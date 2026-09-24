@@ -170,6 +170,7 @@ private fun MainScreen(viewModel: MainViewModel) {
     val selected by viewModel.selectedContacts.collectAsStateWithLifecycle()
     val messageBody by viewModel.messageBody.collectAsStateWithLifecycle()
     val delayMs by viewModel.delayMs.collectAsStateWithLifecycle()
+    val safeMode by viewModel.safeMode.collectAsStateWithLifecycle()
     val callDelayMs by viewModel.callDelayMs.collectAsStateWithLifecycle()
     val ringDurationMs by viewModel.ringDurationMs.collectAsStateWithLifecycle()
     val maxCallMs by viewModel.maxCallMs.collectAsStateWithLifecycle()
@@ -817,6 +818,8 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                     SettingsScreen(
                         delaySeconds = (delayMs / 1000).toInt(),
                         onDelayChange = { viewModel.setDelay(it) },
+                        safeMode = safeMode,
+                        onSafeModeChange = { viewModel.setSafeMode(it) },
                         callDelaySeconds = (callDelayMs / 1000).toInt(),
                         onCallDelayChange = { viewModel.setCallDelay(it) },
                         ringDurationSeconds = (ringDurationMs / 1000).toInt(),

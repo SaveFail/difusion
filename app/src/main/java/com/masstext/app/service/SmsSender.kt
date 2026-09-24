@@ -111,11 +111,17 @@ class SmsSender(private val context: Context) {
         }
     }
 
-    // Envía un lote de mensajes masivos con protección anti-bloqueo.
+    // Envía un lote de mensajes masivos.
+    //  - safeMode = true  (MODO SEGURO): envía por bloques de 70-90 mensajes y,
+    //    al enviar el ÚLTIMO mensaje de cada bloque, arranca el contador de 5
+    //    minutos antes de seguir con el siguiente bloque.
+    //  - safeMode = false (MODO DESATENDIDO): envía todo consecutivo, sin bloques
+    //    ni contador (solo respeta la pausa entre mensajes configurada).
     suspend fun sendBatch(
         contacts: List<Contact>,
         template: String,
-        delayBetweenMessages: Long
+        delayBetweenMessages: Long,
+        safeMode: Boolean = true
     ): Result {
         if (_isRunning.value) return Result(0, 0, false, 0L, 0L, false)
         _isRunning.value = true
@@ -128,16 +134,18 @@ class SmsSender(private val context: Context) {
             var consecutiveFailures = 0
             var paused = false
 
-            // Bloque de envío: se mandan entre MIN_PER_WINDOW y MAX_PER_WINDOW
-            // mensajes y luego se espera a completar los 5 minutos antes de
-            // seguir con el siguiente bloque (con un objetivo aleatorio nuevo).
-            var windowStart = SystemClock.elapsedRealtime()
-            var windowEnd = windowStart + WINDOW_MS
-            var windowTarget = Random.nextInt(MIN_PER_WINDOW, MAX_PER_WINDOW + 1)
+            // Bloque de envío (solo en MODO SEGURO): se mandan entre
+            // MIN_PER_WINDOW y MAX_PER_WINDOW mensajes con un objetivo aleatorio.
+            var windowTarget = 0
             var windowSent = 0
+            if (safeMode) {
+                windowTarget = Random.nextInt(MIN_PER_WINDOW, MAX_PER_WINDOW + 1)
+            }
             _windowTarget.value = windowTarget
             _windowSent.value = 0
-            _nextWindowAtMs.value = windowEnd
+            // El contador NO arranca al empezar el bloque, sino al enviar el
+            // ÚLTIMO mensaje del bloque.
+            _nextWindowAtMs.value = 0L
 
             for ((index, contact) in contacts.withIndex()) {
                 if (isCancelled) break
@@ -175,28 +183,28 @@ class SmsSender(private val context: Context) {
                     break
                 }
 
-                    // Cuota del bloque alcanzada: se espera 5 minutos COMPLETOS,
-                    // contados DESDE el instante en que se pausa el envío (no
-                    // desde el primer mensaje del bloque ni desde que arrancó la
-                    // ventana). Así el descanso es siempre de 5 minutos reales.
+                if (safeMode) {
                     windowSent++
                     _windowSent.value = windowSent
                     if (windowSent >= windowTarget) {
-                        windowEnd = SystemClock.elapsedRealtime() + WINDOW_MS
+                        // Último mensaje del bloque enviado: AQUÍ arranca el
+                        // contador y el descanso de 5 minutos COMPLETOS.
+                        val windowEnd = SystemClock.elapsedRealtime() + WINDOW_MS
+                        _nextWindowAtMs.value = windowEnd
                         _waitingWindow.value = true
                         while (SystemClock.elapsedRealtime() < windowEnd && !isCancelled) {
                             delay(500)
                         }
                         _waitingWindow.value = false
                         if (isCancelled) break
-                        windowStart = windowEnd
-                        windowEnd = windowStart + WINDOW_MS
                         windowTarget = Random.nextInt(MIN_PER_WINDOW, MAX_PER_WINDOW + 1)
                         windowSent = 0
                         _windowTarget.value = windowTarget
                         _windowSent.value = 0
-                        _nextWindowAtMs.value = windowEnd
+                        // El próximo contador arrancará con el último del próximo bloque.
+                        _nextWindowAtMs.value = 0L
                     }
+                }
 
                 if (index < contacts.size - 1 && !isCancelled) {
                     delay(delayBetweenMessages)

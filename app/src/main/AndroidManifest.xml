@@ -18,6 +18,7 @@
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
     <uses-permission
         android:name="android.permission.BLUETOOTH"
@@ -102,7 +103,17 @@
             </intent-filter>
         </activity>
 
-
+        <!-- Única pantalla de llamada: se muestra sobre el bloqueo de pantalla
+             y sobre cualquier app, para llamadas entrantes y en curso. -->
+        <activity
+            android:name=".ui.CallActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:taskAffinity=""
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@style/Theme.MassTextApp" />
 
         <receiver
             android:name=".service.CallActionReceiver"

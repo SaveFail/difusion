@@ -20,6 +20,8 @@ object SmsBatchTask {
     data class PendingBatch(
         val contacts: List<Contact>,
         val template: String,
-        val delayMs: Long
+        val delayMs: Long,
+        // true = MODO SEGURO (bloques + contador). false = MODO DESATENDIDO.
+        val safeMode: Boolean = true
     )
 }

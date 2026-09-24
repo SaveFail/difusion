@@ -4,6 +4,7 @@ import android.content.Intent
 import android.telecom.Call
 import android.telecom.InCallService
 import com.masstext.app.MainActivity
+import com.masstext.app.ui.CallActivity
 
 /**
  * Se enlaza automáticamente con Telecom cuando la app es la app de llamadas
@@ -45,18 +46,23 @@ class MassTextInCallService : InCallService() {
                     CallOverlay.hide(this@MassTextInCallService)
                     val number = runCatching { call.details?.handle?.schemeSpecificPart }
                         .getOrNull()?.takeIf { it.isNotBlank() } ?: "Desconocido"
-                    // En la pantalla normal (o bloqueada), se abre la pantalla de
-                    // llamada completa (CallCenterActivity) que con sus flags se
-                    // sobrepone incluso sobre el bloqueo — no solo una notificación.
-                    // En el modo masivo no interrumpimos la secuencia: solo overlay.
-                    if (CallMonitor.notifyFullScreen) {
-                        openCallCenter()
-                    }
+                    // Única pantalla de llamada (sobre el bloqueo) con
+                    // Contestar / Buzón / Rechazar.
+                    openCallScreen()
+                    // Respaldo inmediato por si el sistema tarda en abrir la
+                    // pantalla completa; la propia pantalla lo oculta al aparecer.
                     if (IncomingCallOverlay.canDraw(this@MassTextInCallService)) {
                         IncomingCallOverlay.show(this@MassTextInCallService, number)
                     }
                 } else {
                     IncomingCallOverlay.hide(this@MassTextInCallService)
+                    // Llamada saliente (marcando/conectando): abrir también la
+                    // pantalla de llamada, sin esperar a tocar la notificación.
+                    if ((state == Call.STATE_DIALING || state == Call.STATE_CONNECTING) &&
+                        CallMonitor.notifyFullScreen
+                    ) {
+                        openCallScreen()
+                    }
                 }
                 if (state == Call.STATE_ACTIVE) {
                     applyBluetoothRoute()
@@ -127,7 +133,7 @@ class MassTextInCallService : InCallService() {
         CallMonitor.attach(call, this)
         CallNotification.update(this)
         if (CallMonitor.notifyFullScreen) {
-            openCallCenter()
+            openCallScreen()
         }
     }
 
@@ -188,6 +194,26 @@ class MassTextInCallService : InCallService() {
                     )
                 }
             )
+        }
+    }
+
+    // Abre la única pantalla de llamada. Funciona desde segundo plano porque la
+    // app es el marcador predeterminado y tiene permiso de superposición; además
+    // hay una notificación con pantalla completa de respaldo.
+    private fun openCallScreen() {
+        runCatching {
+            startActivity(
+                Intent(this, CallActivity::class.java).apply {
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                            Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+                    )
+                }
+            )
+        }.onFailure {
+            CallRecorderLog.append(this, "No se pudo abrir pantalla de llamada: ${it.message}")
         }
     }
 

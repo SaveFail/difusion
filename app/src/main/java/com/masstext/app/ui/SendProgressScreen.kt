@@ -34,6 +34,7 @@ fun SendProgressScreen(
     val windowTarget by sender.windowTarget.collectAsState()
     val windowSent by sender.windowSent.collectAsState()
     val nextWindowAtMs by sender.nextWindowAtMs.collectAsState()
+    val waitingWindow by sender.waitingWindow.collectAsState()
 
     // Ticker de 1 s para que el conteo de los 5 minutos se actualice en vivo.
     var nowMs by remember { mutableStateOf(SystemClock.elapsedRealtime()) }
@@ -126,7 +127,8 @@ fun SendProgressScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        "Bloque actual: $windowSent / $windowTarget mensajes",
+                        if (waitingWindow) "Bloque completado: $windowSent mensajes"
+                        else "Bloque actual: $windowSent / $windowTarget mensajes",
                         style = MaterialTheme.typography.bodyMedium
                     )
                     if (nextWindowAtMs > 0L) {

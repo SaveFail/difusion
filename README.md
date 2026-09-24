@@ -35,6 +35,9 @@ pantalla de llamada y controlar el audio durante la llamada.
 - Envío masivo a los contactos seleccionados con **retardo configurable** entre
   mensajes, barra de progreso y servicio en primer plano (sigue enviando aunque
   cierres la pantalla).
+- **Modo de envío** (Ajustes): **MODO SEGURO** usa bloques de 70-90 mensajes con
+  descanso de 5 minutos (contador que arranca al enviar el **último** mensaje del
+  bloque); **MODO DESATENDIDO** envía consecutivo sin bloques ni contador.
 - Estados por mensaje (`ENVIANDO` → `ENVIADO` / `FALLIDO`) con código y motivo
   del fallo; reenvío de fallidos desde la bandeja o el historial.
 - Plantillas de mensaje con variables `{nombre}` y `{telefono}`.
@@ -50,10 +53,12 @@ pantalla de llamada y controlar el audio durante la llamada.
   corruptos.
 - **Mensaje pregrabado automático** al contestar la llamada (ver
   [nota técnica](#nota-técnica-mensaje-pregrabado-en-llamadas)).
-- Riel de llamada con **silenciar, altavoz, espera, teclado (DTMF), colgar** y
-  **Bluetooth**. El altavoz **solo** se activa al pulsar su botón.
-- App de teléfono predeterminada: pantalla de llamada propia y overlay para
-  llamadas entrantes (contestar / buzón / rechazar).
+- **Pantalla única de llamada** (`CallActivity`) que se sobrepone sobre el
+  bloqueo de pantalla y sobre cualquier app, entrante o saliente/en curso:
+  Contestar / Buzón / Rechazar y, en llamada, colgar, silenciar, altavoz,
+  espera, Bluetooth y teclado DTMF. Se abre sola al recibir o al marcar.
+- El altavoz **solo** se activa al pulsar su botón. Al minimizar la pantalla
+  queda la barra flotante para volver; dentro de la pantalla no se muestra.
 
 ### Contactos
 - Alta manual y por importación de **Excel (.xlsx), CSV** y **Google Sheets**

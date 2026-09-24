@@ -9,7 +9,6 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.masstext.app.R
-import com.masstext.app.MainActivity
 
 /**
  * Notificación permanente de alta prioridad mientras haya una llamada en curso.
@@ -48,10 +47,11 @@ object CallNotification {
         if (!manager.areNotificationsEnabled()) return
         ensureChannel(context)
 
+        // Al tocar la notificación volvemos a la pantalla de llamada.
         val contentIntent = PendingIntent.getActivity(
             context,
             0,
-            Intent(context, MainActivity::class.java).apply {
+            Intent(context, com.masstext.app.ui.CallActivity::class.java).apply {
                 addFlags(
                     Intent.FLAG_ACTIVITY_NEW_TASK or
                         Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
@@ -71,17 +71,34 @@ object CallNotification {
 
         val speaker = CallMonitor.speaker.value
         val muted = CallMonitor.muted.value
+        val isRinging = CallMonitor.isIncoming(CallMonitor.currentCall())
         val statusLine = buildString {
             append(info.state)
             if (muted) append(" · Micro silenciado")
             append(" · Toca para volver a la llamada")
         }
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+        // Pantalla completa para la llamada: abre la única pantalla de llamada
+        // (Contestar / Buzón / Rechazar, o controles en curso), incluso con el
+        // teléfono bloqueado.
+        val incomingIntent = PendingIntent.getActivity(
+            context,
+            3,
+            Intent(context, com.masstext.app.ui.CallActivity::class.java).apply {
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+                )
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_call_notif)
             .setContentTitle(info.number)
             .setContentText(statusLine)
-            .setContentIntent(contentIntent)
+            .setContentIntent(if (isRinging) incomingIntent else contentIntent)
             .setOngoing(true)
             .setShowWhen(false)
             .setCategory(NotificationCompat.CATEGORY_CALL)
@@ -96,9 +113,12 @@ object CallNotification {
                 "Colgar",
                 broadcast(ACTION_END_CALL, 1)
             )
-            .build()
 
-        manager.notify(NOTIFICATION_ID, notification)
+        if (isRinging) {
+            builder.setFullScreenIntent(incomingIntent, true)
+        }
+
+        manager.notify(NOTIFICATION_ID, builder.build())
     }
 
     fun cancel(context: Context) {

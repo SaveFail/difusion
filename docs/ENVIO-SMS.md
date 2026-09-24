@@ -37,7 +37,21 @@ Flujo de un lote completo:
 - `SmsSendService.kt` mantiene el envío en segundo plano (tipo `dataSync`) para
   que continúe aunque se cierre la pantalla.
 
-## 5. Dependencias del proyecto
+## 5. Modo de envío (MODO SEGURO / MODO DESATENDIDO)
+
+En **Ajustes → Modo de envío** hay un interruptor:
+
+- **MODO SEGURO** (por defecto): envía por **bloques** de 70-90 mensajes y, al
+  enviar el **último** mensaje de cada bloque, arranca un **contador** de 5
+  minutos (descanso) antes de seguir con el bloque siguiente. El contador
+  **no** arranca con el primer mensaje del bloque.
+- **MODO DESATENDIDO**: envía **consecutivo**, sin bloques ni contador; solo
+  respeta la pausa entre mensajes configurada.
+
+La elección se guarda en preferencias (`safe_mode`) y se aplica al lote en
+`SmsBatchTask.PendingBatch.safeMode` → `SmsSender.sendBatch(..., safeMode)`.
+
+## 6. Dependencias del proyecto
 
 Lo que ya existe y se usa: `SmsManager`/`Telephony`, Room (`smsMessageDao`,
 `SmsMessage`, `PurgedSms`, `ThreadResolver`), StateFlow, archivos de importador y

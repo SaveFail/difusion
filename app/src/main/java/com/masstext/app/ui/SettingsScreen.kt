@@ -27,6 +27,8 @@ import com.masstext.app.service.VoiceMessageStore
 fun SettingsScreen(
     delaySeconds: Int,
     onDelayChange: (Long) -> Unit,
+    safeMode: Boolean,
+    onSafeModeChange: (Boolean) -> Unit,
     callDelaySeconds: Int,
     onCallDelayChange: (Long) -> Unit,
     ringDurationSeconds: Int,
@@ -534,6 +536,42 @@ fun SettingsScreen(
                     onClick = onOpenAppearance,
                     modifier = Modifier.fillMaxWidth(),
                     icon = Icons.Default.Palette
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            SectionCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "Modo de envío",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            if (safeMode) "MODO SEGURO" else "MODO DESATENDIDO",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (safeMode) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.error
+                        )
+                    }
+                    Switch(
+                        checked = safeMode,
+                        onCheckedChange = onSafeModeChange
+                    )
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    if (safeMode) {
+                        "Envía por bloques de 70-90 mensajes y descansa 5 minutos entre bloques (usa el contador). Recomendado para no bloquear tu línea."
+                    } else {
+                        "Envía todo consecutivo, sin bloques ni contador. Solo respeta la pausa entre mensajes. Úsalo solo si tu operador lo permite."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 

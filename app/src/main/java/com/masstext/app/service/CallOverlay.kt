@@ -12,7 +12,7 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.TextView
-import com.masstext.app.ui.openCallCenter
+import com.masstext.app.ui.openCallScreen
 
 /**
  * Barra flotante que se superpone sobre cualquier app mientras hay una
@@ -30,6 +30,11 @@ object CallOverlay {
     private var stateText: TextView? = null
     private var speakerButton: TextView? = null
 
+    // Cuando la pantalla de llamada (CallActivity) está al frente, no se muestra
+    // la barra flotante: ahí ya están todos los controles.
+    @Volatile
+    var suppressed: Boolean = false
+
     fun canDraw(context: Context): Boolean = Settings.canDrawOverlays(context)
 
     fun isVisible(): Boolean = pillView != null
@@ -44,6 +49,7 @@ object CallOverlay {
     }
 
     fun show(context: Context) {
+        if (suppressed) return
         if (pillView != null) return update(context)
         if (!canDraw(context)) return
         val info = CallMonitor.info.value ?: return
@@ -72,7 +78,7 @@ object CallOverlay {
             background = bg
             setPadding(dp(context, 10), dp(context, 7), dp(context, 8), dp(context, 7))
             isClickable = true
-            setOnClickListener { openCallCenter(context) }
+            setOnClickListener { openCallScreen(context) }
         }
 
         val tag = chip("LLAMADA", 0xFF2ECC71.toInt())

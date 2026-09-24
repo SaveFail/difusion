@@ -49,6 +49,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         const val KEY_CALL_DELAY_MS = "call_delay_ms"
         const val KEY_RING_DURATION_MS = "ring_duration_ms"
         const val KEY_MAX_CALL_MS = "max_call_ms"
+        const val KEY_SAFE_MODE = "safe_mode"
     }
     val contacts = db.contactDao().getAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val templates = db.templateDao().getAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -128,6 +129,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             .getLong(KEY_MAX_CALL_MS, 0L)
     )
     val maxCallMs: StateFlow<Long> = _maxCallMs.asStateFlow()
+
+    // Modo de envío de SMS: true = MODO SEGURO (bloques + contador de 5 min),
+    // false = MODO DESATENDIDO (consecutivo, sin contador).
+    private val _safeMode = MutableStateFlow(
+        getApplication<Application>().getSharedPreferences("masstext_prefs", Context.MODE_PRIVATE)
+            .getBoolean(KEY_SAFE_MODE, true)
+    )
+    val safeMode: StateFlow<Boolean> = _safeMode.asStateFlow()
 
     private val _themeConfig = MutableStateFlow(ThemePrefs.read(getApplication()))
     val themeConfig: StateFlow<ThemeConfig> = _themeConfig.asStateFlow()
@@ -682,6 +691,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         usersPrefs().edit().putLong(KEY_DELAY_MS, delay).apply()
     }
 
+    fun setSafeMode(enabled: Boolean) {
+        _safeMode.value = enabled
+        usersPrefs().edit().putBoolean(KEY_SAFE_MODE, enabled).apply()
+    }
+
     fun saveContact(name: String, phone: String, assignment: String = "") {
         viewModelScope.launch {
             // Se guarda el teléfono tal cual lo escribe el usuario.
@@ -714,7 +728,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (_isSending.value) return
         // El envío corre en un servicio en primer plano, así puede continuar en
         // segundo plano mientras el usuario hace llamadas o navega por la app.
-        SmsBatchTask.set(SmsBatchTask.PendingBatch(contacts, message, delayMs))
+        SmsBatchTask.set(SmsBatchTask.PendingBatch(contacts, message, delayMs, _safeMode.value))
         viewModelScope.launch {
             try {
                 SmsSendService.start(getApplication())

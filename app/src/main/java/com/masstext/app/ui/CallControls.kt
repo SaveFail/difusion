@@ -67,6 +67,21 @@ fun openCallCenter(context: Context) {
     }
 }
 
+// Vuelve a la pantalla de llamada (la única de la app).
+fun openCallScreen(context: Context) {
+    runCatching {
+        context.startActivity(
+            Intent(context, CallActivity::class.java).apply {
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+                )
+            }
+        )
+    }
+}
+
 @Composable
 fun CallCenterContent(
     onMinimize: () -> Unit,

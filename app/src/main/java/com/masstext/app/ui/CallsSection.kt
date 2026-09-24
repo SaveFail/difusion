@@ -93,7 +93,6 @@ fun CallsSection(
 private fun DialerPane(onCallNumber: (String) -> Unit) {
     var number by remember { mutableStateOf("") }
     val inCall = CallMonitor.currentCall() != null
-    var showKeypad by remember { mutableStateOf(false) }
     val actionSize = 52.dp
     val context = LocalContext.current
     val sims = remember { SimManager.getSims(context) }
@@ -101,7 +100,6 @@ private fun DialerPane(onCallNumber: (String) -> Unit) {
         mutableStateOf(SimManager.getDefaultHandle(context))
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -212,91 +210,27 @@ private fun DialerPane(onCallNumber: (String) -> Unit) {
 
         Spacer(modifier = Modifier.height(6.dp))
 
+        // Marcador normal: siempre el teclado. La llamada en curso se maneja en
+        // la pantalla de llamada (CallActivity), no aquí.
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
             contentAlignment = Alignment.Center
         ) {
-            if (inCall && !showKeypad) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primary
-                    ) {
-                        IconButton(onClick = { showKeypad = true }) {
-                            AppIcon(
-                                Icons.Default.Dialpad,
-                                contentDescription = "Activar teclado",
-                                tint = MaterialTheme.colorScheme.onPrimary,
-                                size = 24.dp
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        "Teclado (tonos DTMF)",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val muted by CallMonitor.muted.collectAsState()
-                        val speaker by CallMonitor.speaker.collectAsState()
-                        val onHold by CallMonitor.onHold.collectAsState()
-                        val bluetooth by CallMonitor.bluetooth.collectAsState()
-                        RailIcon(active = muted, icon = Icons.Default.MicOff) {
-                            CallMonitor.toggleMute()
-                        }
-                        RailIcon(active = speaker, icon = Icons.Default.VolumeUp) {
-                            CallMonitor.toggleSpeaker()
-                        }
-                        RailIcon(active = onHold, icon = Icons.Default.Pause) {
-                            CallMonitor.toggleHold()
-                        }
-                        RailIcon(active = bluetooth, icon = Icons.Default.Bluetooth) {
-                            CallMonitor.routeToBluetooth()
-                        }
-
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.error
-                        ) {
-                            IconButton(onClick = { CallMonitor.endCall() }) {
-                                AppIcon(
-                                    Icons.Default.CallEnd,
-                                    contentDescription = "Colgar",
-                                    tint = MaterialTheme.colorScheme.onError,
-                                    size = 22.dp
-                                )
-                            }
-                        }
-                    }
-                }
-            } else {
-                val spacing = 8.dp
-                val keySize = minOf(
-                    (maxWidth - spacing * 2) / 3,
-                    (maxHeight - spacing * 3) / 4
-                ).coerceIn(50.dp, 72.dp)
-                CallKeypad(
-                    onDigit = { c ->
-                        if (inCall) {
-                            CallMonitor.dtmf(c)
-                        } else if (number.length < 20) {
-                            number += c
-                        }
-                    },
-                    showDelete = false,
-                    showLetters = true,
-                    rounded = false,
-                    rowSpacing = spacing,
-                    modifier = Modifier.width(keySize * 3 + spacing * 2)
-                )
-            }
+            val spacing = 8.dp
+            val keySize = minOf(
+                (maxWidth - spacing * 2) / 3,
+                (maxHeight - spacing * 3) / 4
+            ).coerceIn(50.dp, 72.dp)
+            CallKeypad(
+                onDigit = { c -> if (number.length < 20) number += c },
+                showDelete = false,
+                showLetters = true,
+                rounded = false,
+                rowSpacing = spacing,
+                modifier = Modifier.width(keySize * 3 + spacing * 2)
+            )
         }
 
         Spacer(modifier = Modifier.height(6.dp))
@@ -348,8 +282,6 @@ private fun DialerPane(onCallNumber: (String) -> Unit) {
             )
         }
         Spacer(modifier = Modifier.height(4.dp))
-    }
-        CallRail(modifier = Modifier.align(Alignment.CenterEnd))
     }
 }
 
@@ -627,26 +559,5 @@ private fun RailButtonActive(
     }
 }
 
-@Composable
-private fun RailIcon(
-    active: Boolean,
-    icon: ImageVector,
-    onClick: () -> Unit
-) {
-    Surface(
-        shape = CircleShape,
-        color = if (active) MaterialTheme.colorScheme.primary
-        else MaterialTheme.colorScheme.surfaceVariant
-    ) {
-        IconButton(onClick = onClick) {
-            AppIcon(
-                icon,
-                contentDescription = null,
-                tint = if (active) MaterialTheme.colorScheme.onPrimary
-                else MaterialTheme.colorScheme.onSurfaceVariant,
-                size = 20.dp
-            )
-        }
-    }
-}
+
 

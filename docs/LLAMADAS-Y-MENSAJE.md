@@ -17,19 +17,36 @@ La pestaña **Llamadas** (o *Llamar seleccionados* desde Contactos) inicia
 La app debe ser **teléfono predeterminado** para que Telecom le entregue el
 estado real de la llamada (`InCallService`).
 
-## 2. Riel de controles de llamada
+## 2. Pantalla única de llamada (`CallActivity`)
 
-`CallControls.kt` / `CallRail` ofrece, durante la llamada:
+Existe **una sola pantalla de llamada** (`ui/CallActivity.kt`), que se
+**sobrepone sobre el bloqueo de pantalla y sobre cualquier app**, tanto para
+llamadas **entrantes** como **salientes/en curso**. Contiene el panel completo
+(`FullCallPanel` en `CallControls.kt`):
 
-- **Silenciar** micrófono.
-- **Altavoz** (`toggleSpeaker`) — *único* botón que activa el altavoz.
-- **Espera** (hold).
-- **Teclado** (DTMF).
-- **Bluetooth** (si hay dispositivo conectado).
-- **Colgar**.
+- **Entrante:** Contestar / Buzón / Rechazar.
+- **En curso:** Colgar, Silenciar, Altavoz, Espera, Bluetooth, teclado DTMF y
+  grabación.
+- Botón **minimizar** (▼): cierra la pantalla y deja la **barra flotante**
+  (`CallOverlay`) para volver.
 
-En modo secuencia masiva el riel se muestra sobre la lista para no perder el
-listado.
+Comportamiento:
+
+- Al **recibir** una llamada, la pantalla se abre sola (también con el teléfono
+  bloqueado).
+- Al **marcar** (saliente), la pantalla se abre sola en DIALING/CONNECTING; no
+  hace falta tocar la notificación.
+- Mientras `CallActivity` está al frente, la **barra flotante se oculta**
+  (`CallOverlay.suppressed`); al minimizar, reaparece. Tocar la barra o la
+  notificación vuelve a la pantalla de llamada.
+- El **marcador** (pestaña Llamadas → Marcar) ya **no** se transforma en un
+  mini panel de llamada: siempre es el teclado normal.
+
+> El altavoz **solo** se activa al pulsar su botón.
+
+**Corrección importante:** al contestar se usaba `call.answer(ROUTE_...)`, pero
+ese parámetro es el **estado de video**, no la ruta de audio; ahora se usa
+`VideoProfile.STATE_AUDIO_ONLY` (`CallMonitor.answerIncomingCall`).
 
 ## 3. Grabación de llamadas
 

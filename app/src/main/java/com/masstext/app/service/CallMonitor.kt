@@ -7,6 +7,7 @@ import android.media.AudioManager
 import android.os.Build
 import android.telecom.Call
 import android.telecom.CallAudioState
+import android.telecom.VideoProfile
 import android.telecom.InCallService
 import android.telecom.PhoneAccountHandle
 import android.util.Log
@@ -218,7 +219,10 @@ object CallMonitor {
             Log.w(TAG, "answerIncomingCall: no hay llamada entrante (state=${c.state})")
             return
         }
-        runCatching { c.answer(CallAudioState.ROUTE_WIRED_OR_EARPIECE) }
+        // IMPORTANTE: el parámetro de answer() es el estado de VIDEO (no la ruta
+        // de audio). Antes se pasaba ROUTE_WIRED_OR_EARPIECE (una constante de
+        // ruta), lo que podía impedir contestar. Para llamada de voz: AUDIO_ONLY.
+        runCatching { c.answer(VideoProfile.STATE_AUDIO_ONLY) }
             .onFailure { Log.w(TAG, "answerIncomingCall fallo: ${it.message}") }
     }
 
