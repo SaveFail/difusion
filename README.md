@@ -211,6 +211,7 @@ Servicios clave (`app/src/main/java/com/masstext/app/service/`):
 - [`docs/ENVIO-SMS.md`](docs/ENVIO-SMS.md) — pipeline de envío masivo de SMS.
 - [`docs/LLAMADAS-Y-MENSAJE.md`](docs/LLAMADAS-Y-MENSAJE.md) — llamadas masivas y
   mensaje pregrabado (incluye limitaciones del equipo).
+- [`CHANGELOG.md`](CHANGELOG.md) — registro de cambios y pruebas realizadas.
 
 ---
 
