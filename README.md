@@ -8,7 +8,7 @@ pantalla de llamada y controlar el audio durante la llamada.
 
 - **Paquete:** `com.masstext.app`
 - **Nombre visible:** LEX RECOVER
-- **Versión:** 1.3 (`versionCode 4`)
+- **Versión:** 1.4 (`versionCode 5`)
 - **minSdk:** 26 (Android 8) · **targetSdk/compileSdk:** 35 (Android 15)
 
 ---
@@ -86,6 +86,13 @@ pantalla de llamada y controlar el audio durante la llamada.
   nombres reales y su contador; los vacíos salen como *Sin gestionar*,
   *Sin estado* y *Sin medio*. Los filtros se combinan y **Todos** selecciona
   solo lo visible. Se ocultan al marcar contactos para dejar espacio.
+
+### Actualizaciones
+- **Ajustes → Actualizaciones → “Buscar actualizaciones”**: consulta la última
+  Release del repositorio público
+  [`SaveFail/lex-recover-releases`](https://github.com/SaveFail/lex-recover-releases/releases),
+  descarga el APK nuevo y abre el instalador (solo confirmas). El **código sigue
+  privado**; únicamente el APK se publica. Requiere la misma clave de firma.
 
 ### Historial, respaldo y apariencia
 - Historial de envíos y llamadas con **exportación a Excel**.

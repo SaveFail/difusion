@@ -9,4 +9,7 @@
     <files-path
         name="voice"
         path="" />
+    <cache-path
+        name="updates"
+        path="updates/" />
 </paths>

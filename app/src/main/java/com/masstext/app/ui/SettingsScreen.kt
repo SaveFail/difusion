@@ -48,6 +48,9 @@ fun SettingsScreen(
     onRequestSpecialPermissions: () -> Unit,
     fullScreenGranted: Boolean,
     onRepairPhones: (() -> Unit)?,
+    appVersion: String,
+    updateStatus: String,
+    onCheckUpdates: () -> Unit,
     onOpenAppearance: () -> Unit,
     userName: String,
     onUserChange: (String) -> Unit,
@@ -122,6 +125,38 @@ fun SettingsScreen(
                     onClick = onRequestSpecialPermissions,
                     modifier = Modifier.fillMaxWidth(),
                     icon = Icons.Default.Layers
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            SectionCard {
+                Text(
+                    "Actualizaciones",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "Versión instalada: $appVersion. Busca si hay una nueva; la app la descarga y solo confirmas la instalación.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (updateStatus.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        updateStatus,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+                PrimaryActionButton(
+                    text = "Buscar actualizaciones",
+                    onClick = onCheckUpdates,
+                    modifier = Modifier.fillMaxWidth(),
+                    icon = Icons.Default.SystemUpdate
                 )
             }
 

@@ -1,5 +1,26 @@
 # Registro de cambios
 
+## [1.4] — 2026-09-28
+
+### Agregado
+- **Buscar actualizaciones dentro de la app** (Ajustes → *Actualizaciones*).
+  Consulta la **última Release** de un repositorio público de descargas vía la
+  **API de GitHub** (sin caché), compara versiones y, si hay una nueva,
+  **descarga el APK** y abre el instalador del sistema: el usuario solo confirma
+  con un toque.
+  - Permiso `REQUEST_INSTALL_PACKAGES` y `FileProvider` para instalar.
+  - Si falta “Instalar apps desconocidas”, abre los ajustes y reintenta al volver.
+  - `service/UpdateManager.kt` centraliza la comprobación, descarga e instalación.
+- **Repositorio público de descargas:** `SaveFail/lex-recover-releases` (solo el
+  APK). El **código permanece privado**.
+
+### Notas
+- La actualización **no es silenciosa**: Android siempre pide confirmar la
+  instalación (salvo Google Play o *Device Owner*). El APK debe estar firmado con
+  la **misma clave** que la versión instalada.
+- Se publica la **1.4** en el repositorio de descargas para que los equipos en
+  1.3 puedan actualizarse.
+
 ## [1.3] — 2026-09-28
 
 ### Rendimiento y tamaño (equipos de bajos recursos)

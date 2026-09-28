@@ -189,6 +189,10 @@ private fun MainScreen(viewModel: MainViewModel) {
     }
     var recordingEnabled by remember { mutableStateOf(com.masstext.app.service.CallRecorder.isEnabled(context)) }
 
+    // APK ya descargado a la espera de que el usuario permita instalar apps
+    // desconocidas (se reintenta al volver a la app).
+    var pendingApk by remember { mutableStateOf<File?>(null) }
+
     // Si la secuencia sigue corriendo (se reabrió la app mientras avanzaba),
     // la pantalla de llamadas se muestra desde el primer momento.
     var showCalls by remember { mutableStateOf(viewModel.callSequencer.isRunning.value) }
@@ -204,6 +208,14 @@ private fun MainScreen(viewModel: MainViewModel) {
                 micGranted = ContextCompat.checkSelfPermission(
                     context, Manifest.permission.RECORD_AUDIO
                 ) == PackageManager.PERMISSION_GRANTED
+                // Si quedó una actualización descargada, se instala al conceder
+                // el permiso de "instalar apps desconocidas".
+                pendingApk?.let { apk ->
+                    if (com.masstext.app.service.UpdateManager.canInstallPackages(context)) {
+                        pendingApk = null
+                        com.masstext.app.service.UpdateManager.installApk(context, apk)
+                    }
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -616,6 +628,48 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
         }
     }
 
+    // --- Buscar actualizaciones (descarga e instala con un toque) ---
+    var updateStatus by remember { mutableStateOf("") }
+
+    fun checkForUpdates() {
+        if (updateStatus.startsWith("Descargando")) return
+        updateStatus = "Buscando actualizaciones…"
+        scope.launch {
+            val info = com.masstext.app.service.UpdateManager.fetchLatest()
+            if (info == null) {
+                updateStatus = "No se pudo comprobar. Revisa tu conexión."
+                return@launch
+            }
+            if (!com.masstext.app.service.UpdateManager.isNewer(
+                    info.versionName,
+                    com.masstext.app.service.UpdateManager.currentVersionName
+                )
+            ) {
+                updateStatus = "Tienes la última versión (${com.masstext.app.service.UpdateManager.currentVersionName})."
+                return@launch
+            }
+            updateStatus = "Descargando ${info.versionName}…"
+            try {
+                val apk = com.masstext.app.service.UpdateManager.downloadApk(context, info.apkUrl)
+                if (com.masstext.app.service.UpdateManager.canInstallPackages(context)) {
+                    updateStatus = "Descarga lista. Confirma la instalación."
+                    com.masstext.app.service.UpdateManager.installApk(context, apk)
+                } else {
+                    pendingApk = apk
+                    updateStatus = "Activa \"Instalar apps desconocidas\" y vuelve a la app."
+                    Toast.makeText(
+                        context,
+                        "Permite instalar apps desconocidas para LEX RECOVER y vuelve a la app.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                    com.masstext.app.service.UpdateManager.openInstallPermissionSettings(context)
+                }
+            } catch (e: Exception) {
+                updateStatus = "Error al descargar: ${e.message}"
+            }
+        }
+    }
+
     val filePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -985,6 +1039,9 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                             }
                         },
                         onOpenAppearance = { showAppearance = true },
+                        appVersion = com.masstext.app.service.UpdateManager.currentVersionName,
+                        updateStatus = updateStatus,
+                        onCheckUpdates = { checkForUpdates() },
                         userName = viewModel.appUser.collectAsStateWithLifecycle().value,
                         onUserChange = { viewModel.setAppUser(it) },
                         isDefaultSms = isDefaultSmsApp(context),
