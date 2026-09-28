@@ -1,5 +1,19 @@
 # Registro de cambios
 
+## [1.5] — 2026-09-28
+
+### Corregido / mejorado
+- **Estado de los mensajes:** las burbujas del chat (salientes) vuelven a
+  mostrar el estado: **reloj** (enviando), **check** (enviado) o **X** (no
+  enviado), junto a la hora. En la bandeja también se distingue “enviando” de un
+  mensaje entrante (antes ambos se veían igual porque el estado 0 era ambiguo).
+- **Botón de roles:** en *Mensajes y llamadas predeterminadas* el botón ahora es
+  **siempre** “Hacer predeterminadas Mensajes y Llamadas” (antes cambiaba a
+  “Abrir centro de llamadas” cuando ya lo eran).
+- **Actualizaciones:** la tarjeta muestra la **versión instalada** y la
+  **última versión del repositorio** (leída en vivo, no un texto fijo). El
+  mensaje de descarga indica de qué versión a cuál se actualiza.
+
 ## [1.4] — 2026-09-28
 
 ### Agregado

@@ -402,7 +402,7 @@ private fun ConversationRow(
             }
             Spacer(Modifier.height(3.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (conversation.lastStatus != 0) {
+                if (conversation.lastStatus >= 0) {
                     OutgoingStatusIcon(
                         status = conversation.lastStatus,
                         size = 14.dp,

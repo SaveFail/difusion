@@ -317,10 +317,18 @@ fun ConversationScreen(
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Spacer(Modifier.height(2.dp))
-                                Text(
-                                    SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(Date(message.date)),
-                                    style = MaterialTheme.typography.labelSmall
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(Date(message.date)),
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                    // Estado del mensaje saliente: enviando (reloj),
+                                    // enviado (check) o no enviado (X).
+                                    if (isOutgoing) {
+                                        Spacer(Modifier.width(4.dp))
+                                        OutgoingStatusIcon(status = message.status, size = 14.dp)
+                                    }
+                                }
                             }
                         }
                     }

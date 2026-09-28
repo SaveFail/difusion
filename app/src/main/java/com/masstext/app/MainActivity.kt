@@ -420,7 +420,7 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
             name = displayName,
             lastBody = "",
             lastDate = System.currentTimeMillis(),
-            lastStatus = 0,
+            lastStatus = -1,
             unreadCount = 0
         )
     }
@@ -630,6 +630,9 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
 
     // --- Buscar actualizaciones (descarga e instala con un toque) ---
     var updateStatus by remember { mutableStateOf("") }
+    // Versión publicada en el repositorio (se lee al buscar), para mostrarla
+    // siempre real y no un texto fijo.
+    var repoVersion by remember { mutableStateOf("") }
 
     fun checkForUpdates() {
         if (updateStatus.startsWith("Descargando")) return
@@ -640,15 +643,13 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                 updateStatus = "No se pudo comprobar. Revisa tu conexión."
                 return@launch
             }
-            if (!com.masstext.app.service.UpdateManager.isNewer(
-                    info.versionName,
-                    com.masstext.app.service.UpdateManager.currentVersionName
-                )
-            ) {
-                updateStatus = "Tienes la última versión (${com.masstext.app.service.UpdateManager.currentVersionName})."
+            repoVersion = info.versionName
+            val installed = com.masstext.app.service.UpdateManager.currentVersionName
+            if (!com.masstext.app.service.UpdateManager.isNewer(info.versionName, installed)) {
+                updateStatus = "Estás al día: instalada $installed · repositorio ${info.versionName}."
                 return@launch
             }
-            updateStatus = "Descargando ${info.versionName}…"
+            updateStatus = "Descargando ${info.versionName} (tienes $installed)…"
             try {
                 val apk = com.masstext.app.service.UpdateManager.downloadApk(context, info.apkUrl)
                 if (com.masstext.app.service.UpdateManager.canInstallPackages(context)) {
@@ -1040,6 +1041,7 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                         },
                         onOpenAppearance = { showAppearance = true },
                         appVersion = com.masstext.app.service.UpdateManager.currentVersionName,
+                        repoVersion = repoVersion,
                         updateStatus = updateStatus,
                         onCheckUpdates = { checkForUpdates() },
                         userName = viewModel.appUser.collectAsStateWithLifecycle().value,
@@ -1047,7 +1049,6 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                         isDefaultSms = isDefaultSmsApp(context),
                         isDefaultDialer = isDefaultDialerApp(context),
                         onMakeDefaultMessagingAndDialer = { makeDefaultMessagingAndDialer() },
-                        onOpenCallCenter = { openCallCenter(context) },
                         bluetoothPrefer = viewModel.preferBluetooth.collectAsStateWithLifecycle().value,
                         onBluetoothPreferChange = { viewModel.setPreferBluetooth(it) },
                         bluetoothDevices = remember {

@@ -705,7 +705,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 name = nameFor(last.address),
                 lastBody = last.body,
                 lastDate = last.date,
-                lastStatus = if (last.isIncoming) 0 else last.status,
+                // -1 = entrante (sin estado saliente); 0/1/2 = enviando/enviado/fallido.
+                lastStatus = if (last.isIncoming) -1 else last.status,
                 unreadCount = list.count { it.isIncoming && !it.read },
                 lastIsIncoming = last.isIncoming
             )

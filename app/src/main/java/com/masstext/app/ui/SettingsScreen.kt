@@ -49,6 +49,7 @@ fun SettingsScreen(
     fullScreenGranted: Boolean,
     onRepairPhones: (() -> Unit)?,
     appVersion: String,
+    repoVersion: String,
     updateStatus: String,
     onCheckUpdates: () -> Unit,
     onOpenAppearance: () -> Unit,
@@ -57,7 +58,6 @@ fun SettingsScreen(
     isDefaultSms: Boolean,
     isDefaultDialer: Boolean,
     onMakeDefaultMessagingAndDialer: () -> Unit,
-    onOpenCallCenter: () -> Unit,
     bluetoothPrefer: Boolean,
     onBluetoothPreferChange: (Boolean) -> Unit,
     bluetoothDevices: String,
@@ -138,7 +138,16 @@ fun SettingsScreen(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "Versión instalada: $appVersion. Busca si hay una nueva; la app la descarga y solo confirmas la instalación.",
+                    "Versión instalada: $appVersion",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    if (repoVersion.isNotBlank())
+                        "Última versión en el repositorio: $repoVersion"
+                    else
+                        "Toca \"Buscar actualizaciones\" para ver la última versión publicada.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -395,21 +404,14 @@ fun SettingsScreen(
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-                if (isDefaultSms && isDefaultDialer) {
-                    PrimaryActionButton(
-                        text = "Abrir centro de llamadas",
-                        onClick = onOpenCallCenter,
-                        modifier = Modifier.fillMaxWidth(),
-                        icon = Icons.Default.Phone
-                    )
-                } else {
-                    PrimaryActionButton(
-                        text = "Hacer predeterminadas Mensajes y Llamadas",
-                        onClick = onMakeDefaultMessagingAndDialer,
-                        modifier = Modifier.fillMaxWidth(),
-                        icon = Icons.Default.Phone
-                    )
-                }
+                // Siempre permite volver a establecerlas como predeterminadas
+                // (aunque ya lo sean), para que el botón no cambie de función.
+                PrimaryActionButton(
+                    text = "Hacer predeterminadas Mensajes y Llamadas",
+                    onClick = onMakeDefaultMessagingAndDialer,
+                    modifier = Modifier.fillMaxWidth(),
+                    icon = Icons.Default.Phone
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
