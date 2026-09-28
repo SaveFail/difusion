@@ -24,8 +24,8 @@ android {
         applicationId = "com.masstext.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 4
+        versionName = "1.3"
     }
 
     signingConfigs {
@@ -41,7 +41,10 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // R8 elimina código y recursos no usados: APK mucho más pequeño y
+            // arranque más ligero en equipos de bajos recursos.
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
@@ -80,7 +83,6 @@ dependencies {
     implementation(platform("androidx.compose:compose-bom:2024.10.01"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
-    implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.navigation:navigation-compose:2.8.4")
@@ -90,13 +92,13 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
 
-    implementation("org.apache.poi:poi:5.2.5")
-    implementation("org.apache.poi:poi-ooxml:5.2.5")
-    implementation("org.apache.commons:commons-csv:1.11.0")
-    implementation("com.opencsv:opencsv:5.9")
-
+    // Excel (.xlsx) se lee y escribe con nuestro propio lector/escritor en
+    // streaming: no se usa Apache POI ni CSV extra (menos APK y menos memoria).
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
-    implementation("com.google.zxing:core:3.5.3")
 
-    debugImplementation("androidx.compose.ui:ui-tooling")
+    // Escáner de QR con la cámara. Google Code Scanner lo provee Play Services
+    // (no requiere permiso de cámara y casi no aumenta el APK).
+    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
+
+    testImplementation("junit:junit:4.13.2")
 }

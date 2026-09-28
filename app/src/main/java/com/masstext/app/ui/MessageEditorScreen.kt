@@ -30,6 +30,12 @@ fun MessageEditorScreen(
     selectedCount: Int,
     onSend: () -> Unit
 ) {
+    // Plantilla seleccionada: id (-1 = ninguna), nombre y texto original. Sirve
+    // para saber si el mensaje ya está guardado y solo pedir guardar si cambió.
+    var selectedTemplateId by rememberSaveable { mutableStateOf(-1L) }
+    var selectedTemplateBody by rememberSaveable { mutableStateOf("") }
+    var templateName by rememberSaveable { mutableStateOf("") }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -57,8 +63,14 @@ fun MessageEditorScreen(
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(templates) { template ->
                         InputChip(
-                            selected = false,
-                            onClick = { onMessageChange(template.body) },
+                            selected = template.id == selectedTemplateId,
+                            onClick = {
+                                // Cargar la plantilla existente (no hay que guardarla).
+                                selectedTemplateId = template.id
+                                selectedTemplateBody = template.body
+                                templateName = template.name
+                                onMessageChange(template.body)
+                            },
                             label = { Text(template.name) },
                             trailingIcon = {
                                 AppIcon(
@@ -70,6 +82,17 @@ fun MessageEditorScreen(
                         )
                     }
                 }
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    if (selectedTemplateId >= 0) {
+                        "Plantilla \"$templateName\" cargada. Puedes enviarla directamente; " +
+                            "solo guarda si cambias el texto."
+                    } else {
+                        "Toca una plantilla para cargarla. No necesitas volver a guardarla para enviar."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.tertiary
+                )
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
@@ -113,7 +136,6 @@ fun MessageEditorScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            var templateName by rememberSaveable { mutableStateOf("") }
             OutlinedTextField(
                 value = templateName,
                 onValueChange = { templateName = it },
@@ -126,16 +148,27 @@ fun MessageEditorScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            val editingExisting = selectedTemplateId >= 0
+            val bodyChanged = editingExisting && messageBody != selectedTemplateBody
+            val canSave = messageBody.isNotBlank() && templateName.isNotBlank() &&
+                (!editingExisting || bodyChanged)
+
             SecondaryActionButton(
-                text = "Guardar como plantilla \"$templateName\"",
+                text = when {
+                    editingExisting && !bodyChanged -> "Plantilla \"$templateName\" ya guardada"
+                    editingExisting -> "Guardar cambios en \"$templateName\""
+                    else -> "Guardar como plantilla \"$templateName\""
+                },
                 onClick = {
                     if (templateName.isNotBlank()) {
                         onSaveTemplate(templateName, messageBody)
+                        // Queda como guardada: el botón no vuelve a pedir guardar.
+                        selectedTemplateBody = messageBody
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 icon = Icons.Default.BookmarkAdd,
-                enabled = messageBody.isNotBlank() && templateName.isNotBlank()
+                enabled = canSave
             )
 
             Spacer(modifier = Modifier.height(16.dp))

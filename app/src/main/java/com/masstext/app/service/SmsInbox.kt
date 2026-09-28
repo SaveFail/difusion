@@ -19,6 +19,12 @@ object SmsInbox {
         val freshIncoming = mutableListOf<Pair<String, String>>()
         val now = System.currentTimeMillis()
         try {
+            // Una sola lectura de los ids ya importados y de los purgados (antes
+            // se hacían 2 consultas POR MENSAJE, lo que con miles de SMS tardaba
+            // mucho en equipos de bajos recursos).
+            val existing = db.smsMessageDao().allProviderIds(false).toHashSet()
+            val purged = db.smsMessageDao().allPurgedIds(false).toHashSet()
+            val newMessages = mutableListOf<SmsMessage>()
             context.contentResolver.query(
                 Telephony.Sms.CONTENT_URI,
                 arrayOf(
@@ -38,17 +44,14 @@ object SmsInbox {
                     val providerId = cursor.getLong(0)
                     val type = cursor.getInt(5)
                     if (type != Telephony.Sms.MESSAGE_TYPE_INBOX && type != Telephony.Sms.MESSAGE_TYPE_SENT) continue
-                    // Mensajes borrados de forma definitiva (papelera vaciada o
-                    // borrado permanente): no vuelven a importarse, aunque el
-                    // proveedor de SMS todavía los tenga.
-                    if (db.smsMessageDao().isPurged(providerId, false) > 0) continue
-                    if (db.smsMessageDao().byProviderId(providerId, false) != null) continue
+                    // Borrado definitivo o ya importado: se salta sin tocar la base.
+                    if (providerId in purged || providerId in existing) continue
                     val threadId = cursor.getLong(1)
                     val address = cursor.getString(2) ?: ""
                     val body = cursor.getString(3) ?: ""
                     val date = cursor.getLong(4)
                     val read = cursor.getInt(6) == 1
-                    db.smsMessageDao().insert(
+                    newMessages.add(
                         SmsMessage(
                             providerId = providerId,
                             threadId = threadId,
@@ -60,11 +63,15 @@ object SmsInbox {
                             read = read
                         )
                     )
-                    imported++
                     if (type == Telephony.Sms.MESSAGE_TYPE_INBOX && date >= now - 60_000L) {
                         freshIncoming += address to body
                     }
                 }
+            }
+            if (newMessages.isNotEmpty()) {
+                // Una sola transacción para todos los mensajes nuevos.
+                db.smsMessageDao().insertAll(newMessages)
+                imported = newMessages.size
             }
             if (freshIncoming.isNotEmpty()) {
                 val config = ThemePrefs.read(context)

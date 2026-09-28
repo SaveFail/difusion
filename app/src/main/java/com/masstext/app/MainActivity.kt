@@ -487,27 +487,133 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
         }
     }
 
+    // Secuencia de roles predeterminados: 0 = inactivo, 1 = SMS, 2 = Teléfono.
+    var roleStep by remember { mutableStateOf(0) }
+
     val defaultSmsRoleLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) {
-        val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED
-        if (granted) {
-            Toast.makeText(context, "Listo: ahora LEX RECOVER puede enviar SMS", Toast.LENGTH_LONG).show()
+        // Al terminar el rol de SMS, si falta el de teléfono se pide enseguida.
+        if (!isDefaultDialerApp(context)) {
+            roleStep = 2
         } else {
-            Toast.makeText(context, "No se concedió. En tu teléfono revisa Ajustes del sistema > Aplicaciones > LEX RECOVER > Permisos y activa 'Enviar mensajes de texto'.", Toast.LENGTH_LONG).show()
+            roleStep = 0
+            Toast.makeText(context, "Mensajes y llamadas predeterminadas listas", Toast.LENGTH_LONG).show()
         }
     }
 
     val dialerRoleLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) {
-        val held = isDefaultDialerApp(context)
+        roleStep = 0
+        val sms = isDefaultSmsApp(context)
+        val dial = isDefaultDialerApp(context)
         Toast.makeText(
             context,
-            if (held) "Listo: LEX RECOVER es ahora la app de llamadas predeterminada"
-            else "No se aplicó. Revisa Ajustes del sistema > Aplicaciones > Aplicaciones predeterminadas > Teléfono.",
+            when {
+                sms && dial -> "Listo: Mensajes y Llamadas son LEX RECOVER"
+                dial -> "Llamadas predeterminadas listas. Falta Mensajes."
+                else -> "No se aplicó. Revisa Ajustes > Aplicaciones > Aplicaciones predeterminadas."
+            },
             Toast.LENGTH_LONG
         ).show()
+    }
+
+    fun makeDefaultMessagingAndDialer() {
+        when {
+            !isDefaultSmsApp(context) -> roleStep = 1
+            !isDefaultDialerApp(context) -> roleStep = 2
+            else -> Toast.makeText(context, "Mensajes y llamadas ya son LEX RECOVER", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    LaunchedEffect(roleStep) {
+        when (roleStep) {
+            1 -> makeDefaultSmsApp(context, defaultSmsRoleLauncher)
+            2 -> makeDefaultDialerApp(context, dialerRoleLauncher)
+        }
+    }
+
+    // --- Todos los permisos de runtime de una sola vez ---
+    val allPermissionsLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { grants ->
+        val denied = grants.filterValues { !it }.keys
+        if (denied.isEmpty()) {
+            Toast.makeText(context, "Todos los permisos concedidos", Toast.LENGTH_LONG).show()
+        } else {
+            Toast.makeText(
+                context,
+                "Quedaron ${denied.size} permisos sin conceder. Actívalos en Ajustes del sistema > LEX RECOVER > Permisos.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+        micGranted = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.RECORD_AUDIO
+        ) == PackageManager.PERMISSION_GRANTED
+        overlayGranted = Settings.canDrawOverlays(context)
+    }
+
+    fun requestAllPermissions() {
+        val missing = APP_RUNTIME_PERMISSIONS.filter {
+            ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (missing.isEmpty()) {
+            Toast.makeText(context, "Todos los permisos ya están concedidos", Toast.LENGTH_SHORT).show()
+        } else {
+            allPermissionsLauncher.launch(missing.toTypedArray())
+        }
+    }
+
+    // --- Permisos especiales (superposición + pantalla completa) ---
+    var specialStep by remember { mutableStateOf(0) }
+
+    val overlaySpecialLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        if (Build.VERSION.SDK_INT >= 34 && !hasFullScreenIntent(context)) {
+            specialStep = 2
+        } else {
+            specialStep = 0
+            overlayGranted = Settings.canDrawOverlays(context)
+            Toast.makeText(context, "Permisos especiales revisados", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val fullScreenSpecialLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) {
+        specialStep = 0
+        Toast.makeText(context, "Permisos especiales revisados", Toast.LENGTH_SHORT).show()
+    }
+
+    LaunchedEffect(specialStep) {
+        when (specialStep) {
+            1 -> runCatching {
+                overlaySpecialLauncher.launch(
+                    Intent(
+                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                        Uri.parse("package:${context.packageName}")
+                    )
+                )
+            }
+            2 -> runCatching {
+                fullScreenSpecialLauncher.launch(
+                    Intent(
+                        Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
+                        Uri.parse("package:${context.packageName}")
+                    )
+                )
+            }
+        }
+    }
+
+    fun requestSpecialPermissions() {
+        when {
+            !Settings.canDrawOverlays(context) -> specialStep = 1
+            Build.VERSION.SDK_INT >= 34 && !hasFullScreenIntent(context) -> specialStep = 2
+            else -> Toast.makeText(context, "Los permisos especiales ya están activados", Toast.LENGTH_SHORT).show()
+        }
     }
 
     val filePicker = rememberLauncherForActivityResult(
@@ -863,6 +969,9 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                         ) == PackageManager.PERMISSION_GRANTED,
                         onRequestSmsPermission = { sendSmsPermissionLauncher.launch(Manifest.permission.SEND_SMS) },
                         onMakeDefaultSms = { makeDefaultSmsApp(context, defaultSmsRoleLauncher) },
+                        onRequestAllPermissions = { requestAllPermissions() },
+                        onRequestSpecialPermissions = { requestSpecialPermissions() },
+                        fullScreenGranted = hasFullScreenIntent(context),
                         onRepairPhones = {
                             scope.launch {
                                 val fixed = viewModel.repairPhonesNow()
@@ -878,8 +987,9 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                         onOpenAppearance = { showAppearance = true },
                         userName = viewModel.appUser.collectAsStateWithLifecycle().value,
                         onUserChange = { viewModel.setAppUser(it) },
+                        isDefaultSms = isDefaultSmsApp(context),
                         isDefaultDialer = isDefaultDialerApp(context),
-                        onMakeDefaultDialer = { makeDefaultDialerApp(context, dialerRoleLauncher) },
+                        onMakeDefaultMessagingAndDialer = { makeDefaultMessagingAndDialer() },
                         onOpenCallCenter = { openCallCenter(context) },
                         bluetoothPrefer = viewModel.preferBluetooth.collectAsStateWithLifecycle().value,
                         onBluetoothPreferChange = { viewModel.setPreferBluetooth(it) },
@@ -910,6 +1020,26 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                         },
                         driveUrl = viewModel.driveUrl.collectAsStateWithLifecycle().value,
                         onDriveUrlChange = { viewModel.setDriveUrl(it) },
+                        onScanQr = {
+                            scanQrCode(context) { value ->
+                                val url = extractHttpUrl(value)
+                                if (url != null) {
+                                    viewModel.setDriveUrl(url)
+                                    Toast.makeText(
+                                        context,
+                                        "Enlace leído. Sincronizando…",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    viewModel.syncFromDrive()
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        "El código QR no contiene un enlace",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            }
+                        },
                         driveSyncStatus = viewModel.driveSyncStatus.collectAsStateWithLifecycle().value,
                         onSyncFromDrive = { viewModel.syncFromDrive() },
                         driveSheets = viewModel.driveSheets.collectAsStateWithLifecycle().value,
@@ -1281,6 +1411,80 @@ private fun isDefaultDialerApp(context: android.content.Context): Boolean {
         context.getSystemService(android.telecom.TelecomManager::class.java)
             ?.defaultDialerPackage == context.packageName
     }.getOrDefault(false)
+}
+
+/** ¿La app es la app de SMS predeterminada? (rol en Android 10+, paquete antes). */
+private fun isDefaultSmsApp(context: android.content.Context): Boolean {
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+        return runCatching {
+            context.getSystemService(android.app.role.RoleManager::class.java)
+                ?.isRoleHeld(android.app.role.RoleManager.ROLE_SMS)
+        }.getOrDefault(false) ?: false
+    }
+    return runCatching {
+        android.provider.Telephony.Sms.getDefaultSmsPackage(context) == context.packageName
+    }.getOrDefault(false)
+}
+
+/** Android 14+: ¿está permitido el uso de pantalla completa (llamada entrante)? */
+private fun hasFullScreenIntent(context: android.content.Context): Boolean {
+    if (android.os.Build.VERSION.SDK_INT < 34) return true
+    return runCatching {
+        context.getSystemService(android.app.NotificationManager::class.java)
+            ?.canUseFullScreenIntent() == true
+    }.getOrDefault(false)
+}
+
+/** Abre el escáner de QR de Google (Play Services) y devuelve el texto leído. */
+private fun scanQrCode(context: android.content.Context, onResult: (String) -> Unit) {
+    try {
+        val options = com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions.Builder()
+            .setBarcodeFormats(com.google.mlkit.vision.barcode.common.Barcode.FORMAT_QR_CODE)
+            .enableAutoZoom()
+            .build()
+        val scanner = com.google.mlkit.vision.codescanner.GmsBarcodeScanning.getClient(context, options)
+        scanner.startScan()
+            .addOnSuccessListener { barcode ->
+                val value = barcode.rawValue
+                if (value.isNullOrBlank()) {
+                    Toast.makeText(context, "No se pudo leer el código", Toast.LENGTH_SHORT).show()
+                } else {
+                    onResult(value)
+                }
+            }
+            .addOnFailureListener { e ->
+                Toast.makeText(
+                    context,
+                    "No se pudo abrir el escáner (${e.message ?: "sin detalle"}). " +
+                        "Actualiza 'Servicios de Google Play' e inténtalo de nuevo.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+    } catch (e: Throwable) {
+        Toast.makeText(context, "Escáner no disponible: ${e.message}", Toast.LENGTH_LONG).show()
+    }
+}
+
+/** Devuelve el primer enlace http(s) del texto leído, o el texto si ya es un enlace. */
+private fun extractHttpUrl(text: String): String? {
+    val trimmed = text.trim()
+    if (trimmed.startsWith("http://", true) || trimmed.startsWith("https://", true)) return trimmed
+    return Regex("""https?://[^\s"']+""").find(trimmed)?.value
+}
+
+// Permisos "de runtime" (los que el sistema pide con diálogo). Se piden todos
+// de una sola vez desde el botón "Dar todos los permisos".
+private val APP_RUNTIME_PERMISSIONS: List<String> = buildList {
+    add(android.Manifest.permission.SEND_SMS)
+    add(android.Manifest.permission.RECEIVE_SMS)
+    add(android.Manifest.permission.READ_SMS)
+    add(android.Manifest.permission.CALL_PHONE)
+    add(android.Manifest.permission.READ_PHONE_STATE)
+    add(android.Manifest.permission.READ_CALL_LOG)
+    add(android.Manifest.permission.RECORD_AUDIO)
+    if (android.os.Build.VERSION.SDK_INT >= 33) {
+        add(android.Manifest.permission.POST_NOTIFICATIONS)
+    }
 }
 
 /** Vuelve a llamar con la otra SIM después de que CallMonitor cortara la actual. */

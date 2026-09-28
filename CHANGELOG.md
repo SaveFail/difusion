@@ -1,5 +1,56 @@
 # Registro de cambios
 
+## [1.3] — 2026-09-28
+
+### Rendimiento y tamaño (equipos de bajos recursos)
+- **APK de release: 20.8 MB → ~2.9 MB.** Se activó **R8** (`isMinifyEnabled` +
+  `isShrinkResources`) con reglas ProGuard, y se quitaron dependencias no usadas
+  (`opencsv`, `commons-csv`, `zxing`, `ui-tooling`).
+- **Se eliminó Apache POI** (el mayor peso del APK):
+  - Importar `.xlsx` locales usa ahora el **mismo lector en streaming** que Google
+    Drive (copia a temporal y lee la primera hoja).
+  - Nuevo **escritor XLSX propio** (`report/XlsxWriter.kt`): exportación de
+    contactos, plantilla e historial sin POI.
+  - **Nota:** ya no se leen archivos `.xls` antiguos (solo `.xlsx` y `.csv`).
+- Se quitó `android:largeHeap="true"` (menos presión de memoria).
+- **Bandeja SMS/MMS:** antes hacía **2 consultas a la base por cada mensaje** en
+  cada arranque; ahora lee los ids existentes/purgados **una sola vez** e inserta
+  en lote (mejora grande en equipos lentos).
+- **Asignación de usuarios:** una sola sentencia SQL (antes cargaba todos los
+  contactos y actualizaba uno por uno).
+- **Mis Contactos:** los conteos de categorías y la lista de usuarios se calculan
+  con `remember`; la ventana de revisión dibuja como máximo 300 filas.
+
+### Permisos y roles (agiliza la configuración inicial)
+- Nuevo botón **“Dar todos los permisos”**: pide de una vez los permisos de
+  SMS, llamadas, estado del teléfono, micrófono y notificaciones.
+- Nuevo botón **“Permisos especiales”**: encadena superposición (mostrar sobre
+  otras apps) y pantalla completa para llamadas.
+- El botón de “app de llamadas predeterminada” se transformó en **“Hacer
+  predeterminadas Mensajes y Llamadas”**: solicita ambos roles seguidos.
+- **Aclaración:** Android **no** permite un permiso especial para otorgar
+  permisos; cada permiso lo concede el usuario (diálogo del sistema o pantalla de
+  Ajustes). Solo un *Device Owner* (empresarial, por ADB/QR) podría aplicarlos por
+  política.
+
+### Plantillas de mensaje
+- Al **seleccionar una plantilla existente** ya **no pide guardarla**: se resalta,
+  se puede **enviar directamente** y el botón indica “ya guardada”. Solo si se
+  **edita el texto** ofrece **“Guardar cambios”**, que **actualiza** la plantilla
+  en lugar de duplicarla (`TemplateDao.getByName`/`updateBody`, upsert).
+
+### Escáner QR para el enlace de Drive
+- Botón de **cámara** a la derecha del campo del enlace: abre el **escáner QR**
+  (Google Code Scanner de Play Services, **sin permiso de cámara**), lee el enlace
+  del Drive compartido y **sincroniza de una vez**. Requiere Servicios de Google
+  Play; en equipos sin GMS se pega el enlace a mano.
+
+### Pruebas
+- **Dispositivo (TECNO KM4k):** release de ~2.9 MB instalado y funcionando;
+  migraciones Room, bandeja, importación/exportación con el escritor XLSX propio
+  (prueba unitaria del formato incluida), botones de permisos y roles, selección
+  de plantillas sin re-guardar y apertura del escáner QR verificados.
+
 ## [1.2] — 2026-09-28
 
 ### Agregado

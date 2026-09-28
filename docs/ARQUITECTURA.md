@@ -82,6 +82,25 @@ sincronizar, `MainViewModel` filtra por usuario, deduplica por cédula y publica
 las filas en `drivePreviewRows`; la confirmación (`commitDriveImport`) reemplaza
 la lista de contactos con las filas marcadas.
 
+## Exportación
+
+`report/XlsxWriter.kt` genera el `.xlsx` (ZIP + XML OOXML con celdas `inlineStr`)
+**sin Apache POI**. `report/ReportExporter.kt` arma las filas de contactos,
+plantilla e historial. Al no incluir POI, el APK y el uso de memoria bajan mucho
+(importación y exportación en streaming).
+
+## Permisos y roles
+
+`MainActivity` centraliza:
+- **Todos los permisos** de runtime en una sola petición
+  (`RequestMultiplePermissions`).
+- **Permisos especiales** encadenados: superposición
+  (`ACTION_MANAGE_OVERLAY_PERMISSION`) y pantalla completa
+  (`ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT`, Android 14+).
+- **Roles predeterminados** encadenados (SMS y Teléfono) vía `RoleManager`.
+- **Escáner QR** del enlace de Drive con Google Code Scanner
+  (`GmsBarcodeScanning`, sin permiso de cámara).
+
 ## Roles del sistema
 
 - **SMS predeterminado** (`smsrole/`): `SmsReceiver`, `MmsReceiver`,

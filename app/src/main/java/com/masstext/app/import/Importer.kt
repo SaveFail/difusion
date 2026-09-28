@@ -24,38 +24,27 @@ object Importer {
         "283", "284", "285", "286", "287", "288", "292", "293", "295", "297", "298", "299"
     )
 
-    // Convierte una celda de Excel a texto limpio.
-    // Importante: Excel guarda el teléfono como número y sin los formatos acostumbrados,
-    // 04122873438 queda como 4122873438 (número). Si se convierte con toString(),
-    // Java usa notación científica: 4.122873438E9. Aquí se formatea el valor numérico
-    // entero sin exponentes para que el número conserve todos sus dígitos.
-    private fun formatCell(cell: org.apache.poi.ss.usermodel.Cell): String {
+    // Nombre visible del archivo (para decidir si es .xlsx o CSV). Para URIs de
+    // content:// el toString() no trae la extensión, por eso se consulta el
+    // proveedor (OpenableColumns).
+    private fun displayName(context: Context, uri: Uri): String {
         return try {
-            when (cell.cellType) {
-                org.apache.poi.ss.usermodel.CellType.STRING -> cell.stringCellValue.trim()
-                org.apache.poi.ss.usermodel.CellType.NUMERIC -> {
-                    val v = cell.numericCellValue
-                    if (v == Math.rint(v) && !v.isInfinite() && Math.abs(v) < 1e15) {
-                        java.math.BigDecimal.valueOf(v).stripTrailingZeros().toBigInteger().toString()
-                    } else {
-                        cell.toString()
-                    }
-                }
-                else -> cell.toString()
-            }
-        } catch (e: Exception) {
-            cell.toString()
+            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                val idx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                if (idx >= 0 && cursor.moveToFirst()) cursor.getString(idx) else ""
+            } ?: uri.toString()
+        } catch (_: Exception) {
+            uri.toString()
         }
     }
 
     fun parseFile(context: Context, uri: Uri): List<ParsedRow> {
-        val name = uri.toString()
-        val rows = if (name.endsWith(".xlsx", ignoreCase = true) || name.endsWith(".xls", ignoreCase = true)) {
+        val name = displayName(context, uri).lowercase()
+        return if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
             parseExcel(context, uri)
         } else {
             parseCsv(context, uri)
         }
-        return rows
     }
 
     private fun parseCsv(context: Context, uri: Uri): List<ParsedRow> {
@@ -106,35 +95,21 @@ object Importer {
         return result
     }
 
+    // Lee un .xlsx local con el MISMO lector en streaming que usa Google Drive
+    // (ZipFile + XmlPullParser): se copia a un temporal y se lee la primera
+    // hoja, sin cargar el libro completo en memoria.
     private fun parseExcel(context: Context, uri: Uri): List<ParsedRow> {
         val input = context.contentResolver.openInputStream(uri)
             ?: throw IllegalStateException("No se pudo abrir el archivo")
-        val rows = mutableListOf<List<String>>()
-        input.use { stream ->
-            val book = org.apache.poi.ss.usermodel.WorkbookFactory.create(stream)
-            val sheet = book.getSheetAt(0)
-            val rowIterator = sheet.rowIterator()
-            while (rowIterator.hasNext()) {
-                val row = rowIterator.next()
-                val values = mutableListOf<String>()
-                val last = row.lastCellNum.toInt()
-                var max = -1
-                for (c in row.cellIterator()) {
-                    val idx = c.columnIndex
-                    if (idx > max) max = idx
-                }
-                val cellCount = if (max >= 0) max + 1 else 0
-                for (i in 0 until cellCount) {
-                    val cell = row.getCell(i)
-                    values.add(if (cell != null) formatCell(cell) else "")
-                }
-                if (values.any { it.isNotBlank() }) {
-                    rows.add(values)
-                }
+        val tmp = java.io.File.createTempFile("local_sheet", ".xlsx")
+        try {
+            input.use { stream ->
+                java.io.FileOutputStream(tmp).use { out -> stream.copyTo(out, 64 * 1024) }
             }
-            book.close()
+            return readSheetStreaming(tmp, 0)
+        } finally {
+            tmp.delete()
         }
-        return mapRows(rows)
     }
 
     private data class ColumnMap(

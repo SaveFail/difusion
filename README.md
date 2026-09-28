@@ -8,7 +8,7 @@ pantalla de llamada y controlar el audio durante la llamada.
 
 - **Paquete:** `com.masstext.app`
 - **Nombre visible:** LEX RECOVER
-- **Versión:** 1.2 (`versionCode 3`)
+- **Versión:** 1.3 (`versionCode 4`)
 - **minSdk:** 26 (Android 8) · **targetSdk/compileSdk:** 35 (Android 15)
 
 ---
@@ -40,7 +40,9 @@ pantalla de llamada y controlar el audio durante la llamada.
   bloque); **MODO DESATENDIDO** envía consecutivo sin bloques ni contador.
 - Estados por mensaje (`ENVIANDO` → `ENVIADO` / `FALLIDO`) con código y motivo
   del fallo; reenvío de fallidos desde la bandeja o el historial.
-- Plantillas de mensaje con variables `{nombre}` y `{telefono}`.
+- Plantillas de mensaje con variables `{nombre}` y `{telefono}`. Al **elegir una
+  plantilla existente** no hay que volver a guardarla: se puede enviar directo y
+  solo se pide guardar si se **edita** el texto (actualiza, no duplica).
 - Papelera: mover, restaurar y vaciar conversaciones.
 
 ### Llamadas
@@ -69,6 +71,9 @@ pantalla de llamada y controlar el audio durante la llamada.
 ### Sincronización desde Google Drive y categorías
 - Se pega el enlace de la hoja (compartida como *Lector*); la app enumera sus
   pestañas y se elige cuál importar.
+- También se puede **escanear un código QR**: botón de **cámara** en el campo del
+  enlace (Google Code Scanner, sin permiso de cámara) que lee el enlace del Drive
+  y **sincroniza de una vez**.
 - Se importan solo los contactos cuyo **"Asignado a"** coincide con tu usuario
   (o todos si la hoja no tiene esa columna), sin duplicados por cédula.
 - **Categorías por columna:** `SEGUIMIENTO`/`TIPIFICACIÓN` (tipificación),
@@ -154,13 +159,18 @@ Si `keystore.properties` no existe, el APK de release se genera **sin firmar**.
 
 ## Primer arranque: permisos y roles
 
-1. **SMS predeterminado:** Ajustes → *Hacer app de SMS predeterminada* (necesario
-   para enviar/recibir y leer la bandeja).
-2. **Teléfono predeterminado:** Ajustes → *App de llamadas predeterminada*
-   (habilita la pantalla de llamada propia y el riel de controles).
-3. **Permisos:** SMS, teléfono/estado, contactos, micrófono (grabación), cámara
-   (si aplica) y **superposición** (overlay de llamada entrante).
-4. **Notificaciones** (Android 13+).
+En **Ajustes** hay botones para dejarlo listo rápido:
+
+1. **Dar todos los permisos:** pide de una vez SMS, llamadas, estado del
+   teléfono, micrófono y notificaciones (Android 13+).
+2. **Permisos especiales:** encadena **superposición** (mostrar sobre otras apps)
+   y **pantalla completa** para las llamadas (Android 14+).
+3. **Hacer predeterminadas Mensajes y Llamadas:** solicita los dos roles seguidos
+   (app de SMS y app de teléfono). Necesario para enviar/recibir y para la
+   pantalla de llamada propia.
+
+> Android **no** tiene un permiso especial para otorgar permisos: cada uno lo
+> concede el usuario en el diálogo del sistema o en la pantalla de Ajustes.
 
 ---
 
@@ -233,6 +243,27 @@ Servicios clave (`app/src/main/java/com/masstext/app/service/`):
 - [`docs/LLAMADAS-Y-MENSAJE.md`](docs/LLAMADAS-Y-MENSAJE.md) — llamadas masivas y
   mensaje pregrabado (incluye limitaciones del equipo).
 - [`CHANGELOG.md`](CHANGELOG.md) — registro de cambios y pruebas realizadas.
+
+---
+
+## Comentarios y correcciones
+
+Los reportes de correcciones se gestionan en el repositorio público
+[`SaveFail/lex-recover-comentarios`](https://github.com/SaveFail/lex-recover-comentarios/issues)
+(solo Issues; no contiene código ni acceso a la app).
+
+---
+
+## Rendimiento en equipos de bajos recursos
+
+Pensado para equipos con poca RAM (4 GB) y poco almacenamiento:
+
+- **APK de release ~2.9 MB** (R8 + `shrinkResources`).
+- **Sin Apache POI**: Excel se lee y escribe en **streaming** (lector propio y
+  escritor `XlsxWriter`), con bajo uso de memoria.
+- **Bandeja**: sincronización con **una sola lectura** de ids y **inserción en
+  lote** (antes eran 2 consultas por mensaje).
+- Sin `largeHeap`; filtros y conteos calculados una vez por lista.
 
 ---
 

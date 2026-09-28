@@ -38,6 +38,7 @@ object ImportPreviewOverlay {
     private const val TAG = "ImportPreviewOverlay"
     private const val CAT_ALL = "\u0000ALL"
     private const val CAT_BLANK = "\u0000NONE"
+    private const val MAX_ROWS = 300
     private const val SIN_TIPIF = "Sin gestionar"
     private const val SIN_ESTADO = "Sin estado"
     private const val SIN_MEDIO = "Sin medio"
@@ -365,7 +366,10 @@ object ImportPreviewOverlay {
             })
             return
         }
-        pairs.forEach { (index, row) ->
+        // Se dibujan como máximo MAX_ROWS filas: con miles de contactos crear
+        // todas las vistas de golpe saturaba equipos de pocos recursos.
+        val shown = if (pairs.size > MAX_ROWS) pairs.subList(0, MAX_ROWS) else pairs
+        shown.forEach { (index, row) ->
             val rowView = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -442,6 +446,14 @@ object ImportPreviewOverlay {
                 layoutParams = LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 1)
                 )
+            })
+        }
+        if (pairs.size > MAX_ROWS) {
+            container.addView(TextView(context).apply {
+                text = "… y ${pairs.size - MAX_ROWS} más. Usa los filtros para acotar."
+                setTextColor(FAINT)
+                textSize = 12f
+                setPadding(dp(context, 6), dp(context, 10), dp(context, 6), dp(context, 10))
             })
         }
     }

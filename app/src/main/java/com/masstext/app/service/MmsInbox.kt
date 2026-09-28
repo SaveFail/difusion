@@ -24,6 +24,11 @@ object MmsInbox {
         val now = System.currentTimeMillis()
         try {
             val addresses = threadAddresses(context)
+            // Ids ya importados y purgados, leídos UNA sola vez (antes era 2
+            // consultas por cada MMS).
+            val existing = db.smsMessageDao().allProviderIds(true).toHashSet()
+            val purged = db.smsMessageDao().allPurgedIds(true).toHashSet()
+            val newMessages = mutableListOf<SmsMessage>()
             val mmsUri = Uri.parse("content://mms")
             context.contentResolver.query(
                 mmsUri,
@@ -41,9 +46,8 @@ object MmsInbox {
             )?.use { cursor ->
                 while (cursor.moveToNext()) {
                     val mmsId = cursor.getLong(0)
-                    // Borrados de forma definitiva o ya importados: se saltan.
-                    if (db.smsMessageDao().isPurged(mmsId, true) > 0) continue
-                    if (db.smsMessageDao().byProviderId(mmsId, true) != null) continue
+                    // Borrado definitivo o ya importado: se salta sin tocar la base.
+                    if (mmsId in purged || mmsId in existing) continue
 
                     val threadId = cursor.getLong(1)
                     val address = addresses[threadId] ?: continue
@@ -58,7 +62,7 @@ object MmsInbox {
                     val body = parts.joinToString("\n") { it.text.orEmpty() }
                     val media = parts.firstOrNull { it.mediaPath != null }
 
-                    db.smsMessageDao().insert(
+                    newMessages.add(
                         SmsMessage(
                             providerId = mmsId,
                             threadId = threadId,
@@ -74,12 +78,15 @@ object MmsInbox {
                             subject = subject?.takeIf { it.isNotBlank() }
                         )
                     )
-                    imported++
                     if (msgBox == Telephony.Mms.MESSAGE_BOX_INBOX && date >= now - 60_000L) {
                         val preview = body.ifBlank { "Mensaje multimedia (${media?.mime ?: "MMS"})" }
                         freshIncoming += address to preview
                     }
                 }
+            }
+            if (newMessages.isNotEmpty()) {
+                db.smsMessageDao().insertAll(newMessages)
+                imported = newMessages.size
             }
             if (freshIncoming.isNotEmpty()) {
                 val config = ThemePrefs.read(context)

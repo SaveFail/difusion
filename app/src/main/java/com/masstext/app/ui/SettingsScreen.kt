@@ -44,12 +44,16 @@ fun SettingsScreen(
     smsGranted: Boolean,
     onRequestSmsPermission: () -> Unit,
     onMakeDefaultSms: (() -> Unit)?,
+    onRequestAllPermissions: () -> Unit,
+    onRequestSpecialPermissions: () -> Unit,
+    fullScreenGranted: Boolean,
     onRepairPhones: (() -> Unit)?,
     onOpenAppearance: () -> Unit,
     userName: String,
     onUserChange: (String) -> Unit,
+    isDefaultSms: Boolean,
     isDefaultDialer: Boolean,
-    onMakeDefaultDialer: (() -> Unit)?,
+    onMakeDefaultMessagingAndDialer: () -> Unit,
     onOpenCallCenter: () -> Unit,
     bluetoothPrefer: Boolean,
     onBluetoothPreferChange: (Boolean) -> Unit,
@@ -62,6 +66,7 @@ fun SettingsScreen(
     onRequestMic: () -> Unit,
     driveUrl: String,
     onDriveUrlChange: (String) -> Unit,
+    onScanQr: () -> Unit,
     driveSyncStatus: String,
     onSyncFromDrive: () -> Unit,
     // Hojas visibles del libro (picker) + hoja elegida + finaliza la importación.
@@ -88,6 +93,40 @@ fun SettingsScreen(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
+            SectionCard {
+                Text(
+                    "Permisos de la app",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "Concede de una vez todos los permisos normales (SMS, llamadas, estado del teléfono, micrófono y notificaciones) y luego los permisos especiales (mostrar sobre otras apps y pantalla completa para las llamadas).",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                PrimaryActionButton(
+                    text = "Dar todos los permisos",
+                    onClick = onRequestAllPermissions,
+                    modifier = Modifier.fillMaxWidth(),
+                    icon = Icons.Default.CheckCircle
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                SecondaryActionButton(
+                    text = if (overlayGranted && fullScreenGranted) {
+                        "Permisos especiales activados"
+                    } else {
+                        "Dar permisos especiales"
+                    },
+                    onClick = onRequestSpecialPermissions,
+                    modifier = Modifier.fillMaxWidth(),
+                    icon = Icons.Default.Layers
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -169,7 +208,21 @@ fun SettingsScreen(
                 leadingIcon = {
                     Icon(Icons.Default.Cloud, contentDescription = null)
                 },
+                trailingIcon = {
+                    IconButton(onClick = onScanQr) {
+                        Icon(
+                            Icons.Default.QrCodeScanner,
+                            contentDescription = "Escanear código QR del Drive"
+                        )
+                    }
+                },
                 shape = RoundedCornerShape(14.dp)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                "Toca el ícono de QR para abrir la cámara y escanear el código que te da Drive en el navegador.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(10.dp))
             Text(
@@ -254,20 +307,20 @@ fun SettingsScreen(
 
             SectionCard {
                 Text(
-                    "App de llamadas",
+                    "Mensajes y llamadas predeterminadas",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "Convierte esta app en la app de llamadas predeterminada. Así verás la pantalla completa de la llamada en su propio apartado, y durante las llamadas masivas tendrás los controles (silenciar, altavoz, espera, colgar y teclado) en la barra lateral sin que te quiten tu listado.",
+                    "Convierte esta app en la app de Mensajes (SMS) y de Llamadas predeterminada a la vez. Así podrás enviar y recibir SMS, y ver la pantalla completa de la llamada con sus controles durante las campañas.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(10.dp))
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = if (isDefaultDialer) {
+                    color = if (isDefaultSms && isDefaultDialer) {
                         MaterialTheme.colorScheme.primaryContainer
                     } else {
                         MaterialTheme.colorScheme.surfaceVariant
@@ -281,23 +334,33 @@ fun SettingsScreen(
                         AppIcon(
                             Icons.Default.Phone,
                             contentDescription = null,
-                            tint = if (isDefaultDialer) MaterialTheme.colorScheme.primary
+                            tint = if (isDefaultSms && isDefaultDialer) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.onSurfaceVariant,
                             size = 18.dp
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            if (isDefaultDialer) "Ya eres la app de llamadas predeterminada"
-                            else "No eres la app de llamadas predeterminada",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (isDefaultDialer) MaterialTheme.colorScheme.onPrimaryContainer
-                            else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                if (isDefaultSms) "Mensajes: predeterminada"
+                                else "Mensajes: no predeterminada",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (isDefaultSms) MaterialTheme.colorScheme.onPrimaryContainer
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                if (isDefaultDialer) "Llamadas: predeterminada"
+                                else "Llamadas: no predeterminada",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (isDefaultDialer) MaterialTheme.colorScheme.onPrimaryContainer
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-                if (isDefaultDialer) {
+                if (isDefaultSms && isDefaultDialer) {
                     PrimaryActionButton(
                         text = "Abrir centro de llamadas",
                         onClick = onOpenCallCenter,
@@ -306,8 +369,8 @@ fun SettingsScreen(
                     )
                 } else {
                     PrimaryActionButton(
-                        text = "Hacer predeterminada la app de llamadas",
-                        onClick = { onMakeDefaultDialer?.invoke() },
+                        text = "Hacer predeterminadas Mensajes y Llamadas",
+                        onClick = onMakeDefaultMessagingAndDialer,
                         modifier = Modifier.fillMaxWidth(),
                         icon = Icons.Default.Phone
                     )

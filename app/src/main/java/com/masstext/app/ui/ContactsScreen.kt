@@ -77,6 +77,15 @@ fun ContactsScreen(
     val hasBlankTipif = remember(contacts) { contacts.any { it.gestion.isBlank() } }
     val hasBlankEstado = remember(contacts) { contacts.any { it.estado.isBlank() } }
     val hasBlankMedio = remember(contacts) { contacts.any { it.medio.isBlank() } }
+    // Conteos por valor, calculados UNA vez por lista (antes se recorría toda la
+    // lista por cada chip en cada recomposición).
+    val tipifCounts = remember(contacts) { contacts.groupingBy { it.gestion.trim() }.eachCount() }
+    val estadoCounts = remember(contacts) { contacts.groupingBy { it.estado.trim() }.eachCount() }
+    val medioCounts = remember(contacts) { contacts.groupingBy { it.medio.trim() }.eachCount() }
+    // Usuarios disponibles para asignar (incluye los que ya traen los contactos).
+    val assignableUsers = remember(users, contacts) {
+        (users + contacts.map { it.assignment }.filter { it.isNotBlank() }).distinct().sorted()
+    }
 
     var tipifFilter by remember { mutableStateOf(FILTER_ALL) }
     var estadoFilter by remember { mutableStateOf(FILTER_ALL) }
@@ -287,8 +296,8 @@ fun ContactsScreen(
                 countFor = { value ->
                     when (value) {
                         FILTER_ALL -> contacts.size
-                        FILTER_UNMANAGED -> contacts.count { it.gestion.isBlank() }
-                        else -> contacts.count { it.gestion.trim() == value }
+                        FILTER_UNMANAGED -> tipifCounts[""] ?: 0
+                        else -> tipifCounts[value] ?: 0
                     }
                 },
                 onSelect = { selectTipif(it) }
@@ -302,8 +311,8 @@ fun ContactsScreen(
                 countFor = { value ->
                     when (value) {
                         FILTER_ALL -> contacts.size
-                        FILTER_UNMANAGED -> contacts.count { it.estado.isBlank() }
-                        else -> contacts.count { it.estado.trim() == value }
+                        FILTER_UNMANAGED -> estadoCounts[""] ?: 0
+                        else -> estadoCounts[value] ?: 0
                     }
                 },
                 onSelect = { selectEstado(it) }
@@ -317,8 +326,8 @@ fun ContactsScreen(
                 countFor = { value ->
                     when (value) {
                         FILTER_ALL -> contacts.size
-                        FILTER_UNMANAGED -> contacts.count { it.medio.isBlank() }
-                        else -> contacts.count { it.medio.trim() == value }
+                        FILTER_UNMANAGED -> medioCounts[""] ?: 0
+                        else -> medioCounts[value] ?: 0
                     }
                 },
                 onSelect = { selectMedio(it) }
@@ -375,7 +384,7 @@ fun ContactsScreen(
 
     if (showAssignDialog) {
         AssignUserDialog(
-            users = (users + contacts.map { it.assignment }.filter { it.isNotBlank() }).distinct().sorted(),
+            users = assignableUsers,
             title = assignTitle,
             onAssign = { userName -> onConfirmAssign?.invoke(userName) },
             onDismiss = { showAssignDialog = false }

@@ -19,6 +19,17 @@ interface SmsMessageDao {
     @Insert
     suspend fun insert(message: SmsMessage): Long
 
+    @Insert
+    suspend fun insertAll(messages: List<SmsMessage>): List<Long>
+
+    // Ids ya importados / purgados por tipo (sms o mms). Se cargan UNA vez al
+    // sincronizar para no consultar la base por cada mensaje del proveedor.
+    @Query("SELECT providerId FROM sms_messages WHERE isMms = :isMms")
+    suspend fun allProviderIds(isMms: Boolean): List<Long>
+
+    @Query("SELECT providerId FROM sms_purged WHERE isMms = :isMms")
+    suspend fun allPurgedIds(isMms: Boolean): List<Long>
+
     @Update
     suspend fun update(message: SmsMessage)
 

@@ -178,9 +178,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _users.value = updated
         saveUsers(updated)
         viewModelScope.launch {
-            db.contactDao().getAllOnce()
-                .filter { it.assignment == name }
-                .forEach { db.contactDao().update(it.copy(assignment = "")) }
+            db.contactDao().clearAssignmentByName(name)
         }
     }
 
@@ -191,9 +189,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _users.value = updated
         saveUsers(updated)
         viewModelScope.launch {
-            db.contactDao().getAllOnce()
-                .filter { it.assignment == oldName }
-                .forEach { db.contactDao().update(it.copy(assignment = n)) }
+            db.contactDao().renameAssignment(oldName, n)
         }
     }
 
@@ -203,8 +199,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (n.isEmpty()) return
         if (n !in _users.value) addUser(n)
         viewModelScope.launch {
-            db.contactDao().getByIds(ids)
-                .forEach { db.contactDao().update(it.copy(assignment = n)) }
+            db.contactDao().setAssignment(ids, n)
         }
         _selectedContacts.value = emptySet()
     }
@@ -212,8 +207,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun clearAssignment(ids: Set<Long>) {
         if (ids.isEmpty()) return
         viewModelScope.launch {
-            db.contactDao().getByIds(ids)
-                .forEach { db.contactDao().update(it.copy(assignment = "")) }
+            db.contactDao().clearAssignmentByIds(ids)
         }
         _selectedContacts.value = emptySet()
     }
@@ -782,7 +776,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun saveTemplate(name: String, body: String) {
         viewModelScope.launch {
-            db.templateDao().insert(MessageTemplate(name = name, body = body))
+            // Si ya existe una plantilla con ese nombre se ACTUALIZA (no se
+            // duplica). Así, al reenviar una plantilla existente no se crean
+            // copias repetidas.
+            val existing = db.templateDao().getByName(name)
+            if (existing != null) {
+                db.templateDao().updateBody(existing.id, body)
+            } else {
+                db.templateDao().insert(MessageTemplate(name = name, body = body))
+            }
         }
     }
 
