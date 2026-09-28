@@ -311,6 +311,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    // Filas listas para importar que se muestran en la ventana flotante de
+    // revisión (ImportPreviewOverlay). Vacía = no hay revisión pendiente.
+    private var _drivePreviewRows = MutableStateFlow<List<ParsedRow>>(emptyList())
+    val drivePreviewRows: StateFlow<List<ParsedRow>> = _drivePreviewRows.asStateFlow()
+
+    // Datos de la hoja pendiente de confirmar (para el mensaje final).
+    private var pendingSheetName: String = ""
+    private var pendingSheetTotal: Int = 0
+    private var pendingDuplicates: Int = 0
+
     fun finalizeSyncFromDrive() {
         val sheetIndex = _driveSelectedSheetIndex.value
         val sheetName = _driveSheets.value.getOrNull(sheetIndex)
@@ -337,8 +347,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 val total = rows.size
                 val userName = _appUser.value.trim()
                 // Si la hoja trae columna de asignación ("Asignado a"/EJECUTIVO/…),
-                // se importan SOLO las filas asignadas a mi usuario (ignorando
-                // mayúsculas y tildes). Si la hoja no tiene esa columna, se importan todas.
+                // se muestran SOLO las filas asignadas a mi usuario (ignorando
+                // mayúsculas y tildes). Si la hoja no tiene esa columna, se muestran todas.
                 val hasAssignment = rows.any { it.assignment.isNotBlank() }
                 val mine = if (hasAssignment && userName.isNotEmpty()) {
                     rows.filter { normName(it.assignment) == normName(userName) }
@@ -367,31 +377,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         true
                     }
                 }
+                // No se importa todavía: se abre la ventana flotante de revisión
+                // para que el usuario marque qué filas importar.
+                pendingSheetName = sheetName
+                pendingSheetTotal = total
+                pendingDuplicates = repetidas
+                _drivePreviewRows.value = unicas
+                val gestiones = rows.map { it.gestion.trim() }
+                    .filter { it.isNotEmpty() }
+                    .distinct()
+                    .sorted()
+                val gestionesTxt = if (gestiones.isEmpty()) "sin columna de gestión"
+                    else gestiones.joinToString(", ")
                 _driveSyncStatus.value =
-                    "Importando ${unicas.size} contactos de \"$sheetName\"…"
-                db.contactDao().clear()
-                unicas.forEach { row ->
-                    db.contactDao().insert(
-                        Contact(
-                            name = row.name,
-                            phone = row.phone.trim(),
-                            cedula = row.cedula.trim(),
-                            assignment = row.assignment.trim()
-                        )
-                    )
-                }
-                val filtro = if (hasAssignment && userName.isNotEmpty())
-                    "asignados a \"$userName\"" else "de la hoja"
-                val msg = "Lista actualizada desde \"$sheetName\" ($filtro). " +
-                    "En la hoja: $total filas · Asignados a ti: ${mine.size} · " +
-                    "Cargados: ${unicas.size} · Duplicados por cédula: $repetidas"
-                _driveSyncStatus.value = msg
-                Log.d("LEX-Sync", "finalize OK: $msg")
-                Toast.makeText(
-                    app,
-                    "Cargados ${unicas.size} contactos · $repetidas duplicados",
-                    Toast.LENGTH_LONG
-                ).show()
+                    "Revisa la ventana flotante: ${unicas.size} contactos listos " +
+                        "(de $total filas · $repetidas duplicados por cédula · gestiones: $gestionesTxt)."
+                Log.d("LEX-Sync", "finalize: preview ${unicas.size} filas")
             } catch (e: Throwable) {
                 val msg = "Error al importar \"$sheetName\": ${e.message ?: e.javaClass.simpleName}"
                 _driveSyncStatus.value = msg
@@ -399,6 +400,57 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 Toast.makeText(app, msg, Toast.LENGTH_LONG).show()
             }
         }
+    }
+
+    /** Confirma la importación de las filas marcadas en la ventana de revisión. */
+    fun commitDriveImport(rows: List<ParsedRow>) {
+        if (rows.isEmpty()) {
+            _driveSyncStatus.value = "No marcaste ningún contacto. La lista no cambió."
+            _drivePreviewRows.value = emptyList()
+            return
+        }
+        viewModelScope.launch {
+            db.contactDao().clear()
+            rows.forEach { row ->
+                db.contactDao().insert(
+                    Contact(
+                        name = row.name,
+                        phone = row.phone.trim(),
+                        cedula = row.cedula.trim(),
+                        assignment = row.assignment.trim(),
+                        gestion = row.gestion.trim()
+                    )
+                )
+            }
+            val sheet = pendingSheetName.ifBlank { "la hoja" }
+            val msg = "Lista actualizada desde \"$sheet\". " +
+                "En la hoja: $pendingSheetTotal filas · Cargados: ${rows.size} · " +
+                "Duplicados por cédula: $pendingDuplicates"
+            _driveSyncStatus.value = msg
+            _drivePreviewRows.value = emptyList()
+            _driveSheets.value = emptyList()
+            _driveSelectedSheetIndex.value = -1
+            pendingSheetName = ""
+            pendingSheetTotal = 0
+            pendingDuplicates = 0
+            Log.d("LEX-Sync", "commit OK: $msg")
+            Toast.makeText(
+                getApplication(),
+                "Cargados ${rows.size} contactos",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    /** Cancela la revisión: no se toca la lista de contactos actual. */
+    fun cancelDrivePreview() {
+        _drivePreviewRows.value = emptyList()
+        _driveSheets.value = emptyList()
+        _driveSelectedSheetIndex.value = -1
+        pendingSheetName = ""
+        pendingSheetTotal = 0
+        pendingDuplicates = 0
+        _driveSyncStatus.value = "Importación cancelada. La lista de contactos no cambió."
     }
 
     fun viewDriveStatus() = _driveSyncStatus.value
@@ -707,7 +759,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             for (row in rows) {
                 // Se importan los teléfonos exactamente como vienen del archivo.
-                db.contactDao().insert(Contact(name = row.name, phone = row.phone.trim(), assignment = row.assignment))
+                db.contactDao().insert(
+                    Contact(
+                        name = row.name,
+                        phone = row.phone.trim(),
+                        cedula = row.cedula.trim(),
+                        assignment = row.assignment,
+                        gestion = row.gestion.trim()
+                    )
+                )
             }
         }
     }

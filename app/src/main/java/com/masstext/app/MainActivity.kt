@@ -66,6 +66,7 @@ import com.masstext.app.import.ParsedRow
 import com.masstext.app.report.ReportExporter
 import com.masstext.app.service.AppFeedback
 import com.masstext.app.service.CallBluetooth
+import com.masstext.app.service.ImportPreviewOverlay
 import com.masstext.app.service.SheetPickerOverlay
 import com.masstext.app.service.CallMonitor
 import com.masstext.app.storage.RecordStore
@@ -267,6 +268,28 @@ private fun MainScreen(viewModel: MainViewModel) {
             }
         } else {
             SheetPickerOverlay.hide(ctx)
+        }
+    }
+
+    // Ventana flotante de revisión: aparece cuando la sincronización ya leyó la
+    // hoja y hay filas listas para que el usuario marque qué importar.
+    val drivePreviewRows by viewModel.drivePreviewRows.collectAsStateWithLifecycle()
+    LaunchedEffect(drivePreviewRows) {
+        val ctx = context
+        if (drivePreviewRows.isNotEmpty()) {
+            if (ImportPreviewOverlay.canDraw(ctx)) {
+                ImportPreviewOverlay.show(
+                    ctx,
+                    drivePreviewRows,
+                    onImport = { chosen -> viewModel.commitDriveImport(chosen) },
+                    onCancel = { viewModel.cancelDrivePreview() }
+                )
+            } else {
+                // Sin permiso de superposición no hay ventana: se importa todo.
+                viewModel.commitDriveImport(drivePreviewRows)
+            }
+        } else {
+            ImportPreviewOverlay.hide(ctx)
         }
     }
 val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
@@ -703,6 +726,7 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                         onExportContacts = {
                             exportContacts(context, contacts.filter { selected.contains(it.id) })
                         },
+                        onExportVisible = { list -> exportContacts(context, list) },
                         onExportTemplate = {
                             exportTemplate(context)
                         },

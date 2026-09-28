@@ -9,7 +9,8 @@ import java.io.InputStreamReader
     val name: String,
     val phone: String,
     val cedula: String = "",
-    val assignment: String = ""
+    val assignment: String = "",
+    val gestion: String = ""
 )
 
 object Importer {
@@ -139,7 +140,8 @@ object Importer {
         val phoneIdx: Int,
         val assignIdx: Int,
         val hasHeader: Boolean,
-        val cedulaIdx: Int = -1
+        val cedulaIdx: Int = -1,
+        val gestionIdx: Int = -1
     )
 
     private val nameKeywords = setOf(
@@ -157,6 +159,13 @@ object Importer {
     private val cedulaKeywords = setOf(
         "cedula", "cédula", "documento", "doc", "identificacion", "identificación",
         "identidad", "numero de documento", "num doc", "ci", "nro", "n°", "doc identidad"
+    )
+    // Categoría de gestión: columna independiente de "Asignado a". Sus valores
+    // (PROMESA, NO CONTESTA, PAGO…) se usan para agrupar y filtrar contactos.
+    private val gestionKeywords = setOf(
+        "gestion", "gestión", "gestiones", "gestionado", "gestionada",
+        "tipificacion", "tipificación", "tipificacion de gestion", "tipo de gestion",
+        "categoria gestion", "categoria de gestion"
     )
 
     // Normaliza un encabezado: minúsculas y sin tildes, para reconocer encabezados
@@ -183,21 +192,32 @@ object Importer {
         val phoneIdx = folded.indexOfFirst { h ->
             matches(h, phoneKeywords) && !matches(h, cedulaKeywords) && !h.contains("documento")
         }
-        val assignIdx = folded.indexOfFirst { matches(it, assignKeywords) }
+        // La gestión se detecta antes que la asignación: un encabezado como
+        // "Categoría gestión" no debe confundirse con la columna de asignación.
+        val gestionIdx = folded.indexOfFirst { matches(it, gestionKeywords) }
+        val assignIdx = folded.indexOfFirst { h ->
+            matches(h, assignKeywords) && !matches(h, gestionKeywords)
+        }
         if (phoneIdx >= 0) {
             // Hay encabezado (al menos se reconoce el teléfono). Si el nombre no
             // tiene encabezado claro ("Columna 1", "ID", …) se usa la primera
-            // columna que no sea teléfono/cédula/asignación.
+            // columna que no sea teléfono/cédula/asignación/gestión.
             val resolvedName = if (nameIdx >= 0) nameIdx else {
                 folded.indices.firstOrNull {
-                    it != phoneIdx && it != cedulaIdx && it != assignIdx
+                    it != phoneIdx && it != cedulaIdx && it != assignIdx && it != gestionIdx
                 } ?: 0
             }
-            return ColumnMap(resolvedName, phoneIdx, assignIdx, true, cedulaIdx)
+            return ColumnMap(resolvedName, phoneIdx, assignIdx, true, cedulaIdx, gestionIdx)
         }
         // Sin encabezado reconocible: se asume primera columna = nombre,
-        // segunda = teléfono, tercera = cédula y cuarta = asignación.
-        return ColumnMap(0, 1, if (header.size > 2) 2 else -1, false, -1)
+        // segunda = teléfono, tercera = asignación y cuarta = gestión.
+        return ColumnMap(
+            0, 1,
+            if (header.size > 2) 2 else -1,
+            false,
+            -1,
+            if (header.size > 3) 3 else -1
+        )
     }
 
     private fun mapRows(raw: List<List<String>>): List<ParsedRow> {
@@ -216,7 +236,8 @@ object Importer {
             // para no modificar los datos que el usuario coloca en su Excel.
             val assignment = row.getOrNull(map.assignIdx).orEmpty().trim()
             val cedula = row.getOrNull(map.cedulaIdx).orEmpty().trim()
-            result.add(ParsedRow(name, phone, cedula, assignment))
+            val gestion = row.getOrNull(map.gestionIdx).orEmpty().trim()
+            result.add(ParsedRow(name, phone, cedula, assignment, gestion))
         }
         return result
     }
