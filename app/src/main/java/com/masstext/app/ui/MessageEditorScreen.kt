@@ -109,6 +109,13 @@ fun MessageEditorScreen(
                 shape = RoundedCornerShape(14.dp)
             )
 
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                "Usa {nombre} para personalizar con el nombre de cada cliente (y {telefono} para el número).",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.tertiary
+            )
+
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(
@@ -126,13 +133,6 @@ fun MessageEditorScreen(
                     label = { Text("$smsCount SMS") }
                 )
             }
-
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                "Usa {nombre} para personalizar con el nombre de cada cliente.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.tertiary
-            )
 
             Spacer(modifier = Modifier.height(8.dp))
 

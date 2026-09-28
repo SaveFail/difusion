@@ -637,8 +637,12 @@ private fun ConversationInputBar(
             Spacer(Modifier.width(6.dp))
             FilledIconButton(
                 onClick = {
-                    val body = text.trim()
-                    if (body.isBlank()) return@FilledIconButton
+                    val raw = text.trim()
+                    if (raw.isBlank()) return@FilledIconButton
+                    // En el chat también se reemplazan las variables de plantilla.
+                    val body = raw
+                        .replace("{nombre}", conversation.name)
+                        .replace("{telefono}", conversation.address)
                     scope.launch {
                         viewModel.sendSingleMessage(conversation.address, body)
                         Toast.makeText(context, "Mensaje enviado", Toast.LENGTH_SHORT).show()

@@ -1,5 +1,19 @@
 # Registro de cambios
 
+## [1.6] — 2026-09-28
+
+### Mejorado
+- **Editor de mensajes:** el texto “Usa `{nombre}` para personalizar…” ahora
+  aparece en la **sección del mensaje** (debajo del campo de texto) y ya no justo
+  encima del nombre de la plantilla, para evitar confusión. La sección de
+  plantillas queda arriba, con su ayuda justo debajo de las plantillas creadas.
+- **Variables en el chat:** al enviar un mensaje desde un chat también se
+  reemplazan `{nombre}` y `{telefono}` (antes solo en el envío masivo).
+
+### Notas
+- El **check de estado dentro de cada chat** (enviando/enviado/no enviado) se
+  incluyó en la 1.5; esta versión lo conserva.
+
 ## [1.5] — 2026-09-28
 
 ### Corregido / mejorado
