@@ -383,15 +383,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 pendingSheetTotal = total
                 pendingDuplicates = repetidas
                 _drivePreviewRows.value = unicas
-                val gestiones = rows.map { it.gestion.trim() }
-                    .filter { it.isNotEmpty() }
-                    .distinct()
-                    .sorted()
-                val gestionesTxt = if (gestiones.isEmpty()) "sin columna de gestión"
-                    else gestiones.joinToString(", ")
+                fun distintos(selector: (ParsedRow) -> String): Int =
+                    rows.map { selector(it).trim() }.filter { it.isNotEmpty() }.distinct().size
+                val nTipif = distintos { it.gestion }
+                val nEstados = distintos { it.estado }
+                val nMedios = distintos { it.medio }
+                val resumenCat = buildString {
+                    append("tipificaciones: $nTipif")
+                    if (nEstados > 0) append(" · estados: $nEstados")
+                    if (nMedios > 0) append(" · medios: $nMedios")
+                }
                 _driveSyncStatus.value =
                     "Revisa la ventana flotante: ${unicas.size} contactos listos " +
-                        "(de $total filas · $repetidas duplicados por cédula · gestiones: $gestionesTxt)."
+                        "(de $total filas · $repetidas duplicados por cédula · $resumenCat)."
                 Log.d("LEX-Sync", "finalize: preview ${unicas.size} filas")
             } catch (e: Throwable) {
                 val msg = "Error al importar \"$sheetName\": ${e.message ?: e.javaClass.simpleName}"
@@ -418,7 +422,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         phone = row.phone.trim(),
                         cedula = row.cedula.trim(),
                         assignment = row.assignment.trim(),
-                        gestion = row.gestion.trim()
+                        gestion = row.gestion.trim(),
+                        estado = row.estado.trim(),
+                        medio = row.medio.trim()
                     )
                 )
             }
@@ -765,7 +771,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         phone = row.phone.trim(),
                         cedula = row.cedula.trim(),
                         assignment = row.assignment,
-                        gestion = row.gestion.trim()
+                        gestion = row.gestion.trim(),
+                        estado = row.estado.trim(),
+                        medio = row.medio.trim()
                     )
                 )
             }

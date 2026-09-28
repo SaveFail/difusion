@@ -151,7 +151,11 @@ fun SettingsScreen(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                "Crea en Google Sheets una hoja con columnas: Nombre, Cédula, Teléfono, \"Asignado a\" y \"Gestión\". Luego compártela desde Drive con \"Cualquier persona con el enlace → Lector\" y pega aquí el enlace.",
+                "Crea en Google Sheets una hoja con columnas: Nombre, Cédula, Teléfono, " +
+                    "\"Asignado a\" (o EJECUTIVO), y las categorías \"SEGUIMIENTO\" " +
+                    "(tipificación), \"STATUS\" (estado) y \"MEDIO DE CONTACTO\". Luego " +
+                    "compártela desde Drive con \"Cualquier persona con el enlace → Lector\" " +
+                    "y pega aquí el enlace.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -173,12 +177,15 @@ fun SettingsScreen(
                     "\"Asignado a\" coincida con tu Nombre de usuario (sin tildes ni mayúsculas). " +
                     "Si la hoja no tiene esa columna, se importan todos. Se descartan duplicados " +
                     "por cédula y esa lista REEMPLAZA la lista de contactos a llamar.\n\n" +
-                    "La columna \"Gestión\" se usa para agrupar los contactos por categorías en " +
-                    "Mis Contactos (ej. PROMESA, NO CONTESTA). Los que no tengan gestión aparecen " +
-                    "en \"Sin gestionar\"; al elegir una categoría, \"Todos\" selecciona solo esa.\n\n" +
+                    "Las columnas de categorías se detectan por su nombre: \"SEGUIMIENTO\" o " +
+                    "\"TIPIFICACIÓN\" (ej. NO CONTESTA), \"STATUS\" o \"ESTADO\" (ej. PROMESA DE " +
+                    "PAGO) y \"MEDIO DE CONTACTO\" (ej. WHATSAPP). En Mis Contactos verás un " +
+                    "filtro por cada una con los nombres reales de la hoja; los vacíos aparecen " +
+                    "como \"Sin gestionar\", \"Sin estado\" o \"Sin medio\", y al elegir una " +
+                    "categoría \"Todos\" selecciona solo los visibles.\n\n" +
                     "Antes de reemplazar la lista, se abre una VENTANA FLOTANTE de revisión: " +
-                    "arriba las categorías de gestión y abajo las filas con todas las columnas " +
-                    "y una casilla (todas marcadas). Marca lo que quieras y pulsa \"Importar\".",
+                    "arriba los filtros de cada categoría y abajo las filas con todas las " +
+                    "columnas y una casilla (todas marcadas). Marca lo que quieras e \"Importar\".",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

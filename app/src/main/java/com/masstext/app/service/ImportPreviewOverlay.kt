@@ -24,12 +24,11 @@ import com.masstext.app.import.ParsedRow
  * Ventana flotante de REVISIÓN previa a importar desde Drive. Se muestra
  * después de elegir la hoja y antes de reemplazar la lista de contactos.
  *
- *  - Arriba, chips con las categorías de gestión (y "Sin gestionar" + "Todas").
- *  - Debajo, las filas de la categoría elegida con TODAS las columnas
- *    (Nombre, Cédula, Teléfono, Asignado a) y una casilla por fila.
- *  - Todas las casillas vienen marcadas; "Marcar todo"/"Nada" actúan sobre la
- *    categoría visible.
- *  - "Importar (N)" confirma y devuelve solo las filas marcadas.
+ *  - Chips con las categorías de cada columna: Tipificación (SEGUIMIENTO),
+ *    Estado (STATUS) y Medio de contacto.
+ *  - Debajo, las filas de la categoría elegida con TODAS las columnas y una
+ *    casilla por fila. Todas vienen marcadas.
+ *  - "Marcar todo"/"Nada" actúan sobre lo visible; "Importar (N)" confirma.
  *
  * Es una ventana real de WindowManager (TYPE_APPLICATION_OVERLAY), el mismo
  * patrón que SheetPickerOverlay y CallOverlay.
@@ -38,8 +37,10 @@ object ImportPreviewOverlay {
 
     private const val TAG = "ImportPreviewOverlay"
     private const val CAT_ALL = "\u0000ALL"
-    private const val CAT_UNMANAGED = "\u0000NONE"
-    private const val UNMANAGED_LABEL = "Sin gestionar"
+    private const val CAT_BLANK = "\u0000NONE"
+    private const val SIN_TIPIF = "Sin gestionar"
+    private const val SIN_ESTADO = "Sin estado"
+    private const val SIN_MEDIO = "Sin medio"
 
     private const val BG = 0xFF16223A.toInt()
     private const val GREEN = 0xFF2ECC71.toInt()
@@ -59,7 +60,9 @@ object ImportPreviewOverlay {
     private var onCancel: (() -> Unit)? = null
     private var allRows: List<ParsedRow> = emptyList()
     private val selectedIndices = mutableSetOf<Int>()
-    private var currentCategory: String = CAT_ALL
+    private var currentGestion: String = CAT_ALL
+    private var currentEstado: String = CAT_ALL
+    private var currentMedio: String = CAT_ALL
 
     private fun dp(context: Context, value: Int): Int =
         (value * context.resources.displayMetrics.density).toInt()
@@ -81,13 +84,15 @@ object ImportPreviewOverlay {
         allRows = rows
         selectedIndices.clear()
         selectedIndices.addAll(rows.indices)
-        currentCategory = CAT_ALL
+        currentGestion = CAT_ALL
+        currentEstado = CAT_ALL
+        currentMedio = CAT_ALL
         this.onImport = onImport
         this.onCancel = onCancel
 
         val metrics = context.resources.displayMetrics
         val pillW = (metrics.widthPixels * 0.96f).toInt()
-        val maxH = (metrics.heightPixels * 0.85f).toInt()
+        val maxH = (metrics.heightPixels * 0.9f).toInt()
 
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -131,14 +136,10 @@ object ImportPreviewOverlay {
         }
         root.addView(summaryText)
 
-        // --- Chips de categorías de gestión (scroll horizontal) ---
-        val chipsScroll = HorizontalScrollView(context).apply {
-            isHorizontalScrollBarEnabled = false
-        }
-        chipsContainer = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
-        chipsScroll.addView(chipsContainer)
+        // --- Filtros por dimensión (una fila por columna) ---
+        chipsContainer = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
         root.addView(
-            chipsScroll,
+            chipsContainer,
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT
@@ -239,30 +240,38 @@ object ImportPreviewOverlay {
         onCancel = null
         allRows = emptyList()
         selectedIndices.clear()
-        currentCategory = CAT_ALL
+        currentGestion = CAT_ALL
+        currentEstado = CAT_ALL
+        currentMedio = CAT_ALL
     }
 
     // ---------- Datos ----------
 
-    private fun categories(): List<String> =
-        allRows.map { it.gestion.trim() }
+    private fun distinct(selector: (ParsedRow) -> String): List<String> =
+        allRows.map { selector(it).trim() }
             .filter { it.isNotBlank() }
             .distinct()
             .sorted()
 
-    private fun hasUnmanaged(): Boolean = allRows.any { it.gestion.isBlank() }
+    private fun hasBlank(selector: (ParsedRow) -> String): Boolean =
+        allRows.any { selector(it).isBlank() }
 
-    private fun countFor(category: String): Int = when (category) {
+    private fun countDim(selector: (ParsedRow) -> String, value: String): Int = when (value) {
         CAT_ALL -> allRows.size
-        CAT_UNMANAGED -> allRows.count { it.gestion.isBlank() }
-        else -> allRows.count { it.gestion.trim() == category }
+        CAT_BLANK -> allRows.count { selector(it).isBlank() }
+        else -> allRows.count { selector(it).trim() == value }
     }
 
-    private fun matches(row: ParsedRow): Boolean = when (currentCategory) {
+    private fun matchDim(value: String, selected: String): Boolean = when (selected) {
         CAT_ALL -> true
-        CAT_UNMANAGED -> row.gestion.isBlank()
-        else -> row.gestion.trim() == currentCategory
+        CAT_BLANK -> value.isBlank()
+        else -> value.trim() == selected
     }
+
+    private fun matches(row: ParsedRow): Boolean =
+        matchDim(row.gestion, currentGestion) &&
+            matchDim(row.estado, currentEstado) &&
+            matchDim(row.medio, currentMedio)
 
     private fun visiblePairs(): List<Pair<Int, ParsedRow>> =
         allRows.withIndex().filter { matches(it.value) }.map { it.index to it.value }
@@ -274,41 +283,73 @@ object ImportPreviewOverlay {
     private fun renderChips(context: Context) {
         val container = chipsContainer ?: return
         container.removeAllViews()
-        val options = mutableListOf(CAT_ALL)
-        options.addAll(categories())
-        if (hasUnmanaged()) options.add(CAT_UNMANAGED)
-        options.forEach { category ->
-            val label = when (category) {
-                CAT_ALL -> "Todas"
-                CAT_UNMANAGED -> UNMANAGED_LABEL
-                else -> category
-            }
-            val chip = TextView(context).apply {
-                text = "$label (${countFor(category)})"
+        addDimensionRow(
+            context, container, "Tipificación",
+            distinct { it.gestion }, hasBlank { it.gestion }, SIN_TIPIF,
+            { currentGestion }, { currentGestion = it }, { it.gestion }
+        )
+        addDimensionRow(
+            context, container, "Estado",
+            distinct { it.estado }, hasBlank { it.estado }, SIN_ESTADO,
+            { currentEstado }, { currentEstado = it }, { it.estado }
+        )
+        addDimensionRow(
+            context, container, "Medio de contacto",
+            distinct { it.medio }, hasBlank { it.medio }, SIN_MEDIO,
+            { currentMedio }, { currentMedio = it }, { it.medio }
+        )
+    }
+
+    private fun addDimensionRow(
+        context: Context,
+        parent: LinearLayout,
+        label: String,
+        categories: List<String>,
+        hasBlank: Boolean,
+        blankLabel: String,
+        current: () -> String,
+        setCurrent: (String) -> Unit,
+        selector: (ParsedRow) -> String
+    ) {
+        val wrap = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+        wrap.addView(TextView(context).apply {
+            text = label
+            setTextColor(FAINT)
+            textSize = 11f
+            typeface = Typeface.DEFAULT_BOLD
+            setPadding(dp(context, 4), dp(context, 3), dp(context, 4), dp(context, 1))
+        })
+        val scroll = HorizontalScrollView(context).apply { isHorizontalScrollBarEnabled = false }
+        val chips = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
+        fun addChip(text: String, value: String) {
+            chips.addView(TextView(context).apply {
+                this.text = text
                 setTextColor(TEXT)
                 textSize = 13f
                 maxLines = 1
                 ellipsize = TextUtils.TruncateAt.END
-                setPadding(dp(context, 12), dp(context, 6), dp(context, 12), dp(context, 6))
+                setPadding(dp(context, 12), dp(context, 5), dp(context, 12), dp(context, 5))
                 background = GradientDrawable().apply {
                     cornerRadius = dp(context, 14).toFloat()
-                    setColor(if (category == currentCategory) GREEN else CHIP)
+                    setColor(if (current() == value) GREEN else CHIP)
                 }
                 setOnClickListener {
-                    currentCategory = category
+                    setCurrent(value)
                     renderChips(context)
                     renderRows(context)
                     updateSummary()
                 }
-            }
-            container.addView(
-                chip,
-                LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                ).apply { rightMargin = dp(context, 6) }
-            )
+            }, LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply { rightMargin = dp(context, 6) })
         }
+        addChip("Todos (${countDim(selector, CAT_ALL)})", CAT_ALL)
+        categories.forEach { addChip("$it (${countDim(selector, it)})", it) }
+        if (hasBlank) addChip("$blankLabel (${countDim(selector, CAT_BLANK)})", CAT_BLANK)
+        scroll.addView(chips)
+        wrap.addView(scroll)
+        parent.addView(wrap)
     }
 
     private fun renderRows(context: Context) {
@@ -317,7 +358,7 @@ object ImportPreviewOverlay {
         val pairs = visiblePairs()
         if (pairs.isEmpty()) {
             container.addView(TextView(context).apply {
-                text = "Sin contactos en esta categoría"
+                text = "Sin contactos con estos filtros"
                 setTextColor(FAINT)
                 textSize = 13f
                 setPadding(dp(context, 6), dp(context, 12), dp(context, 6), dp(context, 12))
@@ -362,6 +403,18 @@ object ImportPreviewOverlay {
                 info.addView(TextView(context).apply {
                     text = detail
                     setTextColor(MUTED)
+                    textSize = 12f
+                    maxLines = 1
+                    ellipsize = TextUtils.TruncateAt.END
+                })
+            }
+            val cats = listOf(row.gestion, row.estado, row.medio)
+                .map { it.trim() }
+                .filter { it.isNotBlank() }
+            if (cats.isNotEmpty()) {
+                info.addView(TextView(context).apply {
+                    text = cats.joinToString("  ·  ")
+                    setTextColor(GREEN)
                     textSize = 12f
                     maxLines = 1
                     ellipsize = TextUtils.TruncateAt.END

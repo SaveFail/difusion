@@ -33,11 +33,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.masstext.app.data.Contact
 
-// Filtros especiales del selector de categorías de gestión. Se usan caracteres
-// nulos como centinelas para no chocar con un valor real de gestión.
+// Filtros especiales de las categorías. Se usan caracteres nulos como
+// centinelas para no chocar con un valor real de categoría.
 private const val FILTER_ALL = "\u0000ALL"
 private const val FILTER_UNMANAGED = "\u0000UNMANAGED"
-private const val UNMANAGED_LABEL = "Sin gestionar"
+private const val LABEL_SIN_TIPIF = "Sin gestionar"
+private const val LABEL_SIN_ESTADO = "Sin estado"
+private const val LABEL_SIN_MEDIO = "Sin medio"
 
 @Composable
 fun ContactsScreen(
@@ -61,42 +63,65 @@ fun ContactsScreen(
     onManageUsers: () -> Unit,
     hasAssignment: Boolean
 ) {
-    // Categorías de gestión derivadas de TODOS los contactos guardados.
-    val gestionCategories = remember(contacts) {
-        contacts.map { it.gestion.trim() }
-            .filter { it.isNotBlank() }
-            .distinct()
-            .sorted()
+    // Categorías por dimensión, derivadas de TODOS los contactos guardados:
+    // tipificación (SEGUIMIENTO), estado (STATUS) y medio de contacto.
+    val tipificaciones = remember(contacts) {
+        contacts.map { it.gestion.trim() }.filter { it.isNotBlank() }.distinct().sorted()
     }
-    val hasUnmanaged = remember(contacts) { contacts.any { it.gestion.isBlank() } }
-    var gestionFilter by remember { mutableStateOf(FILTER_ALL) }
+    val estados = remember(contacts) {
+        contacts.map { it.estado.trim() }.filter { it.isNotBlank() }.distinct().sorted()
+    }
+    val medios = remember(contacts) {
+        contacts.map { it.medio.trim() }.filter { it.isNotBlank() }.distinct().sorted()
+    }
+    val hasBlankTipif = remember(contacts) { contacts.any { it.gestion.isBlank() } }
+    val hasBlankEstado = remember(contacts) { contacts.any { it.estado.isBlank() } }
+    val hasBlankMedio = remember(contacts) { contacts.any { it.medio.isBlank() } }
+
+    var tipifFilter by remember { mutableStateOf(FILTER_ALL) }
+    var estadoFilter by remember { mutableStateOf(FILTER_ALL) }
+    var medioFilter by remember { mutableStateOf(FILTER_ALL) }
+
     // Si la categoría activa desaparece (p. ej. tras re-sincronizar) volvemos a Todos.
-    LaunchedEffect(gestionCategories, hasUnmanaged) {
-        if (gestionFilter != FILTER_ALL && gestionFilter != FILTER_UNMANAGED &&
-            gestionFilter !in gestionCategories
-        ) {
-            gestionFilter = FILTER_ALL
+    LaunchedEffect(tipificaciones) {
+        if (tipifFilter != FILTER_ALL && tipifFilter != FILTER_UNMANAGED &&
+            tipifFilter !in tipificaciones
+        ) tipifFilter = FILTER_ALL
+    }
+    LaunchedEffect(estados) {
+        if (estadoFilter != FILTER_ALL && estadoFilter != FILTER_UNMANAGED &&
+            estadoFilter !in estados
+        ) estadoFilter = FILTER_ALL
+    }
+    LaunchedEffect(medios) {
+        if (medioFilter != FILTER_ALL && medioFilter != FILTER_UNMANAGED &&
+            medioFilter !in medios
+        ) medioFilter = FILTER_ALL
+    }
+
+    fun matchesFilter(value: String, filter: String): Boolean = when (filter) {
+        FILTER_ALL -> true
+        FILTER_UNMANAGED -> value.isBlank()
+        else -> value.trim() == filter
+    }
+    val visibleContacts = remember(contacts, tipifFilter, estadoFilter, medioFilter) {
+        contacts.filter {
+            matchesFilter(it.gestion, tipifFilter) &&
+                matchesFilter(it.estado, estadoFilter) &&
+                matchesFilter(it.medio, medioFilter)
         }
     }
-    val visibleContacts = remember(contacts, gestionFilter) {
-        when (gestionFilter) {
-            FILTER_ALL -> contacts
-            FILTER_UNMANAGED -> contacts.filter { it.gestion.isBlank() }
-            else -> contacts.filter { it.gestion.trim() == gestionFilter }
-        }
+    val anyFilterActive =
+        tipifFilter != FILTER_ALL || estadoFilter != FILTER_ALL || medioFilter != FILTER_ALL
+
+    fun selectTipif(value: String) {
+        if (value != tipifFilter) { tipifFilter = value; onClearSelection() }
     }
-    val activeLabel = when (gestionFilter) {
-        FILTER_ALL -> "Todos"
-        FILTER_UNMANAGED -> UNMANAGED_LABEL
-        else -> gestionFilter
+    fun selectEstado(value: String) {
+        if (value != estadoFilter) { estadoFilter = value; onClearSelection() }
     }
-    fun selectGestion(value: String) {
-        if (value != gestionFilter) {
-            gestionFilter = value
-            // Al cambiar de categoría se limpia la selección para no arrastrar
-            // contactos ocultos de otra categoría.
-            onClearSelection()
-        }
+    fun selectMedio(value: String) {
+        if (value != medioFilter) { medioFilter = value; onClearSelection() }
     }
     var assignTitle by remember { mutableStateOf("Asignar usuario") }
     var showAssignDialog by remember { mutableStateOf(false) }
@@ -117,10 +142,10 @@ fun ContactsScreen(
     ) {
         ScreenHeader(
             title = "Mis Contactos",
-            subtitle = if (gestionFilter == FILTER_ALL) {
+            subtitle = if (!anyFilterActive) {
                 "${contacts.size} contactos guardados"
             } else {
-                "${visibleContacts.size} en \"$activeLabel\""
+                "${visibleContacts.size} de ${contacts.size} (filtrados)"
             },
             icon = Icons.Default.Contacts
         )
@@ -152,7 +177,8 @@ fun ContactsScreen(
                         )
                         TextButton(onClick = { onSelectAll(visibleContacts.map { it.id }) }) {
                             Text(
-                                if (gestionFilter == FILTER_ALL) "Todos" else "Todos ($activeLabel)",
+                                if (!anyFilterActive) "Todos"
+                                else "Todos (${visibleContacts.size})",
                                 fontSize = 13.sp
                             )
                         }
@@ -250,10 +276,12 @@ fun ContactsScreen(
         }
 
         if (contacts.isNotEmpty()) {
-            GestionFilterRow(
-                categories = gestionCategories,
-                hasUnmanaged = hasUnmanaged,
-                selected = gestionFilter,
+            CategoryFilterRow(
+                label = "Tipificación",
+                categories = tipificaciones,
+                hasBlank = hasBlankTipif,
+                blankLabel = LABEL_SIN_TIPIF,
+                selected = tipifFilter,
                 countFor = { value ->
                     when (value) {
                         FILTER_ALL -> contacts.size
@@ -261,12 +289,42 @@ fun ContactsScreen(
                         else -> contacts.count { it.gestion.trim() == value }
                     }
                 },
-                onSelect = { selectGestion(it) }
+                onSelect = { selectTipif(it) }
             )
-            if (gestionFilter != FILTER_ALL) {
+            CategoryFilterRow(
+                label = "Estado",
+                categories = estados,
+                hasBlank = hasBlankEstado,
+                blankLabel = LABEL_SIN_ESTADO,
+                selected = estadoFilter,
+                countFor = { value ->
+                    when (value) {
+                        FILTER_ALL -> contacts.size
+                        FILTER_UNMANAGED -> contacts.count { it.estado.isBlank() }
+                        else -> contacts.count { it.estado.trim() == value }
+                    }
+                },
+                onSelect = { selectEstado(it) }
+            )
+            CategoryFilterRow(
+                label = "Medio de contacto",
+                categories = medios,
+                hasBlank = hasBlankMedio,
+                blankLabel = LABEL_SIN_MEDIO,
+                selected = medioFilter,
+                countFor = { value ->
+                    when (value) {
+                        FILTER_ALL -> contacts.size
+                        FILTER_UNMANAGED -> contacts.count { it.medio.isBlank() }
+                        else -> contacts.count { it.medio.trim() == value }
+                    }
+                },
+                onSelect = { selectMedio(it) }
+            )
+            if (anyFilterActive) {
                 Spacer(modifier = Modifier.height(6.dp))
                 SecondaryActionButton(
-                    text = "Exportar categoría \"$activeLabel\" (${visibleContacts.size})",
+                    text = "Exportar filtrados (${visibleContacts.size})",
                     onClick = { onExportVisible(visibleContacts) },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -289,8 +347,8 @@ fun ContactsScreen(
         } else if (visibleContacts.isEmpty()) {
             EmptyState(
                 icon = Icons.Default.Contacts,
-                title = "Sin contactos en \"$activeLabel\"",
-                description = "Cambia de categoría en los filtros de arriba o sincroniza de nuevo desde Drive.",
+                title = "Sin contactos con estos filtros",
+                description = "Cambia las categorías en los filtros de arriba o sincroniza de nuevo desde Drive.",
                 modifier = Modifier.fillMaxSize()
             )
         } else {
@@ -324,49 +382,59 @@ fun ContactsScreen(
 }
 
 @Composable
-private fun GestionFilterRow(
+private fun CategoryFilterRow(
+    label: String,
     categories: List<String>,
-    hasUnmanaged: Boolean,
+    hasBlank: Boolean,
+    blankLabel: String,
     selected: String,
     countFor: (String) -> Int,
     onSelect: (String) -> Unit
 ) {
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = 16.dp, vertical = 2.dp)
     ) {
-        FilterChip(
-            selected = selected == FILTER_ALL,
-            onClick = { onSelect(FILTER_ALL) },
-            label = { Text("Todos (${countFor(FILTER_ALL)})") }
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        categories.forEach { category ->
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             FilterChip(
-                selected = selected == category,
-                onClick = { onSelect(category) },
-                label = {
-                    Text(
-                        "$category (${countFor(category)})",
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                selected = selected == FILTER_ALL,
+                onClick = { onSelect(FILTER_ALL) },
+                label = { Text("Todos (${countFor(FILTER_ALL)})") }
             )
-        }
-        if (hasUnmanaged) {
-            FilterChip(
-                selected = selected == FILTER_UNMANAGED,
-                onClick = { onSelect(FILTER_UNMANAGED) },
-                label = {
-                    Text(
-                        "$UNMANAGED_LABEL (${countFor(FILTER_UNMANAGED)})",
-                        maxLines = 1
-                    )
-                }
-            )
+            categories.forEach { category ->
+                FilterChip(
+                    selected = selected == category,
+                    onClick = { onSelect(category) },
+                    label = {
+                        Text(
+                            "$category (${countFor(category)})",
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                )
+            }
+            if (hasBlank) {
+                FilterChip(
+                    selected = selected == FILTER_UNMANAGED,
+                    onClick = { onSelect(FILTER_UNMANAGED) },
+                    label = {
+                        Text("$blankLabel (${countFor(FILTER_UNMANAGED)})", maxLines = 1)
+                    }
+                )
+            }
         }
     }
 }
@@ -449,26 +517,23 @@ private fun ContactRow(
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
-                if (contact.gestion.isNotBlank()) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.secondaryContainer
-                    ) {
-                        Text(
-                            contact.gestion,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                        )
-                    }
-                } else {
+                val categorias = listOf(contact.gestion, contact.estado, contact.medio)
+                    .map { it.trim() }
+                    .filter { it.isNotBlank() }
+                if (categorias.isEmpty()) {
                     Text(
-                        UNMANAGED_LABEL,
+                        LABEL_SIN_TIPIF,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                    )
+                } else {
+                    Text(
+                        categorias.joinToString("  ·  "),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.secondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }

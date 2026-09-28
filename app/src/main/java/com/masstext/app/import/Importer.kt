@@ -10,7 +10,9 @@ import java.io.InputStreamReader
     val phone: String,
     val cedula: String = "",
     val assignment: String = "",
-    val gestion: String = ""
+    val gestion: String = "",
+    val estado: String = "",
+    val medio: String = ""
 )
 
 object Importer {
@@ -141,7 +143,9 @@ object Importer {
         val assignIdx: Int,
         val hasHeader: Boolean,
         val cedulaIdx: Int = -1,
-        val gestionIdx: Int = -1
+        val gestionIdx: Int = -1,
+        val statusIdx: Int = -1,
+        val medioIdx: Int = -1
     )
 
     private val nameKeywords = setOf(
@@ -160,13 +164,19 @@ object Importer {
         "cedula", "cédula", "documento", "doc", "identificacion", "identificación",
         "identidad", "numero de documento", "num doc", "ci", "nro", "n°", "doc identidad"
     )
-    // Categoría de gestión: columna independiente de "Asignado a". Sus valores
-    // (PROMESA, NO CONTESTA, PAGO…) se usan para agrupar y filtrar contactos.
+    // Categoría de gestión (tipificación): columna independiente de "Asignado a".
+    // Sus valores (NO CONTESTA, VOLVER A LLAMAR…) se usan para filtrar contactos.
+    // OJO: "FECHA DE GESTION" contiene "gestion" pero es una fecha, por eso se
+    // excluyen los encabezados con palabras de fecha.
     private val gestionKeywords = setOf(
-        "gestion", "gestión", "gestiones", "gestionado", "gestionada",
-        "tipificacion", "tipificación", "tipificacion de gestion", "tipo de gestion",
-        "categoria gestion", "categoria de gestion"
+        "seguimiento", "tipificacion", "tipificación", "gestion", "gestión",
+        "gestiones", "gestionado", "gestionada"
     )
+    private val dateWords = setOf("fecha", "feccha", "date", "vencimiento")
+    // Estado de la cuenta (columna STATUS).
+    private val statusKeywords = setOf("status", "estado", "estatus")
+    // Medio/canal de contacto.
+    private val medioKeywords = setOf("medio", "canal", "via", "vía", "canal de contacto")
 
     // Normaliza un encabezado: minúsculas y sin tildes, para reconocer encabezados
     // con o sin acentos (ej. "Teléfono", "Asignación").
@@ -192,22 +202,30 @@ object Importer {
         val phoneIdx = folded.indexOfFirst { h ->
             matches(h, phoneKeywords) && !matches(h, cedulaKeywords) && !h.contains("documento")
         }
-        // La gestión se detecta antes que la asignación: un encabezado como
-        // "Categoría gestión" no debe confundirse con la columna de asignación.
-        val gestionIdx = folded.indexOfFirst { matches(it, gestionKeywords) }
+        // La gestión (tipificación) se detecta antes que la asignación y se
+        // excluyen encabezados de fecha ("FECHA DE GESTION" no es una categoría).
+        val gestionIdx = folded.indexOfFirst { h ->
+            matches(h, gestionKeywords) && dateWords.none { w -> h.contains(w) }
+        }
+        val statusIdx = folded.indexOfFirst { matches(it, statusKeywords) }
+        val medioIdx = folded.indexOfFirst { matches(it, medioKeywords) }
         val assignIdx = folded.indexOfFirst { h ->
             matches(h, assignKeywords) && !matches(h, gestionKeywords)
         }
         if (phoneIdx >= 0) {
             // Hay encabezado (al menos se reconoce el teléfono). Si el nombre no
             // tiene encabezado claro ("Columna 1", "ID", …) se usa la primera
-            // columna que no sea teléfono/cédula/asignación/gestión.
+            // columna que no sea teléfono/cédula/asignación/categorías.
             val resolvedName = if (nameIdx >= 0) nameIdx else {
                 folded.indices.firstOrNull {
-                    it != phoneIdx && it != cedulaIdx && it != assignIdx && it != gestionIdx
+                    it != phoneIdx && it != cedulaIdx && it != assignIdx &&
+                        it != gestionIdx && it != statusIdx && it != medioIdx
                 } ?: 0
             }
-            return ColumnMap(resolvedName, phoneIdx, assignIdx, true, cedulaIdx, gestionIdx)
+            return ColumnMap(
+                resolvedName, phoneIdx, assignIdx, true,
+                cedulaIdx, gestionIdx, statusIdx, medioIdx
+            )
         }
         // Sin encabezado reconocible: se asume primera columna = nombre,
         // segunda = teléfono, tercera = asignación y cuarta = gestión.
@@ -216,7 +234,9 @@ object Importer {
             if (header.size > 2) 2 else -1,
             false,
             -1,
-            if (header.size > 3) 3 else -1
+            if (header.size > 3) 3 else -1,
+            -1,
+            -1
         )
     }
 
@@ -237,7 +257,9 @@ object Importer {
             val assignment = row.getOrNull(map.assignIdx).orEmpty().trim()
             val cedula = row.getOrNull(map.cedulaIdx).orEmpty().trim()
             val gestion = row.getOrNull(map.gestionIdx).orEmpty().trim()
-            result.add(ParsedRow(name, phone, cedula, assignment, gestion))
+            val estado = row.getOrNull(map.statusIdx).orEmpty().trim()
+            val medio = row.getOrNull(map.medioIdx).orEmpty().trim()
+            result.add(ParsedRow(name, phone, cedula, assignment, gestion, estado, medio))
         }
         return result
     }

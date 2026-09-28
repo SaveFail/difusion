@@ -10,7 +10,11 @@ data class Contact(
     val phone: String,
     val cedula: String = "",
     val assignment: String = "",
-    // Categoría de gestión proveniente de la hoja de Drive (ej. PROMESA, NO CONTESTA…).
-    // Vacío = "Sin gestionar".
-    val gestion: String = ""
+    // Categorías provenientes de la hoja de Drive. Vacío = sin dato.
+    // gestion = tipificación (columna SEGUIMIENTO: NO CONTESTA, VOLVER A LLAMAR…).
+    val gestion: String = "",
+    // estado = columna STATUS (PROMESA DE PAGO, PAGO…).
+    val estado: String = "",
+    // medio = columna MEDIO DE CONTACTO (LLAMADA, WHATSAPP…).
+    val medio: String = ""
 )
