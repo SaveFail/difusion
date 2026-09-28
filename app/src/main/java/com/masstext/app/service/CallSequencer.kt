@@ -66,6 +66,10 @@ class CallSequencer private constructor(private val context: Context) {
     private var roundIndex = 1
     private var userRepeat = 0
 
+    // Números cuya llamada fue VÁLIDA (el cliente contestó). No se vuelven a
+    // marcar: al repetir (por cola o por usuario) se saltan automáticamente.
+    private val validPhones = mutableSetOf<String>()
+
     private val _currentContact = MutableStateFlow<Contact?>(null)
     val currentContact: StateFlow<Contact?> = _currentContact.asStateFlow()
 
@@ -161,6 +165,7 @@ class CallSequencer private constructor(private val context: Context) {
         redialActive = false
         resumeFast = false
         callToken = 0L
+        validPhones.clear()
         _isPaused.value = false
         _progress.value = 0
         transitionJob?.cancel()
@@ -394,6 +399,10 @@ class CallSequencer private constructor(private val context: Context) {
     private fun contractPhone(contact: Contact): String =
         com.masstext.app.import.Importer.normalizePhone(contact.phone)
 
+    // Una llamada es "válida" cuando el cliente contestó (se registró conectada).
+    private fun isValid(contact: Contact): Boolean =
+        validPhones.contains(contractPhone(contact))
+
     // Llamada conectada (el cliente contestó): cancela el temporizador de timbrado
     // para que la conversación no se interrumpa, muestra el nombre y arma el
     // tope de duración, si está configurado. La siguiente llamada solo se
@@ -498,6 +507,10 @@ class CallSequencer private constructor(private val context: Context) {
     private fun onCallFinished(contact: Contact?, success: Boolean) {
         CallMessagePlayer.stop()
         CallMicMute.restore(context)
+        // Si la llamada fue válida (contestada), queda marcada para no repetirla.
+        if (success && contact != null) {
+            validPhones.add(contractPhone(contact))
+        }
         lastActionMs = System.currentTimeMillis()
         _callState.value = "Llamada terminada"
         recordCall(contact, success)
@@ -559,34 +572,51 @@ class CallSequencer private constructor(private val context: Context) {
         }
     }
 
-    // Por cola: al terminar la ronda completa, se reinicia desde el 1º hasta
-    // completar el número de rondas elegido.
+    // Por cola: se recorre la lista y se reinicia hasta completar las rondas.
+    // Las llamadas VÁLIDAS (contestadas) se omiten en las rondas siguientes.
     private fun advanceQueue() {
         if (_isPaused.value) {
             _status.value = "Cola en pausa, reanudar para continuar"
             return
         }
-        currentIndex++
-        if (currentIndex >= total) {
-            currentIndex = 0
-            roundIndex++
-            _round.value = roundIndex
-            if (roundIndex > repeats) {
-                finish()
-                return
-            }
-            _status.value = "Ronda $roundIndex de $repeats: reiniciando lista"
+        // Siguiente contacto NO válido dentro de esta ronda.
+        var next = currentIndex + 1
+        while (next < total && isValid(contactsList[next])) next++
+        if (next < total) {
+            currentIndex = next
             scheduleNext(betweenOrFast())
             return
         }
+        // Fin de la ronda: solo continúa si quedan contactos sin llamada válida.
+        roundIndex++
+        _round.value = roundIndex
+        val firstPending = contactsList.indexOfFirst { !isValid(it) }
+        if (roundIndex > repeats || firstPending < 0) {
+            finish()
+            return
+        }
+        currentIndex = firstPending
+        _status.value = "Ronda $roundIndex de $repeats: reiniciando lista (se omiten las llamadas válidas)"
         scheduleNext(betweenOrFast())
     }
 
-    // Por usuario: al cliente actual se le llama N veces seguidas antes de
-    // avanzar al siguiente número.
+    // Por usuario: al cliente actual se le llama hasta N veces, pero si una
+    // llamada fue VÁLIDA no se repite y se salta al siguiente de inmediato.
     private fun advanceUser() {
         if (_isPaused.value) {
             _status.value = "Cola en pausa, reanudar para continuar"
+            return
+        }
+        val current = contactsList.getOrNull(currentIndex)
+        if (current != null && isValid(current)) {
+            _status.value = "Llamada válida con ${current.name}: se pasa al siguiente"
+            userRepeat = 0
+            currentIndex++
+            if (currentIndex >= total) {
+                finish()
+                return
+            }
+            scheduleNext(betweenOrFast())
             return
         }
         userRepeat++

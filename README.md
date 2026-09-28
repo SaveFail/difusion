@@ -8,7 +8,7 @@ pantalla de llamada y controlar el audio durante la llamada.
 
 - **Paquete:** `com.masstext.app`
 - **Nombre visible:** LEX RECOVER
-- **Versión:** 1.7 (`versionCode 8`)
+- **Versión:** 1.8 (`versionCode 9`)
 - **minSdk:** 26 (Android 8) · **targetSdk/compileSdk:** 35 (Android 15)
 
 ---
@@ -48,7 +48,9 @@ pantalla de llamada y controlar el audio durante la llamada.
 ### Llamadas
 - Sección de llamadas con **secuencia masiva**: marca uno a uno con retardo
   entre llamadas, **duración de timbrado** y **tope de duración** por llamada.
-- Repetición de la cola **por cola** o **por usuario**.
+- Repetición de la cola **por cola** o **por usuario**. Las **llamadas válidas
+  (contestadas) no se repiten**: se saltan automáticamente al avanzar (en ambos
+  modos).
 - Marcador propio, historial de llamadas y etiquetas.
 - **Grabación de llamadas** (fuente `VOICE_COMMUNICATION`; si el equipo la
   bloquea, cae a micrófono) con verificación del archivo para no guardar audios

@@ -1,8 +1,11 @@
 package com.masstext.app.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -16,10 +19,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.masstext.app.data.MessageTemplate
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MessageEditorScreen(
     messageBody: String,
@@ -36,10 +42,16 @@ fun MessageEditorScreen(
     var selectedTemplateBody by rememberSaveable { mutableStateOf("") }
     var templateName by rememberSaveable { mutableStateOf("") }
 
+    // Para que el teclado no tape el campo del nombre de la plantilla: se sube
+    // con imePadding y se desplaza a la vista al enfocarlo.
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    val scope = rememberCoroutineScope()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
+            .imePadding()
     ) {
         ScreenHeader(
             title = "Nuevo mensaje",
@@ -140,7 +152,14 @@ fun MessageEditorScreen(
             OutlinedTextField(
                 value = templateName,
                 onValueChange = { templateName = it },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .bringIntoViewRequester(bringIntoViewRequester)
+                    .onFocusChanged { focusState ->
+                        if (focusState.isFocused) {
+                            scope.launch { bringIntoViewRequester.bringIntoView() }
+                        }
+                    },
                 label = { Text("Nombre de la plantilla") },
                 placeholder = { Text("Ej: Promoción noviembre") },
                 singleLine = true,

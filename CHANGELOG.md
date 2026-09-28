@@ -1,5 +1,19 @@
 # Registro de cambios
 
+## [1.8] — 2026-09-28
+
+### Agregado / corregido
+- **Llamadas válidas no se repiten.** Si una llamada fue **válida** (el cliente
+  contestó), no se vuelve a marcar: la secuencia **salta automáticamente** a la
+  siguiente llamada programada. Aplica a los dos modos:
+  - **Por usuario:** tras una llamada válida se pasa al siguiente contacto sin
+    repetir las veces restantes.
+  - **Por cola:** en las rondas siguientes se **omiten** los contactos que ya
+    tuvieron una llamada válida; la secuencia termina cuando no quedan pendientes.
+- **Editor de mensajes:** el **nombre de la plantilla ya no queda oculto por el
+  teclado**; la pantalla se ajusta (imePadding) y el campo se desplaza a la vista
+  al enfocarlo.
+
 ## [1.7] — 2026-09-28
 
 ### Cambiado
