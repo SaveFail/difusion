@@ -168,6 +168,7 @@ private fun MainScreen(viewModel: MainViewModel) {
     val navController = rememberNavController()
 
     val contacts by viewModel.contacts.collectAsStateWithLifecycle()
+    val themeConfig by viewModel.themeConfig.collectAsStateWithLifecycle()
     val selected by viewModel.selectedContacts.collectAsStateWithLifecycle()
     val messageBody by viewModel.messageBody.collectAsStateWithLifecycle()
     val delayMs by viewModel.delayMs.collectAsStateWithLifecycle()
@@ -868,7 +869,9 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                             ).show()
                         },
                         onOpenTrash = { showTrash = true },
-                        onOpenCalls = { showCalls = true }
+                        onOpenCalls = { showCalls = true },
+                        brandName = themeConfig.appName,
+                        brandLogo = themeConfig.appLogo
                     )
                 }
                 composable("contacts") {

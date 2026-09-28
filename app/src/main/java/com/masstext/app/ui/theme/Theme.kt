@@ -49,7 +49,10 @@ data class ThemeConfig(
     // Colores del estado de los mensajes en el chat.
     val statusSent: Long = 0xFF2E7D32,
     val statusSending: Long = 0xFFF9A825,
-    val statusFailed: Long = 0xFFC62828
+    val statusFailed: Long = 0xFFC62828,
+    // Marca: nombre a mostrar dentro de la app y logo (emoji). Vacío = por defecto.
+    val appName: String = "",
+    val appLogo: String = ""
 )
 
 object ThemePrefs {
@@ -73,6 +76,8 @@ object ThemePrefs {
     private const val KEY_STATUS_SENT = "theme_status_sent"
     private const val KEY_STATUS_SENDING = "theme_status_sending"
     private const val KEY_STATUS_FAILED = "theme_status_failed"
+    private const val KEY_APP_NAME = "theme_app_name"
+    private const val KEY_APP_LOGO = "theme_app_logo"
     private const val KEY_VERSION = "theme_version"
     private const val VERSION = 2
 
@@ -101,7 +106,9 @@ object ThemePrefs {
             preset = prefs.getString(KEY_PRESET, defaults.preset) ?: defaults.preset,
             statusSent = prefs.getLong(KEY_STATUS_SENT, defaults.statusSent),
             statusSending = prefs.getLong(KEY_STATUS_SENDING, defaults.statusSending),
-            statusFailed = prefs.getLong(KEY_STATUS_FAILED, defaults.statusFailed)
+            statusFailed = prefs.getLong(KEY_STATUS_FAILED, defaults.statusFailed),
+            appName = prefs.getString(KEY_APP_NAME, defaults.appName) ?: defaults.appName,
+            appLogo = prefs.getString(KEY_APP_LOGO, defaults.appLogo) ?: defaults.appLogo
         )
     }
 
@@ -126,6 +133,8 @@ object ThemePrefs {
             .putLong(KEY_STATUS_SENT, config.statusSent)
             .putLong(KEY_STATUS_SENDING, config.statusSending)
             .putLong(KEY_STATUS_FAILED, config.statusFailed)
+            .putString(KEY_APP_NAME, config.appName)
+            .putString(KEY_APP_LOGO, config.appLogo)
             .apply()
     }
 
@@ -295,6 +304,8 @@ private fun configToJson(config: ThemeConfig): JSONObject = JSONObject().apply {
     put("statusSent", config.statusSent)
     put("statusSending", config.statusSending)
     put("statusFailed", config.statusFailed)
+    put("appName", config.appName)
+    put("appLogo", config.appLogo)
 }
 
 fun configFromJson(json: String): ThemeConfig? {
@@ -317,7 +328,9 @@ fun configFromJson(json: String): ThemeConfig? {
             notificationSound = o.optString("notificationSound", ""),
             statusSent = o.optLong("statusSent", 0xFF2E7D32),
             statusSending = o.optLong("statusSending", 0xFFF9A825),
-            statusFailed = o.optLong("statusFailed", 0xFFC62828)
+            statusFailed = o.optLong("statusFailed", 0xFFC62828),
+            appName = o.optString("appName", ""),
+            appLogo = o.optString("appLogo", "")
         )
     } catch (_: Exception) {
         null

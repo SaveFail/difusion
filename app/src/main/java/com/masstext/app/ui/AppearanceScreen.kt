@@ -196,12 +196,30 @@ fun AppearanceScreen(
                 }
             }
 
+            // Pestañas para dividir la personalización y evitar confusiones.
+            val tabs = listOf("Tema", "Marca", "Colores", "Texto", "Fuente", "Sonido", "Vista", "Guardar")
+            var tab by remember { mutableStateOf(0) }
+            ScrollableTabRow(
+                selectedTabIndex = tab,
+                edgePadding = 8.dp,
+                containerColor = MaterialTheme.colorScheme.surface
+            ) {
+                tabs.forEachIndexed { index, title ->
+                    Tab(
+                        selected = tab == index,
+                        onClick = { tab = index },
+                        text = { Text(title, maxLines = 1, fontSize = 13.sp) }
+                    )
+                }
+            }
+
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp)
             ) {
+                if (tab == 0) {
 
                 SectionLabel("Temas preestablecidos")
                 Spacer(modifier = Modifier.height(6.dp))
@@ -278,7 +296,11 @@ fun AppearanceScreen(
                         onCheckedChange = { onConfigChange(config.copy(statusBarTint = it)) }
                     )
                 }
-                Spacer(modifier = Modifier.height(12.dp))
+                } // fin Tema
+                if (tab == 1) {
+                    MarcaTab(config = config, onConfigChange = onConfigChange)
+                }
+                if (tab == 5) {
 
                 SectionCard {
                     Text("Sonido y avisos del teléfono", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -337,7 +359,8 @@ fun AppearanceScreen(
                         onDismiss = { showTonePicker = false }
                     )
                 }
-                Spacer(modifier = Modifier.height(16.dp))
+                } // fin Sonido
+                if (tab == 6) {
 
                 Text(
                     "Vista previa de la pantalla",
@@ -351,7 +374,8 @@ fun AppearanceScreen(
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 PreviewCard(config)
-                Spacer(modifier = Modifier.height(20.dp))
+                } // fin Vista
+                if (tab == 3) {
 
                 SectionLabel("Tamaño de las letras")
                 Spacer(modifier = Modifier.height(6.dp))
@@ -383,7 +407,8 @@ fun AppearanceScreen(
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
+                } // fin Texto
+                if (tab == 2) {
 
                 SectionLabel("Color de la aplicación")
                 Spacer(modifier = Modifier.height(6.dp))
@@ -452,7 +477,8 @@ fun AppearanceScreen(
                 ColorSwatchRow(statusOptions, selected = config.statusFailed, onSelected = {
                     onConfigChange(config.copy(statusFailed = it, preset = ""))
                 })
-                Spacer(modifier = Modifier.height(12.dp))
+                } // fin Colores
+                if (tab == 4) {
 
                 SectionLabel("Tipo de fuente")
                 Spacer(modifier = Modifier.height(6.dp))
@@ -483,7 +509,8 @@ fun AppearanceScreen(
                     modifier = Modifier.fillMaxWidth(),
                     icon = Icons.Default.FileOpen
                 )
-                Spacer(modifier = Modifier.height(16.dp))
+                } // fin Fuente
+                if (tab == 7) {
 
                 SectionLabel("Guardar / compartir tu apariencia")
                 Spacer(modifier = Modifier.height(8.dp))
@@ -509,7 +536,81 @@ fun AppearanceScreen(
                     modifier = Modifier.fillMaxWidth(),
                     icon = Icons.Default.RestartAlt
                 )
+                } // fin Guardar
             }
+        }
+    }
+}
+
+// Emojis disponibles como logo de la app.
+val logoOptions: List<String> = listOf(
+    "📨", "💬", "📞", "📣", "🚀", "⭐", "🔵", "🟢", "🟣", "🔥", "🛡️", "💼", "📊", "❤️", "✅", "⚡"
+)
+
+@Composable
+private fun MarcaTab(config: ThemeConfig, onConfigChange: (ThemeConfig) -> Unit) {
+    SectionCard {
+        Text("Nombre de la app", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+        Spacer(modifier = Modifier.height(6.dp))
+        OutlinedTextField(
+            value = config.appName,
+            onValueChange = { onConfigChange(config.copy(appName = it)) },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Nombre a mostrar") },
+            placeholder = { Text("LEX RECOVER") },
+            singleLine = true
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Text("Icono de la app (logo)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+        Spacer(modifier = Modifier.height(6.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            logoOptions.forEach { emoji ->
+                FilterChip(
+                    selected = config.appLogo == emoji,
+                    onClick = { onConfigChange(config.copy(appLogo = emoji)) },
+                    label = { Text(emoji, fontSize = 18.sp) }
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        BrandPreview(config)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            "Android no permite cambiar el nombre ni el icono del lanzador a valores libres. " +
+                "Este nombre y logo se muestran dentro de la app.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun BrandPreview(config: ThemeConfig) {
+    val name = config.appName.ifBlank { "LEX RECOVER" }
+    val logo = config.appLogo.ifBlank { "📨" }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(MaterialTheme.colorScheme.primary),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(logo, fontSize = 24.sp)
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(
+                "Así se verá tu marca dentro de la app",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

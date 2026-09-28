@@ -1,5 +1,20 @@
 # Registro de cambios
 
+## [1.9] — 2026-09-28
+
+### Agregado
+- **Apariencia por pestañas** (Ajustes → Apariencia): ahora se divide en
+  **Tema, Marca, Colores, Texto, Fuente, Sonido, Vista y Guardar** para no
+  mezclar tantas opciones y evitar confusiones.
+- **Marca (nombre e icono de la app):** nueva pestaña para escribir el **nombre a
+  mostrar** y elegir un **logo (emoji)** con vista previa. El nombre y el logo se
+  muestran dentro de la app (encabezado de Mensajes) y en la vista previa.
+  - **Nota:** Android **no** permite cambiar el nombre ni el icono del
+    **lanzador** a valores libres (solo con alias predefinidos); por eso se aplica
+    dentro de la app. Queda documentado en la propia pantalla.
+- **Colores configurables del estado de los mensajes** (de 1.7) quedan en la
+  pestaña *Colores*.
+
 ## [1.8] — 2026-09-28
 
 ### Agregado / corregido
