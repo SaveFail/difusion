@@ -275,7 +275,9 @@ fun ContactsScreen(
             }
         }
 
-        if (contacts.isNotEmpty()) {
+        // Los filtros se ocultan mientras hay contactos seleccionados: dejan
+        // espacio visual y evitan cambiar de categoría con la selección activa.
+        if (contacts.isNotEmpty() && selected.isEmpty()) {
             CategoryFilterRow(
                 label = "Tipificación",
                 categories = tipificaciones,
