@@ -39,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -55,6 +56,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.masstext.app.data.*
+import com.masstext.app.ui.theme.ThemeConfig
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -74,6 +76,7 @@ fun ConversationScreen(
     val scope = rememberCoroutineScope()
     val messages by viewModel.messagesForThread(conversation.threadId)
         .collectAsStateWithLifecycle(initialValue = emptyList())
+    val themeConfig by viewModel.themeConfig.collectAsStateWithLifecycle()
 
     var query by rememberSaveable { mutableStateOf("") }
     var filtering by rememberSaveable { mutableStateOf(false) }
@@ -317,16 +320,19 @@ fun ConversationScreen(
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Spacer(Modifier.height(2.dp))
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(Date(message.date)),
-                                        style = MaterialTheme.typography.labelSmall
-                                    )
-                                    // Estado del mensaje saliente: enviando (reloj),
-                                    // enviado (check) o no enviado (X).
-                                    if (isOutgoing) {
-                                        Spacer(Modifier.width(4.dp))
-                                        OutgoingStatusIcon(status = message.status, size = 14.dp)
+                                Text(
+                                    SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(Date(message.date)),
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                                // Estado del mensaje saliente, visible debajo y a la
+                                // derecha de cada mensaje (enviando/enviado/no enviado).
+                                if (isOutgoing) {
+                                    Spacer(Modifier.height(3.dp))
+                                    Box(
+                                        Modifier.fillMaxWidth(),
+                                        contentAlignment = Alignment.CenterEnd
+                                    ) {
+                                        MessageStatusPill(status = message.status, theme = themeConfig)
                                     }
                                 }
                             }
@@ -357,6 +363,48 @@ fun ConversationScreen(
                 query = ""
             }
         )
+    }
+}
+
+@Composable
+private fun MessageStatusPill(status: Int, theme: ThemeConfig) {
+    val label: String
+    val icon: ImageVector
+    val colorLong: Long
+    when (status) {
+        SmsStatus.SENDING -> {
+            label = "Enviando"
+            icon = Icons.Default.Schedule
+            colorLong = theme.statusSending
+        }
+        SmsStatus.FAILED -> {
+            label = "No enviado"
+            icon = Icons.Default.Close
+            colorLong = theme.statusFailed
+        }
+        else -> {
+            label = "Enviado"
+            icon = Icons.Default.Check
+            colorLong = theme.statusSent
+        }
+    }
+    val bg = Color(colorLong)
+    // Texto legible según el brillo del color elegido.
+    val fg = if (bg.luminance() > 0.5f) Color(0xFF000000) else Color(0xFFFFFFFF)
+    Surface(color = bg, shape = RoundedCornerShape(50)) {
+        Row(
+            Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(icon, contentDescription = label, tint = fg, modifier = Modifier.size(12.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(
+                label,
+                color = fg,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
     }
 }
 

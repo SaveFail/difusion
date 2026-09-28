@@ -45,7 +45,11 @@ data class ThemeConfig(
     val soundEnabled: Boolean = true,
     val vibrationEnabled: Boolean = true,
     val notificationSound: String = "",
-    val preset: String = "lexrecover"
+    val preset: String = "lexrecover",
+    // Colores del estado de los mensajes en el chat.
+    val statusSent: Long = 0xFF2E7D32,
+    val statusSending: Long = 0xFFF9A825,
+    val statusFailed: Long = 0xFFC62828
 )
 
 object ThemePrefs {
@@ -66,6 +70,9 @@ object ThemePrefs {
     private const val KEY_VIBRATION = "theme_vibration"
     private const val KEY_NOTIFICATION_SOUND = "theme_notification_sound"
     private const val KEY_PRESET = "theme_preset"
+    private const val KEY_STATUS_SENT = "theme_status_sent"
+    private const val KEY_STATUS_SENDING = "theme_status_sending"
+    private const val KEY_STATUS_FAILED = "theme_status_failed"
     private const val KEY_VERSION = "theme_version"
     private const val VERSION = 2
 
@@ -91,7 +98,10 @@ object ThemePrefs {
             soundEnabled = prefs.getBoolean(KEY_SOUND, defaults.soundEnabled),
             vibrationEnabled = prefs.getBoolean(KEY_VIBRATION, defaults.vibrationEnabled),
             notificationSound = prefs.getString(KEY_NOTIFICATION_SOUND, defaults.notificationSound) ?: defaults.notificationSound,
-            preset = prefs.getString(KEY_PRESET, defaults.preset) ?: defaults.preset
+            preset = prefs.getString(KEY_PRESET, defaults.preset) ?: defaults.preset,
+            statusSent = prefs.getLong(KEY_STATUS_SENT, defaults.statusSent),
+            statusSending = prefs.getLong(KEY_STATUS_SENDING, defaults.statusSending),
+            statusFailed = prefs.getLong(KEY_STATUS_FAILED, defaults.statusFailed)
         )
     }
 
@@ -113,6 +123,9 @@ object ThemePrefs {
             .putBoolean(KEY_VIBRATION, config.vibrationEnabled)
             .putString(KEY_NOTIFICATION_SOUND, config.notificationSound)
             .putString(KEY_PRESET, config.preset)
+            .putLong(KEY_STATUS_SENT, config.statusSent)
+            .putLong(KEY_STATUS_SENDING, config.statusSending)
+            .putLong(KEY_STATUS_FAILED, config.statusFailed)
             .apply()
     }
 
@@ -279,6 +292,9 @@ private fun configToJson(config: ThemeConfig): JSONObject = JSONObject().apply {
     put("soundEnabled", config.soundEnabled)
     put("vibrationEnabled", config.vibrationEnabled)
     put("notificationSound", config.notificationSound)
+    put("statusSent", config.statusSent)
+    put("statusSending", config.statusSending)
+    put("statusFailed", config.statusFailed)
 }
 
 fun configFromJson(json: String): ThemeConfig? {
@@ -298,7 +314,10 @@ fun configFromJson(json: String): ThemeConfig? {
             statusBarTint = o.optBoolean("statusBarTint", true),
             soundEnabled = o.optBoolean("soundEnabled", true),
             vibrationEnabled = o.optBoolean("vibrationEnabled", true),
-            notificationSound = o.optString("notificationSound", "")
+            notificationSound = o.optString("notificationSound", ""),
+            statusSent = o.optLong("statusSent", 0xFF2E7D32),
+            statusSending = o.optLong("statusSending", 0xFFF9A825),
+            statusFailed = o.optLong("statusFailed", 0xFFC62828)
         )
     } catch (_: Exception) {
         null

@@ -84,6 +84,19 @@ val bgOptions: List<Pair<String, Long>> = listOf(
     "Negro" to 0xFF121212
 )
 
+// Colores para el estado de los mensajes en el chat.
+val statusOptions: List<Pair<String, Long>> = listOf(
+    "Verde" to 0xFF2E7D32,
+    "Rojo" to 0xFFC62828,
+    "Ámbar" to 0xFFF9A825,
+    "Azul" to 0xFF1565C0,
+    "Morado" to 0xFF6A1B9A,
+    "Naranja" to 0xFFEF6C00,
+    "Gris" to 0xFF546E7A,
+    "Negro" to 0xFF000000,
+    "Blanco" to 0xFFFFFFFF
+)
+
 private val textScaleOptions = listOf(
     "Pequeñas" to 0.85f,
     "Normal" to 1f,
@@ -420,6 +433,24 @@ fun AppearanceScreen(
                 Spacer(modifier = Modifier.height(6.dp))
                 ColorSwatchRow(bgOptions, selected = config.background, onSelected = {
                     onConfigChange(config.copy(background = it, preset = ""))
+                })
+                Spacer(modifier = Modifier.height(12.dp))
+
+                SectionLabel("Colores del estado de los mensajes")
+                Spacer(modifier = Modifier.height(6.dp))
+                Text("Enviado", style = MaterialTheme.typography.bodySmall)
+                ColorSwatchRow(statusOptions, selected = config.statusSent, onSelected = {
+                    onConfigChange(config.copy(statusSent = it, preset = ""))
+                })
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Enviando", style = MaterialTheme.typography.bodySmall)
+                ColorSwatchRow(statusOptions, selected = config.statusSending, onSelected = {
+                    onConfigChange(config.copy(statusSending = it, preset = ""))
+                })
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("No enviado", style = MaterialTheme.typography.bodySmall)
+                ColorSwatchRow(statusOptions, selected = config.statusFailed, onSelected = {
+                    onConfigChange(config.copy(statusFailed = it, preset = ""))
                 })
                 Spacer(modifier = Modifier.height(12.dp))
 

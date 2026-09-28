@@ -96,6 +96,14 @@ fun MessageEditorScreen(
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
+            // Ayuda de variables justo encima del cuadro del mensaje.
+            Text(
+                "Usa {nombre} para personalizar con el nombre de cada cliente (y {telefono} para el número).",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.tertiary
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+
             val smsCount = calculateSmsCount(messageBody)
 
             OutlinedTextField(
@@ -107,13 +115,6 @@ fun MessageEditorScreen(
                 label = { Text("Mensaje") },
                 placeholder = { Text("Hola {nombre}, le informamos...") },
                 shape = RoundedCornerShape(14.dp)
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                "Usa {nombre} para personalizar con el nombre de cada cliente (y {telefono} para el número).",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.tertiary
             )
 
             Spacer(modifier = Modifier.height(8.dp))

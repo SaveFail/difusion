@@ -1,5 +1,18 @@
 # Registro de cambios
 
+## [1.7] — 2026-09-28
+
+### Cambiado
+- **Editor de mensajes:** el texto de ayuda de `{nombre}` queda **justo debajo
+  de las plantillas y encima del cuadro del mensaje** (ya no debajo del cuadro).
+- **Chat:** cada mensaje saliente muestra una **etiqueta de estado visible** en
+  la esquina inferior derecha de la burbuja: **Enviado** (check), **Enviando**
+  (reloj) o **No enviado** (X), con su propio color de fondo para que siempre se
+  vea, aunque se envíen más mensajes.
+- **Apariencia:** nuevos **colores configurables** para el estado de los
+  mensajes (Enviado / Enviando / No enviado). El texto se ajusta a negro o
+  blanco según el brillo del color elegido para que nunca se pierda.
+
 ## [1.6] — 2026-09-28
 
 ### Mejorado
