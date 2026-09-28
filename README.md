@@ -8,7 +8,7 @@ pantalla de llamada y controlar el audio durante la llamada.
 
 - **Paquete:** `com.masstext.app`
 - **Nombre visible:** LEX RECOVER
-- **Versión:** 1.1 (`versionCode 2`)
+- **Versión:** 1.2 (`versionCode 3`)
 - **minSdk:** 26 (Android 8) · **targetSdk/compileSdk:** 35 (Android 15)
 
 ---
@@ -65,6 +65,22 @@ pantalla de llamada y controlar el audio durante la llamada.
   (enlace publicado como CSV/hoja).
 - Asignación de contactos a **usuarios**, exportación por usuario y global.
 - Reparación automática de números a los que les falta el `0` inicial.
+
+### Sincronización desde Google Drive y categorías
+- Se pega el enlace de la hoja (compartida como *Lector*); la app enumera sus
+  pestañas y se elige cuál importar.
+- Se importan solo los contactos cuyo **"Asignado a"** coincide con tu usuario
+  (o todos si la hoja no tiene esa columna), sin duplicados por cédula.
+- **Categorías por columna:** `SEGUIMIENTO`/`TIPIFICACIÓN` (tipificación),
+  `STATUS`/`ESTADO` (estado) y `MEDIO DE CONTACTO` (medio). Se detectan por el
+  nombre del encabezado y se ignoran las columnas de fecha.
+- **Ventana flotante de revisión** antes de reemplazar la lista: filtros por
+  categoría y todas las filas con sus columnas y casillas (todas marcadas); se
+  elige qué importar.
+- En **Mis Contactos**, tres filtros (Tipificación, Estado, Medio) con los
+  nombres reales y su contador; los vacíos salen como *Sin gestionar*,
+  *Sin estado* y *Sin medio*. Los filtros se combinan y **Todos** selecciona
+  solo lo visible. Se ocultan al marcar contactos para dejar espacio.
 
 ### Historial, respaldo y apariencia
 - Historial de envíos y llamadas con **exportación a Excel**.
@@ -150,13 +166,17 @@ Si `keystore.properties` no existe, el APK de release se genera **sin firmar**.
 
 ## Uso rápido
 
-1. **Contactos → Importar** (Excel/CSV o enlace de Google Sheets) o alta manual.
-2. Selecciona contactos y asígnalos a un **usuario** si vas a repartir la carga.
-3. **Editor**: escribe el mensaje (o usa una plantilla) y **Enviar**.
-4. Para **llamadas**: Contactos → *Llamar seleccionados*, o la pestaña
+1. **Contactos → Importar** (Excel/CSV) o alta manual.
+2. **Ajustes → Sincronizar desde Drive**: elige la pestaña del libro y en la
+   **ventana flotante de revisión** marca (por categoría de gestión) qué
+   contactos importar. La lista resultante reemplaza la de contactos a llamar.
+3. En **Mis Contactos** filtra por **Tipificación**, **Estado** y **Medio**;
+   selecciona contactos y asígnalos a un **usuario** si vas a repartir la carga.
+4. **Editor**: escribe el mensaje (o usa una plantilla) y **Enviar**.
+5. Para **llamadas**: Contactos → *Llamar seleccionados*, o la pestaña
    **Llamadas** para la secuencia masiva.
-5. Configura retardos, timbrado y tope en **Ajustes**.
-6. El **mensaje pregrabado** se graba/importa en Ajustes → *Mensaje* y se
+6. Configura retardos, timbrado y tope en **Ajustes**.
+7. El **mensaje pregrabado** se graba/importa en Ajustes → *Mensaje* y se
    reproduce al contestar (si está activado).
 
 ---
@@ -200,6 +220,7 @@ Servicios clave (`app/src/main/java/com/masstext/app/service/`):
 | `CallMessagePlayer.kt` | Reproduce el mensaje pregrabado en la ruta actual |
 | `VoiceMessageStore.kt` | Graba/importa/almacena el mensaje pregrabado |
 | `SheetPickerOverlay.kt` | Selector flotante de hojas de Google Sheets |
+| `ImportPreviewOverlay.kt` | Ventana flotante de revisión al sincronizar (categorías + filas con casillas) |
 | `Importer.kt` (`import/`) | Lectura de Excel/CSV en streaming |
 
 ---

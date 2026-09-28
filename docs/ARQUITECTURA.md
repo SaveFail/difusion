@@ -39,7 +39,8 @@ de importación, progreso de envío y centro de llamadas.
 
 `data/AppDatabase.kt` define las entidades y DAOs:
 
-- `Contact` / `ContactDao` — contactos y su `assignment` (usuario).
+- `Contact` / `ContactDao` — contactos, su `assignment` (usuario) y las
+  categorías `gestion` (tipificación), `estado` y `medio` (de la hoja de Drive).
 - `SmsMessage` / `SmsMessageDao` — mensajes locales.
 - `SendRecord` / `SendDao` — registros de envío (auditoría).
 - `CallRecord` / `CallDao` — registros de llamada y etiquetas.
@@ -63,6 +64,8 @@ Almacenamiento auxiliar: `storage/UserStore.kt` (usuarios) y
 - **`CallRecorder`** — MediaRecorder, verificación del archivo y respaldo.
 - **`VoiceMessageStore` / `CallMessagePlayer`** — mensaje pregrabado.
 - **`SheetPickerOverlay`** — ventana flotante para elegir hoja de Google Sheets.
+- **`ImportPreviewOverlay`** — ventana flotante de revisión antes de importar:
+  filtros por categoría (tipificación, estado, medio) y filas con casillas.
 
 ## Importación
 
@@ -70,6 +73,14 @@ Almacenamiento auxiliar: `storage/UserStore.kt` (usuarios) y
 `worksheets/*.xml` con `XmlPullParser`) para no cargar todo el archivo en
 memoria (evita `OutOfMemoryError` con hojas grandes). Normaliza teléfonos y
 deduplica.
+
+Las columnas de categoría se detectan por su encabezado:
+`SEGUIMIENTO`/`TIPIFICACIÓN` → `gestion`, `STATUS`/`ESTADO` → `estado`,
+`MEDIO DE CONTACTO` → `medio`; los encabezados de **fecha** se excluyen para no
+confundir "FECHA DE GESTIÓN" (fecha serial de Excel) con una categoría. Al
+sincronizar, `MainViewModel` filtra por usuario, deduplica por cédula y publica
+las filas en `drivePreviewRows`; la confirmación (`commitDriveImport`) reemplaza
+la lista de contactos con las filas marcadas.
 
 ## Roles del sistema
 

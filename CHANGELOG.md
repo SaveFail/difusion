@@ -1,5 +1,44 @@
 # Registro de cambios
 
+## [1.2] — 2026-09-28
+
+### Agregado
+- **Categorías de contacto desde Google Drive.** La hoja puede traer columnas
+  de categoría y cada contacto guarda tres valores (Room `version = 11`):
+  - `gestion` ← **SEGUIMIENTO** o **TIPIFICACIÓN** (ej. NO CONTESTA, VOLVER A LLAMAR).
+  - `estado` ← **STATUS** o **ESTADO** (ej. PROMESA DE PAGO, PAGO).
+  - `medio` ← **MEDIO DE CONTACTO** (ej. LLAMADA, WHATSAPP).
+- **Filtros por categoría en Mis Contactos.** Una fila de chips por dimensión
+  (Tipificación, Estado y Medio de contacto) con los **nombres reales** de la
+  hoja y su contador; los vacíos aparecen como *Sin gestionar*, *Sin estado* y
+  *Sin medio*. Los tres filtros se combinan (Y) y el botón **Todos** selecciona
+  solo los contactos visibles. Botón **Exportar filtrados**.
+- **Ventana flotante de revisión al sincronizar** (`ImportPreviewOverlay`). Tras
+  elegir la hoja se abre una ventana `TYPE_APPLICATION_OVERLAY` con los filtros
+  de cada categoría y las filas con **todas las columnas** (Nombre, Cédula,
+  Teléfono, Asignado a) y una **casilla por fila** (todas marcadas por defecto),
+  con **Marcar todo / Nada** e **Importar (N)**. Solo se importan las filas
+  marcadas y reemplazan la lista.
+- **Exportación:** el Excel de contactos y la plantilla incluyen las columnas
+  **Tipificación**, **Estado** y **Medio**.
+- Los **filtros se ocultan** mientras hay contactos seleccionados, para dejar
+  espacio visual; al limpiar la selección vuelven a mostrarse.
+
+### Corregido
+- **Categorías mostraban números en vez de nombres.** La sincronización leía
+  como "Gestión" la columna **FECHA DE GESTIÓN**, que en el XLSX son fechas
+  guardadas como **número de serie de Excel** (46252, 46279…). Ahora las
+  columnas de categoría se detectan **por su nombre** y se **excluyen** los
+  encabezados de fecha (`fecha`, `feccha`, `vencimiento`).
+
+### Pruebas
+- **Dispositivo (TECNO KM4k) con hoja real (pestaña `SEP 19-09`):** migración
+  Room 10→11 correcta; la ventana de revisión mostró tipificaciones
+  (NO CONTESTA, VOLVER A LLAMAR, PAGO EN SOPORTE), estados (ABONO, INCUMPLIDA,
+  PAGO, PROMESA DE PAGO) y medios (LLAMADA, SMS, WHATSAPP); se importaron 223
+  contactos de 9 605 filas (261 duplicados por cédula). Los filtros de Mis
+  Contactos muestran los nombres y se ocultan al seleccionar.
+
 ## [1.1] — 2026-09-24
 
 ### Corregido
