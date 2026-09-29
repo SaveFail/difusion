@@ -1027,6 +1027,7 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                         onMakeDefaultSms = { makeDefaultSmsApp(context, defaultSmsRoleLauncher) },
                         onRequestAllPermissions = { requestAllPermissions() },
                         onRequestSpecialPermissions = { requestSpecialPermissions() },
+                        onOpenSystemPermissions = { openSystemAppPermissions(context) },
                         fullScreenGranted = hasFullScreenIntent(context),
                         onRepairPhones = {
                             scope.launch {
@@ -1486,6 +1487,44 @@ private fun isDefaultSmsApp(context: android.content.Context): Boolean {
     return runCatching {
         android.provider.Telephony.Sms.getDefaultSmsPackage(context) == context.packageName
     }.getOrDefault(false)
+}
+
+/**
+ * Abre la pantalla de permisos de la app en Ajustes del sistema, donde está el
+ * acceso a "Permisos restringidos" / "Permitir ajustes restringidos". Android no
+ * deja otorgarlos por código (protección del sistema), pero así se llega en un
+ * toque. Intenta primero los editores de permisos de fabricantes (MIUI/EMUI…).
+ */
+private fun openSystemAppPermissions(context: Context) {
+    val pkg = context.packageName
+    val oemIntents = listOf(
+        Intent("miui.intent.action.APP_PERM_EDITOR").putExtra("extra_pkgname", pkg),
+        Intent("miui.intent.action.APP_PERM_EDITOR").putExtra("package_name", pkg),
+        Intent().setClassName(
+            "com.huawei.systemmanager",
+            "com.huawei.systemmanager.appcontrol.activity.StartupAppControlActivity"
+        ),
+        Intent("com.samsung.android.settings.permissionmanagement.APP_PERMISSION_MANAGER")
+            .putExtra("extra_pkgname", pkg)
+    )
+    for (intent in oemIntents) {
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (runCatching { context.startActivity(intent) }.isSuccess) return
+    }
+    // Genérico: ficha de la app en Ajustes (desde ahí, "Permisos" y el menú ⋮
+    // "Permitir ajustes restringidos").
+    val generic = Intent(
+        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+        Uri.parse("package:$pkg")
+    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    runCatching { context.startActivity(generic) }.onFailure {
+        runCatching {
+            context.startActivity(
+                Intent(Settings.ACTION_APPLICATION_SETTINGS)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        }
+    }
 }
 
 /** Android 14+: ¿está permitido el uso de pantalla completa (llamada entrante)? */

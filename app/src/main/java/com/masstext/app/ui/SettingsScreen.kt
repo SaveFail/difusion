@@ -47,6 +47,7 @@ fun SettingsScreen(
     onMakeDefaultSms: (() -> Unit)?,
     onRequestAllPermissions: () -> Unit,
     onRequestSpecialPermissions: () -> Unit,
+    onOpenSystemPermissions: () -> Unit,
     fullScreenGranted: Boolean,
     onRepairPhones: (() -> Unit)?,
     appVersion: String,
@@ -145,6 +146,19 @@ fun SettingsScreen(
                     onClick = onRequestSpecialPermissions,
                     modifier = Modifier.fillMaxWidth(),
                     icon = Icons.Default.Layers
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                SecondaryActionButton(
+                    text = "Abrir permisos del sistema (restringidos)",
+                    onClick = onOpenSystemPermissions,
+                    modifier = Modifier.fillMaxWidth(),
+                    icon = Icons.Default.Settings
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "Si el equipo bloquea permisos (p. ej. \"Permisos restringidos\" en MIUI o \"Permitir ajustes restringidos\" en Android 13+), este botón abre la pantalla donde se activan. Android no permite activarlos desde la app.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             } // fin Permisos (parte 1)

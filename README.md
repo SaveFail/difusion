@@ -8,7 +8,7 @@ pantalla de llamada y controlar el audio durante la llamada.
 
 - **Paquete:** `com.masstext.app`
 - **Nombre visible:** LEX RECOVER
-- **Versión:** 2.2 (`versionCode 13`)
+- **Versión:** 2.3 (`versionCode 14`)
 - **minSdk:** 26 (Android 8) · **targetSdk/compileSdk:** 35 (Android 15)
 
 ---
@@ -178,7 +178,10 @@ En **Ajustes** hay botones para dejarlo listo rápido:
    teléfono, micrófono y notificaciones (Android 13+).
 2. **Permisos especiales:** encadena **superposición** (mostrar sobre otras apps)
    y **pantalla completa** para las llamadas (Android 14+).
-3. **Hacer predeterminadas Mensajes y Llamadas:** solicita los dos roles seguidos
+3. **Abrir permisos del sistema (restringidos):** abre la pantalla de Ajustes
+   donde se habilitan los permisos restringidos del fabricante. Android no deja
+   activarlos desde la app; este botón lleva directo al lugar.
+4. **Hacer predeterminadas Mensajes y Llamadas:** solicita los dos roles seguidos
    (app de SMS y app de teléfono). Necesario para enviar/recibir y para la
    pantalla de llamada propia.
 

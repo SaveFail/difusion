@@ -1,5 +1,16 @@
 # Registro de cambios
 
+## [2.3] — 2026-09-28
+
+### Agregado
+- **Ajustes → Permisos → "Abrir permisos del sistema (restringidos)"**: abre la
+  pantalla de permisos de la app en Ajustes del sistema, donde se activan los
+  **permisos restringidos** (MIUI/HyperOS, "Permitir ajustes restringidos" en
+  Android 13+, etc.). Intenta primero los editores de permisos del fabricante
+  (MIUI/EMUI/Samsung) y, si no, la ficha de la app.
+  - **Nota:** Android **no** permite que la app active esos permisos por código
+    (protección del sistema); el botón lleva en un toque al lugar correcto.
+
 ## [2.2] — 2026-09-28
 
 ### Cambiado (organización de Ajustes)
