@@ -311,14 +311,6 @@ o root, y quedan fuera del alcance de esta app. Ver
 
 ---
 
-## Respaldo (punto base)
-
-En [`backup/`](backup/) se guarda una **copia congelada** del código fuente de
-cada versión estable. La actual es **v2.5** (`versionCode 16`), nuestro punto
-base. Ver [`backup/README.md`](backup/README.md) para restaurar.
-
----
-
 ## Proyectos no incluidos
 
 La carpeta local `_extras/` (paneles web, CRM, e-commerce) y `wa-worker/`

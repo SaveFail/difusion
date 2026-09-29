@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <cache-path
+        name="mms_attachments"
+        path="mms/" />
+    <files-path
+        name="mms_inbox"
+        path="mms/" />
+    <files-path
+        name="voice"
+        path="" />
+    <cache-path
+        name="updates"
+        path="updates/" />
+</paths>
