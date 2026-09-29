@@ -128,7 +128,21 @@ class MainActivity : ComponentActivity() {
                     LocalAppPadding provides appPadding(themeConfig.spacing),
                     LocalUseGradient provides themeConfig.useGradient
                 ) {
-                    MainScreen(viewModel)
+                    // Términos y condiciones en el primer arranque.
+                    val termsPrefs = remember {
+                        getSharedPreferences("masstext_prefs", MODE_PRIVATE)
+                    }
+                    var termsAccepted by remember {
+                        mutableStateOf(termsPrefs.getInt("terms_version", 0) >= TERMS_VERSION)
+                    }
+                    if (termsAccepted) {
+                        MainScreen(viewModel)
+                    } else {
+                        TermsScreen(onAccept = {
+                            termsPrefs.edit().putInt("terms_version", TERMS_VERSION).apply()
+                            termsAccepted = true
+                        })
+                    }
                 }
             }
         }

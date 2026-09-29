@@ -240,6 +240,37 @@ fun FullCallPanel(
             }
         }
 
+        // Aviso de grabación (responsabilidad legal: hay que avisar al interlocutor).
+        val recordingState by CallRecorder.state.collectAsState()
+        if (recordingState == com.masstext.app.service.RecordingState.RECORDING ||
+            recordingState == com.masstext.app.service.RecordingState.PAUSED
+        ) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.errorContainer
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    AppIcon(
+                        Icons.Default.Mic,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
+                        size = 16.dp
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        "Llamada siendo grabada — avisa al interlocutor",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
+        }
+
         if (CallRecorder.isEnabled(context)) {
             Spacer(modifier = Modifier.height(8.dp))
             RecordingControls()

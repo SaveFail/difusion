@@ -8,7 +8,7 @@ pantalla de llamada y controlar el audio durante la llamada.
 
 - **Paquete:** `com.masstext.app`
 - **Nombre visible:** LEX RECOVER
-- **Versión:** 2.5 (`versionCode 16`)
+- **Versión:** 2.6 (`versionCode 17`)
 - **minSdk:** 26 (Android 8) · **targetSdk/compileSdk:** 35 (Android 15)
 
 ---
@@ -308,6 +308,24 @@ o root, y quedan fuera del alcance de esta app. Ver
   ni logs. Revísalo antes de cada push.
 - El repositorio se recomienda **privado** (contiene lógica de negocio).
 - Nunca compartas tu keystore ni sus contraseñas.
+
+---
+
+## Aviso legal y responsabilidad
+
+Al abrir la app por primera vez se muestran unos **Términos y Condiciones** que
+hay que aceptar (se pueden consultar luego en Ajustes → General). En resumen:
+
+- La app es **una herramienta o facilidad de contacto**; el **usuario es el único
+  responsable** de su uso.
+- Debe contar con el **consentimiento** de las personas a contactar y cumplir las
+  leyes de telecomunicaciones, datos personales, consumo y cobranza aplicables.
+- Prohibido el **spam** y el uso abusivo o acosador; hay que **identificarse** y
+  ofrecer una forma de **no recibir más comunicaciones (opt-out)**.
+- Para **grabar llamadas** o usar **mensaje automático**: avisar al interlocutor y
+  obtener su consentimiento.
+- Se distribuye **“tal cual”**, **sin garantía** de funcionamiento y **sin
+  responsabilidad** de los autores por daños, sanciones o mal uso.
 
 ---
 

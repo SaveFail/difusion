@@ -152,6 +152,28 @@ fun MessageEditorScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Sugerencia: incluye una forma de no recibir más mensajes (opt-out).",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+                AssistChip(
+                    onClick = {
+                        if (!messageBody.contains("STOP", ignoreCase = true)) {
+                            onMessageChange(
+                                messageBody.trimEnd() +
+                                    "\nResponde STOP para no recibir más mensajes."
+                            )
+                        }
+                    },
+                    label = { Text("+ Opt-out") }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             OutlinedTextField(
                 value = templateName,
                 onValueChange = { templateName = it },

@@ -1,5 +1,22 @@
 # Registro de cambios
 
+## [2.6] — 2026-09-28
+
+### Agregado (legal / responsabilidad)
+- **Términos y Condiciones en el primer arranque** (`TermsScreen`): pantalla que
+  se muestra la primera vez y exige aceptar para usar la app. Indica que el
+  **usuario es el único responsable** del uso (consentimiento, leyes de
+  telecomunicaciones/datos/cobranza, no spam), la obligación de **avisar y
+  obtener consentimiento para grabar** o usar mensaje automático, y una
+  **exención de responsabilidad**: la app se distribuye “tal cual”, como medio o
+  facilidad de contacto, **sin garantía de funcionamiento** y sin responsabilidad
+  de los autores por daños, sanciones o mal uso. La aceptación se guarda
+  (versión 1) y se puede **consultar luego** en Ajustes → General.
+- **Aviso de “llamada siendo grabada”** durante la grabación (Ajustes → General →
+  ver términos; y en los controles de llamada), recordando avisar al interlocutor.
+- **Sugerencia de opt-out** en el editor de mensajes, con botón **“+ Opt-out”**
+  que agrega “Responde STOP para no recibir más mensajes”.
+
 ## [2.5] — 2026-09-28
 
 ### Corregido

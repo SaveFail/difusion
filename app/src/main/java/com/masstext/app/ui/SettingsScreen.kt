@@ -83,6 +83,7 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     var showAbout by remember { mutableStateOf(false) }
+    var showTerms by remember { mutableStateOf(false) }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -1097,6 +1098,13 @@ fun SettingsScreen(
                         icon = Icons.Default.Palette
                     )
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+                SecondaryActionButton(
+                    text = "Ver términos y condiciones",
+                    onClick = { showTerms = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    icon = Icons.Default.Gavel
+                )
             }
             } // fin General
             } // fin contenido de pestaña
@@ -1108,6 +1116,10 @@ fun SettingsScreen(
                 repoVersion = repoVersion,
                 onDismiss = { showAbout = false }
             )
+        }
+
+        if (showTerms) {
+            TermsDialog(onDismiss = { showTerms = false })
         }
     }
 
