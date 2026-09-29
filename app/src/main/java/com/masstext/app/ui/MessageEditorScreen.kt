@@ -34,6 +34,7 @@ fun MessageEditorScreen(
     onSaveTemplate: (String, String) -> Unit,
     onDeleteTemplate: (MessageTemplate) -> Unit,
     selectedCount: Int,
+    showSmsCounter: Boolean = true,
     onSend: () -> Unit
 ) {
     // Plantilla seleccionada: id (-1 = ninguna), nombre y texto original. Sirve
@@ -141,10 +142,12 @@ fun MessageEditorScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                AssistChip(
-                    onClick = {},
-                    label = { Text("$smsCount SMS") }
-                )
+                if (showSmsCounter) {
+                    AssistChip(
+                        onClick = {},
+                        label = { Text("$smsCount SMS") }
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))

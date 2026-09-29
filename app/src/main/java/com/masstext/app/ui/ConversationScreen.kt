@@ -77,6 +77,17 @@ fun ConversationScreen(
     val messages by viewModel.messagesForThread(conversation.threadId)
         .collectAsStateWithLifecycle(initialValue = emptyList())
     val themeConfig by viewModel.themeConfig.collectAsStateWithLifecycle()
+    val outgoingBubbleColor =
+        if (themeConfig.outgoingBubble == 0L) MaterialTheme.colorScheme.primary
+        else Color(themeConfig.outgoingBubble)
+    val incomingBubbleColor =
+        if (themeConfig.incomingBubble == 0L) MaterialTheme.colorScheme.surfaceVariant
+        else Color(themeConfig.incomingBubble)
+    val bubbleShape = when (themeConfig.bubbleShape) {
+        "pill" -> RoundedCornerShape(50)
+        "sharp" -> RoundedCornerShape(4.dp)
+        else -> RoundedCornerShape(14.dp)
+    }
 
     var query by rememberSaveable { mutableStateOf("") }
     var filtering by rememberSaveable { mutableStateOf(false) }
@@ -265,12 +276,12 @@ fun ConversationScreen(
                 itemsIndexed(filteredMessages, key = { _, m -> m.id }) { index, message ->
                     val isOutgoing = !message.isIncoming
                     Box(Modifier.fillMaxWidth(), contentAlignment = if (isOutgoing) Alignment.CenterEnd else Alignment.CenterStart) {
+                        val bubbleColor = if (isOutgoing) outgoingBubbleColor else incomingBubbleColor
                         Surface(
-                            color = if (isOutgoing) MaterialTheme.colorScheme.primary
-                                    else MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = if (isOutgoing) MaterialTheme.colorScheme.onPrimary
-                                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                            shape = RoundedCornerShape(14.dp),
+                            color = bubbleColor,
+                            contentColor = if (bubbleColor.luminance() > 0.5f)
+                                Color(0xFF000000) else Color(0xFFFFFFFF),
+                            shape = bubbleShape,
                             shadowElevation = 1.dp,
                             border = if (message.id == highlightedMsgId)
                                 BorderStroke(2.dp, MaterialTheme.colorScheme.tertiary) else null,
@@ -320,13 +331,15 @@ fun ConversationScreen(
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                                 Spacer(Modifier.height(2.dp))
-                                Text(
-                                    SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(Date(message.date)),
-                                    style = MaterialTheme.typography.labelSmall
-                                )
+                                if (themeConfig.showMessageTime) {
+                                    Text(
+                                        SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(Date(message.date)),
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
+                                }
                                 // Estado del mensaje saliente, visible debajo y a la
                                 // derecha de cada mensaje (enviando/enviado/no enviado).
-                                if (isOutgoing) {
+                                if (isOutgoing && themeConfig.showMessageStatus) {
                                     Spacer(Modifier.height(3.dp))
                                     Box(
                                         Modifier.fillMaxWidth(),

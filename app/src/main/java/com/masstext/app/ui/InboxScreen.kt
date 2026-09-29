@@ -51,9 +51,7 @@ fun InboxScreen(
     onResendSelected: (List<Conversation>) -> Unit,
     onDeleteSelected: (List<Conversation>) -> Unit,
     onOpenTrash: () -> Unit,
-    onOpenCalls: () -> Unit,
-    brandName: String = "",
-    brandLogo: String = ""
+    onOpenCalls: () -> Unit
 ) {
     var selecting by remember { mutableStateOf(false) }
     var selectedThreads by remember { mutableStateOf<Set<Long>>(emptySet()) }
@@ -93,12 +91,8 @@ fun InboxScreen(
                                 .padding(horizontal = 16.dp, vertical = 10.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                if (brandLogo.isNotBlank()) {
-                                    Text(brandLogo, style = MaterialTheme.typography.titleLarge)
-                                    Spacer(Modifier.width(6.dp))
-                                }
                                 Text(
-                                    brandName.ifBlank { "Mensajes" },
+                                    "Mensajes",
                                     style = MaterialTheme.typography.titleLarge,
                                     color = MaterialTheme.colorScheme.onPrimary,
                                     fontWeight = FontWeight.Bold

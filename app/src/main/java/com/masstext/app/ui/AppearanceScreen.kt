@@ -84,6 +84,19 @@ val bgOptions: List<Pair<String, Long>> = listOf(
     "Negro" to 0xFF121212
 )
 
+// Colores para las burbujas del chat.
+val bubbleOptions: List<Pair<String, Long>> = listOf(
+    "Azul" to 0xFF3F6ABE,
+    "Violeta" to 0xFF7C3AED,
+    "Verde" to 0xFF2E7D32,
+    "Turquesa" to 0xFF00897B,
+    "Naranja" to 0xFFEF6C00,
+    "Rojo" to 0xFFC62828,
+    "Gris" to 0xFF546E7A,
+    "Crema" to 0xFFFFF3E0,
+    "Blanco" to 0xFFFFFFFF
+)
+
 // Colores para el estado de los mensajes en el chat.
 val statusOptions: List<Pair<String, Long>> = listOf(
     "Verde" to 0xFF2E7D32,
@@ -197,7 +210,7 @@ fun AppearanceScreen(
             }
 
             // Pestañas para dividir la personalización y evitar confusiones.
-            val tabs = listOf("Tema", "Marca", "Colores", "Texto", "Fuente", "Sonido", "Vista", "Guardar")
+            val tabs = listOf("Tema", "Colores", "Texto", "Fuente", "Sonido", "Vista", "Guardar")
             var tab by remember { mutableStateOf(0) }
             ScrollableTabRow(
                 selectedTabIndex = tab,
@@ -297,10 +310,7 @@ fun AppearanceScreen(
                     )
                 }
                 } // fin Tema
-                if (tab == 1) {
-                    MarcaTab(config = config, onConfigChange = onConfigChange)
-                }
-                if (tab == 5) {
+                if (tab == 4) {
 
                 SectionCard {
                     Text("Sonido y avisos del teléfono", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -360,7 +370,68 @@ fun AppearanceScreen(
                     )
                 }
                 } // fin Sonido
-                if (tab == 6) {
+                if (tab == 5) {
+
+                SectionCard {
+                    Text("Burbujas del chat", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Color de los mensajes enviados", style = MaterialTheme.typography.bodySmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FilterChip(
+                            selected = config.outgoingBubble == 0L,
+                            onClick = { onConfigChange(config.copy(outgoingBubble = 0, preset = "")) },
+                            label = { Text("Auto", fontSize = 12.sp) }
+                        )
+                    }
+                    ColorSwatchRow(bubbleOptions, selected = config.outgoingBubble, onSelected = {
+                        onConfigChange(config.copy(outgoingBubble = it, preset = ""))
+                    })
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text("Color de los mensajes recibidos", style = MaterialTheme.typography.bodySmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FilterChip(
+                            selected = config.incomingBubble == 0L,
+                            onClick = { onConfigChange(config.copy(incomingBubble = 0, preset = "")) },
+                            label = { Text("Auto", fontSize = 12.sp) }
+                        )
+                    }
+                    ColorSwatchRow(bubbleOptions, selected = config.incomingBubble, onSelected = {
+                        onConfigChange(config.copy(incomingBubble = it, preset = ""))
+                    })
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("Forma de las burbujas", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf("rounded" to "Redondeadas", "pill" to "Pastilla", "sharp" to "Rectas").forEach { (v, l) ->
+                            FilterChip(
+                                selected = config.bubbleShape == v,
+                                onClick = { onConfigChange(config.copy(bubbleShape = v, preset = "")) },
+                                label = { Text(l, fontSize = 12.sp) }
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    ToggleRow(
+                        label = "Mostrar estado de envío",
+                        helper = "Enviando / enviado / no enviado en cada mensaje.",
+                        checked = config.showMessageStatus,
+                        onCheckedChange = { onConfigChange(config.copy(showMessageStatus = it, preset = "")) }
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    ToggleRow(
+                        label = "Mostrar hora de cada mensaje",
+                        checked = config.showMessageTime,
+                        onCheckedChange = { onConfigChange(config.copy(showMessageTime = it, preset = "")) }
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    ToggleRow(
+                        label = "Mostrar contador de SMS",
+                        helper = "El chip \"N SMS\" al escribir un mensaje.",
+                        checked = config.showSmsCounter,
+                        onCheckedChange = { onConfigChange(config.copy(showSmsCounter = it, preset = "")) }
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
                     "Vista previa de la pantalla",
@@ -375,7 +446,7 @@ fun AppearanceScreen(
                 Spacer(modifier = Modifier.height(12.dp))
                 PreviewCard(config)
                 } // fin Vista
-                if (tab == 3) {
+                if (tab == 2) {
 
                 SectionLabel("Tamaño de las letras")
                 Spacer(modifier = Modifier.height(6.dp))
@@ -408,7 +479,7 @@ fun AppearanceScreen(
                     }
                 }
                 } // fin Texto
-                if (tab == 2) {
+                if (tab == 1) {
 
                 SectionLabel("Color de la aplicación")
                 Spacer(modifier = Modifier.height(6.dp))
@@ -478,7 +549,7 @@ fun AppearanceScreen(
                     onConfigChange(config.copy(statusFailed = it, preset = ""))
                 })
                 } // fin Colores
-                if (tab == 4) {
+                if (tab == 3) {
 
                 SectionLabel("Tipo de fuente")
                 Spacer(modifier = Modifier.height(6.dp))
@@ -510,7 +581,7 @@ fun AppearanceScreen(
                     icon = Icons.Default.FileOpen
                 )
                 } // fin Fuente
-                if (tab == 7) {
+                if (tab == 6) {
 
                 SectionLabel("Guardar / compartir tu apariencia")
                 Spacer(modifier = Modifier.height(8.dp))
@@ -538,79 +609,6 @@ fun AppearanceScreen(
                 )
                 } // fin Guardar
             }
-        }
-    }
-}
-
-// Emojis disponibles como logo de la app.
-val logoOptions: List<String> = listOf(
-    "📨", "💬", "📞", "📣", "🚀", "⭐", "🔵", "🟢", "🟣", "🔥", "🛡️", "💼", "📊", "❤️", "✅", "⚡"
-)
-
-@Composable
-private fun MarcaTab(config: ThemeConfig, onConfigChange: (ThemeConfig) -> Unit) {
-    SectionCard {
-        Text("Nombre de la app", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-        Spacer(modifier = Modifier.height(6.dp))
-        OutlinedTextField(
-            value = config.appName,
-            onValueChange = { onConfigChange(config.copy(appName = it)) },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text("Nombre a mostrar") },
-            placeholder = { Text("LEX RECOVER") },
-            singleLine = true
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        Text("Icono de la app (logo)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-        Spacer(modifier = Modifier.height(6.dp))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            logoOptions.forEach { emoji ->
-                FilterChip(
-                    selected = config.appLogo == emoji,
-                    onClick = { onConfigChange(config.copy(appLogo = emoji)) },
-                    label = { Text(emoji, fontSize = 18.sp) }
-                )
-            }
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        BrandPreview(config)
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            "Android no permite cambiar el nombre ni el icono del lanzador a valores libres. " +
-                "Este nombre y logo se muestran dentro de la app.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun BrandPreview(config: ThemeConfig) {
-    val name = config.appName.ifBlank { "LEX RECOVER" }
-    val logo = config.appLogo.ifBlank { "📨" }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(MaterialTheme.colorScheme.primary),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(logo, fontSize = 24.sp)
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Column {
-            Text(name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Text(
-                "Así se verá tu marca dentro de la app",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }

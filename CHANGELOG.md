@@ -1,5 +1,23 @@
 # Registro de cambios
 
+## [2.0] — 2026-09-28
+
+### Agregado
+- **Ajustes por pestañas** para ordenar todo lo que estaba disperso:
+  **Permisos, Drive, Roles, Llamadas, Apariencia, Envío y General**. La barra de
+  pestañas queda fija arriba; solo el contenido cambia.
+- **Personalización ampliada (Apariencia → Vista):**
+  - **Color de las burbujas** del chat (enviados y recibidos), con opción
+    *Auto* (sigue el color de la app).
+  - **Forma de las burbujas**: redondeadas, pastilla o rectas.
+  - **Mostrar/ocultar**: estado de envío, hora de cada mensaje y contador de SMS.
+  - El texto de las burbujas pasa a negro/blanco según el brillo del color.
+
+### Quitado
+- La pestaña **Marca** (nombre/emoji de la app): no cambiaba el nombre ni el
+  icono reales del lanzador (Android no lo permite), así que se eliminó para no
+  confundir. Se retiró también del modelo de tema.
+
 ## [1.9] — 2026-09-28
 
 ### Agregado

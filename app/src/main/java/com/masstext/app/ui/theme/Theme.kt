@@ -50,9 +50,13 @@ data class ThemeConfig(
     val statusSent: Long = 0xFF2E7D32,
     val statusSending: Long = 0xFFF9A825,
     val statusFailed: Long = 0xFFC62828,
-    // Marca: nombre a mostrar dentro de la app y logo (emoji). Vacío = por defecto.
-    val appName: String = "",
-    val appLogo: String = ""
+    // Personalización ampliada del chat y del editor. 0 = usar el color de la app.
+    val outgoingBubble: Long = 0,
+    val incomingBubble: Long = 0,
+    val bubbleShape: String = "rounded", // rounded | pill | sharp
+    val showMessageStatus: Boolean = true,
+    val showMessageTime: Boolean = true,
+    val showSmsCounter: Boolean = true
 )
 
 object ThemePrefs {
@@ -76,8 +80,12 @@ object ThemePrefs {
     private const val KEY_STATUS_SENT = "theme_status_sent"
     private const val KEY_STATUS_SENDING = "theme_status_sending"
     private const val KEY_STATUS_FAILED = "theme_status_failed"
-    private const val KEY_APP_NAME = "theme_app_name"
-    private const val KEY_APP_LOGO = "theme_app_logo"
+    private const val KEY_OUT_BUBBLE = "theme_out_bubble"
+    private const val KEY_IN_BUBBLE = "theme_in_bubble"
+    private const val KEY_BUBBLE_SHAPE = "theme_bubble_shape"
+    private const val KEY_SHOW_STATUS = "theme_show_status"
+    private const val KEY_SHOW_TIME = "theme_show_time"
+    private const val KEY_SHOW_SMS_COUNTER = "theme_show_sms_counter"
     private const val KEY_VERSION = "theme_version"
     private const val VERSION = 2
 
@@ -107,8 +115,12 @@ object ThemePrefs {
             statusSent = prefs.getLong(KEY_STATUS_SENT, defaults.statusSent),
             statusSending = prefs.getLong(KEY_STATUS_SENDING, defaults.statusSending),
             statusFailed = prefs.getLong(KEY_STATUS_FAILED, defaults.statusFailed),
-            appName = prefs.getString(KEY_APP_NAME, defaults.appName) ?: defaults.appName,
-            appLogo = prefs.getString(KEY_APP_LOGO, defaults.appLogo) ?: defaults.appLogo
+            outgoingBubble = prefs.getLong(KEY_OUT_BUBBLE, defaults.outgoingBubble),
+            incomingBubble = prefs.getLong(KEY_IN_BUBBLE, defaults.incomingBubble),
+            bubbleShape = prefs.getString(KEY_BUBBLE_SHAPE, defaults.bubbleShape) ?: defaults.bubbleShape,
+            showMessageStatus = prefs.getBoolean(KEY_SHOW_STATUS, defaults.showMessageStatus),
+            showMessageTime = prefs.getBoolean(KEY_SHOW_TIME, defaults.showMessageTime),
+            showSmsCounter = prefs.getBoolean(KEY_SHOW_SMS_COUNTER, defaults.showSmsCounter)
         )
     }
 
@@ -133,8 +145,12 @@ object ThemePrefs {
             .putLong(KEY_STATUS_SENT, config.statusSent)
             .putLong(KEY_STATUS_SENDING, config.statusSending)
             .putLong(KEY_STATUS_FAILED, config.statusFailed)
-            .putString(KEY_APP_NAME, config.appName)
-            .putString(KEY_APP_LOGO, config.appLogo)
+            .putLong(KEY_OUT_BUBBLE, config.outgoingBubble)
+            .putLong(KEY_IN_BUBBLE, config.incomingBubble)
+            .putString(KEY_BUBBLE_SHAPE, config.bubbleShape)
+            .putBoolean(KEY_SHOW_STATUS, config.showMessageStatus)
+            .putBoolean(KEY_SHOW_TIME, config.showMessageTime)
+            .putBoolean(KEY_SHOW_SMS_COUNTER, config.showSmsCounter)
             .apply()
     }
 
@@ -304,8 +320,12 @@ private fun configToJson(config: ThemeConfig): JSONObject = JSONObject().apply {
     put("statusSent", config.statusSent)
     put("statusSending", config.statusSending)
     put("statusFailed", config.statusFailed)
-    put("appName", config.appName)
-    put("appLogo", config.appLogo)
+    put("outgoingBubble", config.outgoingBubble)
+    put("incomingBubble", config.incomingBubble)
+    put("bubbleShape", config.bubbleShape)
+    put("showMessageStatus", config.showMessageStatus)
+    put("showMessageTime", config.showMessageTime)
+    put("showSmsCounter", config.showSmsCounter)
 }
 
 fun configFromJson(json: String): ThemeConfig? {
@@ -329,8 +349,12 @@ fun configFromJson(json: String): ThemeConfig? {
             statusSent = o.optLong("statusSent", 0xFF2E7D32),
             statusSending = o.optLong("statusSending", 0xFFF9A825),
             statusFailed = o.optLong("statusFailed", 0xFFC62828),
-            appName = o.optString("appName", ""),
-            appLogo = o.optString("appLogo", "")
+            outgoingBubble = o.optLong("outgoingBubble", 0),
+            incomingBubble = o.optLong("incomingBubble", 0),
+            bubbleShape = o.optString("bubbleShape", "rounded"),
+            showMessageStatus = o.optBoolean("showMessageStatus", true),
+            showMessageTime = o.optBoolean("showMessageTime", true),
+            showSmsCounter = o.optBoolean("showSmsCounter", true)
         )
     } catch (_: Exception) {
         null

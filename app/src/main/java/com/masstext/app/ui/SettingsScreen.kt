@@ -18,6 +18,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -82,8 +83,6 @@ fun SettingsScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
         ) {
         ScreenHeader(
             title = "Ajustes",
@@ -91,11 +90,30 @@ fun SettingsScreen(
             icon = Icons.Default.Settings
         )
 
+        // Pestañas para ordenar la configuración por temas.
+        val settingsTabs = listOf("Permisos", "Drive", "Roles", "Llamadas", "Apariencia", "Envío", "General")
+        var settingsTab by remember { mutableStateOf(0) }
+        ScrollableTabRow(
+            selectedTabIndex = settingsTab,
+            edgePadding = 8.dp,
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            settingsTabs.forEachIndexed { index, title ->
+                Tab(
+                    selected = settingsTab == index,
+                    onClick = { settingsTab = index },
+                    text = { Text(title, maxLines = 1, fontSize = 13.sp) }
+                )
+            }
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
+            if (settingsTab == 0) {
             SectionCard {
                 Text(
                     "Permisos de la app",
@@ -223,6 +241,8 @@ fun SettingsScreen(
                     }
                 }
             }
+            } // fin Permisos
+            if (settingsTab == 1) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -346,6 +366,8 @@ fun SettingsScreen(
                     icon = Icons.Default.Person
                 )
             }
+            } // fin Drive
+            if (settingsTab == 2) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -413,6 +435,8 @@ fun SettingsScreen(
                     icon = Icons.Default.Phone
                 )
             }
+            } // fin Roles
+            if (settingsTab == 3) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -628,6 +652,8 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            } // fin Llamadas
+            if (settingsTab == 4) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -651,6 +677,8 @@ fun SettingsScreen(
                     icon = Icons.Default.Palette
                 )
             }
+            } // fin Apariencia
+            if (settingsTab == 5) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -963,6 +991,8 @@ fun SettingsScreen(
                 micGranted = micGranted,
                 onRequestMic = onRequestMic
             )
+            } // fin Envío
+            if (settingsTab == 6) {
 
             if (onRepairPhones != null) {
                 Spacer(modifier = Modifier.height(16.dp))
@@ -987,6 +1017,7 @@ fun SettingsScreen(
                     )
                 }
             }
+            } // fin General
         }
     }
 
