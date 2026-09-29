@@ -64,17 +64,34 @@ object SimManager {
         prefs(context).edit().putString(KEY_SMS_DEFAULT, id).apply()
     }
 
-    /** SIM elegida para enviar SMS (o la primera disponible). */
+    /** SIM elegida para enviar SMS (o la de la suscripción por defecto). */
     fun getSmsSim(context: Context): SimInfo? {
         val sims = getSims(context)
         if (sims.isEmpty()) return null
-        val id = getSmsId(context)
-        return sims.find { it.handle.id == id } ?: sims.first()
+        getSmsId(context)?.let { id -> sims.find { it.handle.id == id }?.let { return it } }
+        val defaultSub = runCatching {
+            android.telephony.SubscriptionManager.getDefaultSmsSubscriptionId()
+        }.getOrDefault(android.telephony.SubscriptionManager.INVALID_SUBSCRIPTION_ID)
+        return sims.find { it.handle.id.toIntOrNull() == defaultSub } ?: sims.first()
     }
 
-    /** Subscription id de la SIM elegida para SMS (null = predeterminada). */
-    fun getSmsSubId(context: Context): Int? =
-        getSmsSim(context)?.handle?.id?.toIntOrNull()
+    /**
+     * Subscription id de la SIM elegida para SMS, o **null** para usar el
+     * SmsManager predeterminado. Se devuelve null (comportamiento normal, sin
+     * confirmación por mensaje) salvo que haya 2+ SIM, el usuario haya elegido
+     * una explícitamente y sea distinta de la suscripción de SMS por defecto.
+     */
+    fun getSmsSubId(context: Context): Int? {
+        val sims = getSims(context)
+        if (sims.size < 2) return null
+        val chosenId = getSmsId(context) ?: return null
+        val chosen = sims.find { it.handle.id == chosenId } ?: return null
+        val subId = chosen.handle.id.toIntOrNull() ?: return null
+        val defaultSub = runCatching {
+            android.telephony.SubscriptionManager.getDefaultSmsSubscriptionId()
+        }.getOrDefault(android.telephony.SubscriptionManager.INVALID_SUBSCRIPTION_ID)
+        return if (subId == defaultSub) null else subId
+    }
 
     /** Devuelve la otra SIM (la que no es la actual). */
     fun getOtherSim(context: Context, current: PhoneAccountHandle?): SimInfo? {

@@ -1,5 +1,17 @@
 # Registro de cambios
 
+## [2.5] — 2026-09-28
+
+### Corregido
+- **Envío masivo pedía confirmación por cada SMS** (“permitir/no permitir”) aunque
+  la app fuera la predeterminada. Ocurrió desde 2.4 al enviar con un `SmsManager`
+  por suscripción. Ahora se usa el **SmsManager predeterminado** salvo que haya
+  **2+ SIM** y elijas **explícitamente** una distinta a la suscripción de SMS por
+  defecto. Así se recupera el envío masivo normal (sin confirmación por mensaje)
+  y el selector de SIM sigue funcionando cuando de verdad se necesita.
+- El indicador del botón de SIM muestra ahora la **SIM realmente usada** (la de
+  la suscripción de SMS por defecto) cuando no se ha elegido otra.
+
 ## [2.4] — 2026-09-28
 
 ### Agregado
