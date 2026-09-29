@@ -8,7 +8,7 @@ pantalla de llamada y controlar el audio durante la llamada.
 
 - **Paquete:** `com.masstext.app`
 - **Nombre visible:** LEX RECOVER
-- **Versión:** 2.1 (`versionCode 12`)
+- **Versión:** 2.2 (`versionCode 13`)
 - **minSdk:** 26 (Android 8) · **targetSdk/compileSdk:** 35 (Android 15)
 
 ---
@@ -104,8 +104,8 @@ pantalla de llamada y controlar el audio durante la llamada.
   (incluida `.ttf/.otf`), escala de texto e iconos, forma, espaciado, colores del
   estado de los mensajes, **colores y forma de las burbujas del chat** y
   **mostrar/ocultar** estado, hora y contador de SMS. Exportar/importar.
-- **Ajustes por pestañas** (Permisos, Drive, Roles, Llamadas, Apariencia, Envío,
-  General) para tener la configuración ordenada.
+- **Ajustes por pestañas** (Permisos, Actualizaciones, Drive, Llamadas,
+  Apariencia, Envío, General) para tener la configuración ordenada.
 
 ---
 

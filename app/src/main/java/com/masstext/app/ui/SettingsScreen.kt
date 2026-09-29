@@ -54,6 +54,7 @@ fun SettingsScreen(
     updateStatus: String,
     onCheckUpdates: () -> Unit,
     onOpenAppearance: () -> Unit,
+    onResetAppearance: () -> Unit,
     userName: String,
     onUserChange: (String) -> Unit,
     isDefaultSms: Boolean,
@@ -91,7 +92,7 @@ fun SettingsScreen(
         )
 
         // Pestañas para ordenar la configuración por temas.
-        val settingsTabs = listOf("Permisos", "Drive", "Roles", "Llamadas", "Apariencia", "Envío", "General")
+        val settingsTabs = listOf("Permisos", "Actualizaciones", "Drive", "Llamadas", "Apariencia", "Envío", "General")
         var settingsTab by remember { mutableStateOf(0) }
         ScrollableTabRow(
             selectedTabIndex = settingsTab,
@@ -146,6 +147,8 @@ fun SettingsScreen(
                     icon = Icons.Default.Layers
                 )
             }
+            } // fin Permisos (parte 1)
+            if (settingsTab == 1) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -187,6 +190,8 @@ fun SettingsScreen(
                     icon = Icons.Default.SystemUpdate
                 )
             }
+            } // fin Actualizaciones
+            if (settingsTab == 0) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -243,7 +248,7 @@ fun SettingsScreen(
                 }
             }
             } // fin Permisos
-            if (settingsTab == 1) {
+            if (settingsTab == 2) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -367,7 +372,7 @@ fun SettingsScreen(
                 )
             }
             } // fin Drive
-            if (settingsTab == 2) {
+            if (settingsTab == 0) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -760,6 +765,8 @@ fun SettingsScreen(
                     icon = Icons.Default.Save
                 )
             }
+            } // fin Envío
+            if (settingsTab == 3) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -991,7 +998,7 @@ fun SettingsScreen(
                 micGranted = micGranted,
                 onRequestMic = onRequestMic
             )
-            } // fin Envío
+            } // fin Llamadas (retardos y mensaje)
             if (settingsTab == 6) {
 
             if (onRepairPhones != null) {
@@ -1016,6 +1023,51 @@ fun SettingsScreen(
                         icon = Icons.Default.Refresh
                     )
                 }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            SectionCard {
+                Text(
+                    "Restablecer apariencia",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "Devuelve los colores, la fuente, el espaciado y las burbujas del chat a los valores por defecto.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                SecondaryActionButton(
+                    text = "Restablecer apariencia",
+                    onClick = onResetAppearance,
+                    modifier = Modifier.fillMaxWidth(),
+                    icon = Icons.Default.RestartAlt
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            SectionCard {
+                Text(
+                    "Acerca de la app",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "LEX RECOVER · Versión instalada: $appVersion" +
+                        if (repoVersion.isNotBlank()) " · Última en el repositorio: $repoVersion" else "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                SecondaryActionButton(
+                    text = "Abrir personalización",
+                    onClick = onOpenAppearance,
+                    modifier = Modifier.fillMaxWidth(),
+                    icon = Icons.Default.Palette
+                )
             }
             } // fin General
             } // fin contenido de pestaña

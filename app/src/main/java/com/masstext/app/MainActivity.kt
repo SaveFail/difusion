@@ -1041,6 +1041,9 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                             }
                         },
                         onOpenAppearance = { showAppearance = true },
+                        onResetAppearance = {
+                            viewModel.setThemeConfig(com.masstext.app.ui.theme.ThemeConfig())
+                        },
                         appVersion = com.masstext.app.service.UpdateManager.currentVersionName,
                         repoVersion = repoVersion,
                         updateStatus = updateStatus,

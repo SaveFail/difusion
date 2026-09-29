@@ -1,5 +1,22 @@
 # Registro de cambios
 
+## [2.2] — 2026-09-28
+
+### Cambiado (organización de Ajustes)
+- **Permisos** ahora incluye también **Mensajes y llamadas predeterminadas**
+  (antes en la pestaña Roles, que se eliminó).
+- **Nueva pestaña exclusiva “Actualizaciones”.**
+- **Drive** se mantiene igual (enlace, sincronización y usuario).
+- **Llamadas** ahora incluye **Repetición de llamadas**, los **retardos**
+  (pausa, timbre y límite) y el **mensaje automático al contestar** (además de
+  Bluetooth, barra flotante y grabación).
+- **Envío** queda con el **Modo de envío** y el **retardo entre mensajes**.
+- **General** ahora tiene más: **Corregir números**, **Restablecer apariencia** y
+  **Acerca de** (versión instalada y de repositorio).
+
+Pestañas finales: **Permisos · Actualizaciones · Drive · Llamadas · Apariencia ·
+Envío · General**.
+
 ## [2.1] — 2026-09-28
 
 ### Corregido
