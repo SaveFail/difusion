@@ -70,7 +70,7 @@ class SmsSendService : Service() {
             }
             scope.launch {
                 try {
-                    val result = sender.sendBatch(task.contacts, task.template, task.delayMs, task.safeMode)
+                    val result = sender.sendBatch(task.contacts, task.template, task.delayMs, task.safeMode, task.subId)
                     runCatching {
                         val db = AppDatabase.getInstance(this@SmsSendService)
                         val breakdown = if (result.firstRowId > 0L && result.lastRowId >= result.firstRowId) {

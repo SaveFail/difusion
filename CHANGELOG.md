@@ -1,5 +1,22 @@
 # Registro de cambios
 
+## [2.4] — 2026-09-28
+
+### Agregado
+- **Selector de SIM para SMS**: botón pequeño con forma de SIM en el **envío
+  masivo** (editor) y **dentro de cada chat**, para elegir con qué SIM enviar.
+  Aparece **aunque solo haya una SIM** (muestra cuál es). La elección se guarda y
+  la usan el envío masivo y el chat.
+- **Indicador de SIM en llamadas**: el marcador muestra la SIM **aunque solo haya
+  una activa** (antes solo aparecía con 2 SIM).
+- **Acerca de**: descripción corta y precisa de la app + detalle en un diálogo.
+- **Apariencia → Guardar**: botón **“Guardar cambios”** que confirma y deja
+  guardada la apariencia en el teléfono.
+
+### Notas
+- El envío por SIM usa `SmsManager` de la suscripción elegida; si no está
+  disponible, cae a la SIM predeterminada.
+
 ## [2.3] — 2026-09-28
 
 ### Agregado

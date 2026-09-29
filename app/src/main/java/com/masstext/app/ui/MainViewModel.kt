@@ -620,8 +620,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun sendSingleMessage(address: String, body: String) {
+        val subId = com.masstext.app.service.SimManager.getSmsSubId(getApplication())
         viewModelScope.launch {
-            smsSender.sendSingle(address, body)
+            smsSender.sendSingle(address, body, subId)
         }
     }
 
@@ -799,7 +800,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (_isSending.value) return
         // El envío corre en un servicio en primer plano, así puede continuar en
         // segundo plano mientras el usuario hace llamadas o navega por la app.
-        SmsBatchTask.set(SmsBatchTask.PendingBatch(contacts, message, delayMs, _safeMode.value))
+        val subId = com.masstext.app.service.SimManager.getSmsSubId(getApplication())
+        SmsBatchTask.set(SmsBatchTask.PendingBatch(contacts, message, delayMs, _safeMode.value, subId))
         viewModelScope.launch {
             try {
                 SmsSendService.start(getApplication())

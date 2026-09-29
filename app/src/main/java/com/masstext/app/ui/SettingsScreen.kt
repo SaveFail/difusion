@@ -82,6 +82,7 @@ fun SettingsScreen(
     onFinalizeSyncFromDrive: () -> Unit
 ) {
     val context = LocalContext.current
+    var showAbout by remember { mutableStateOf(false) }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -1064,29 +1065,89 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(16.dp))
             SectionCard {
                 Text(
-                    "Acerca de la app",
+                    "Acerca de LEX RECOVER",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "LEX RECOVER · Versión instalada: $appVersion" +
+                    "App de SMS y llamadas masivas para gestión de cobranza: envía mensajes y campañas de llamadas a tu lista de contactos, sincronizada desde Google Sheets.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    "Versión instalada: $appVersion" +
                         if (repoVersion.isNotBlank()) " · Última en el repositorio: $repoVersion" else "",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                SecondaryActionButton(
-                    text = "Abrir personalización",
-                    onClick = onOpenAppearance,
-                    modifier = Modifier.fillMaxWidth(),
-                    icon = Icons.Default.Palette
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PrimaryActionButton(
+                        text = "Ver descripción",
+                        onClick = { showAbout = true },
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.Info
+                    )
+                    SecondaryActionButton(
+                        text = "Personalizar",
+                        onClick = onOpenAppearance,
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.Palette
+                    )
+                }
             }
             } // fin General
             } // fin contenido de pestaña
         }
+
+        if (showAbout) {
+            AboutDialog(
+                appVersion = appVersion,
+                repoVersion = repoVersion,
+                onDismiss = { showAbout = false }
+            )
+        }
     }
+
+@Composable
+private fun AboutDialog(appVersion: String, repoVersion: String, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("LEX RECOVER") },
+        text = {
+            Column {
+                Text(
+                    "App de SMS y llamadas masivas para gestión de cobranza.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "• Importa contactos desde Excel/CSV o Google Sheets.\n" +
+                        "• Envía SMS masivos con plantillas y variables ({nombre}, {telefono}).\n" +
+                        "• Realiza campañas de llamadas con grabación y mensaje pregrabado.\n" +
+                        "• Organiza los contactos por categorías de gestión (tipificación, estado, medio).\n" +
+                        "• Funciona como app de SMS y de llamadas predeterminada.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    "Versión instalada: $appVersion" +
+                        if (repoVersion.isNotBlank()) " · Repositorio: $repoVersion" else "",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Cerrar") }
+        }
+    )
+}
 
 @Composable
 private fun CallVoiceMessageCard(

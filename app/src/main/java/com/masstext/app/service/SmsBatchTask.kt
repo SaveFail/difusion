@@ -22,6 +22,8 @@ object SmsBatchTask {
         val template: String,
         val delayMs: Long,
         // true = MODO SEGURO (bloques + contador). false = MODO DESATENDIDO.
-        val safeMode: Boolean = true
+        val safeMode: Boolean = true,
+        // Subscription id de la SIM elegida para enviar (null = predeterminada).
+        val subId: Int? = null
     )
 }

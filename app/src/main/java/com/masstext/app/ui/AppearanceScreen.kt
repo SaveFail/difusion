@@ -172,7 +172,8 @@ fun AppearanceScreen(
     onBack: () -> Unit,
     onPickFont: () -> Unit,
     onExportConfig: () -> Unit,
-    onImportConfig: () -> Unit
+    onImportConfig: () -> Unit,
+    onSaveConfig: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var showTonePicker by remember { mutableStateOf(false) }
@@ -582,6 +583,20 @@ fun AppearanceScreen(
                 )
                 } // fin Fuente
                 if (tab == 6) {
+
+                PrimaryActionButton(
+                    text = "Guardar cambios",
+                    onClick = onSaveConfig,
+                    modifier = Modifier.fillMaxWidth(),
+                    icon = Icons.Default.Save
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    "Los cambios se aplican al instante; este botón los confirma y los deja guardados en el teléfono.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(16.dp))
 
                 SectionLabel("Guardar / compartir tu apariencia")
                 Spacer(modifier = Modifier.height(8.dp))

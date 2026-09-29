@@ -8,7 +8,7 @@ pantalla de llamada y controlar el audio durante la llamada.
 
 - **Paquete:** `com.masstext.app`
 - **Nombre visible:** LEX RECOVER
-- **Versión:** 2.3 (`versionCode 14`)
+- **Versión:** 2.4 (`versionCode 15`)
 - **minSdk:** 26 (Android 8) · **targetSdk/compileSdk:** 35 (Android 15)
 
 ---
@@ -40,6 +40,8 @@ pantalla de llamada y controlar el audio durante la llamada.
   bloque); **MODO DESATENDIDO** envía consecutivo sin bloques ni contador.
 - Estados por mensaje (`ENVIANDO` → `ENVIADO` / `FALLIDO`) con código y motivo
   del fallo; reenvío de fallidos desde la bandeja o el historial.
+- **Selector de SIM** (botón con forma de SIM) en el envío masivo y en cada chat
+  para elegir con qué SIM enviar, aunque solo haya una.
 - Plantillas de mensaje con variables `{nombre}` y `{telefono}`. Al **elegir una
   plantilla existente** no hay que volver a guardarla: se puede enviar directo y
   solo se pide guardar si se **edita** el texto (actualiza, no duplica).

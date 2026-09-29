@@ -16,6 +16,7 @@ object SimManager {
 
     private const val PREFS = "sim_prefs"
     private const val KEY_DEFAULT = "default_account_id"
+    private const val KEY_SMS_DEFAULT = "sms_account_id"
 
     private fun prefs(ctx: Context): SharedPreferences =
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -54,6 +55,26 @@ object SimManager {
         return sims.find { it.handle.id == defId }?.handle
             ?: sims.first().handle
     }
+
+    /** ID de la SIM elegida para enviar SMS. */
+    fun getSmsId(context: Context): String? =
+        prefs(context).getString(KEY_SMS_DEFAULT, null)
+
+    fun setSmsId(context: Context, id: String?) {
+        prefs(context).edit().putString(KEY_SMS_DEFAULT, id).apply()
+    }
+
+    /** SIM elegida para enviar SMS (o la primera disponible). */
+    fun getSmsSim(context: Context): SimInfo? {
+        val sims = getSims(context)
+        if (sims.isEmpty()) return null
+        val id = getSmsId(context)
+        return sims.find { it.handle.id == id } ?: sims.first()
+    }
+
+    /** Subscription id de la SIM elegida para SMS (null = predeterminada). */
+    fun getSmsSubId(context: Context): Int? =
+        getSmsSim(context)?.handle?.id?.toIntOrNull()
 
     /** Devuelve la otra SIM (la que no es la actual). */
     fun getOtherSim(context: Context, current: PhoneAccountHandle?): SimInfo? {

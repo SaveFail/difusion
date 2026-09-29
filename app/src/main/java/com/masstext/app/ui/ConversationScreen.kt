@@ -696,6 +696,8 @@ private fun ConversationInputBar(
                 placeholder = { Text("Escribe un mensaje") }
             )
             Spacer(Modifier.width(6.dp))
+            SimPickerButton()
+            Spacer(Modifier.width(6.dp))
             FilledIconButton(
                 onClick = {
                     val raw = text.trim()

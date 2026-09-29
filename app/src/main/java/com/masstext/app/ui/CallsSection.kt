@@ -160,8 +160,8 @@ private fun DialerPane(onCallNumber: (String) -> Unit) {
             }
         }
 
-        // Selector de SIM (solo si hay 2 o más)
-        if (sims.size >= 2 && !inCall) {
+        // Selector/indicador de SIM (se muestra aunque haya una sola).
+        if (sims.isNotEmpty() && !inCall) {
             Spacer(modifier = Modifier.height(6.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),

@@ -196,6 +196,18 @@ fun MessageEditorScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Enviar con:",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                SimPickerButton()
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
             PrimaryActionButton(
                 text = if (selectedCount > 0) "Enviar a $selectedCount destinatarios" else "Enviar SMS",
                 onClick = onSend,

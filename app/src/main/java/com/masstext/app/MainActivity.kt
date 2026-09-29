@@ -1173,6 +1173,11 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
             },
             onImportConfig = {
                 configImportLauncher.launch(arrayOf("application/json", "text/plain", "application/octet-stream", "*/*"))
+            },
+            onSaveConfig = {
+                // Ya se aplica al instante; aquí se persiste y se confirma.
+                viewModel.setThemeConfig(themeConfig)
+                Toast.makeText(context, "Apariencia guardada", Toast.LENGTH_SHORT).show()
             }
         )
     }

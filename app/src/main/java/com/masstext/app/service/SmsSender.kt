@@ -69,8 +69,14 @@ class SmsSender(private val context: Context) {
     private val _waitingWindow = MutableStateFlow(false)
     val waitingWindow: StateFlow<Boolean> = _waitingWindow.asStateFlow()
 
-    private
-    val smsManager = SmsManager.getDefault()
+    // SmsManager de la SIM elegida (o la predeterminada si subId es null).
+    private fun smsManagerFor(subId: Int?): SmsManager =
+        if (subId != null) {
+            runCatching { SmsManager.getSmsManagerForSubscriptionId(subId) }
+                .getOrDefault(SmsManager.getDefault())
+        } else {
+            SmsManager.getDefault()
+        }
 
     fun cancel() {
         isCancelled = true
@@ -89,10 +95,10 @@ class SmsSender(private val context: Context) {
     }
 
     // Envía un solo mensaje (usado desde la bandeja de mensajería).
-    suspend fun sendSingle(phone: String, message: String) {
+    suspend fun sendSingle(phone: String, message: String, subId: Int? = null) {
         val normalized = Importer.normalizePhone(phone)
         try {
-            sendOne(normalized, message)
+            sendOne(normalized, message, subId)
         } catch (_: Exception) {
         }
     }
@@ -100,11 +106,11 @@ class SmsSender(private val context: Context) {
     // Reenvía un mensaje que falló: vuelve a marcarlo como "enviando" y reutiliza
     // la misma fila para que el resultado (Enviado/No enviado) se refleje ahí,
     // limpiando la causa del fallo anterior.
-    suspend fun resend(phone: String, message: String, rowId: Long) {
+    suspend fun resend(phone: String, message: String, rowId: Long, subId: Int? = null) {
         val normalized = Importer.normalizePhone(phone)
         db.smsMessageDao().setStatusAndClearError(rowId, SmsStatus.SENDING)
         try {
-            sendOne(normalized, message)
+            sendOne(normalized, message, subId)
         } catch (e: Exception) {
             db.smsMessageDao().setStatus(rowId, SmsStatus.FAILED)
             throw e
@@ -121,7 +127,8 @@ class SmsSender(private val context: Context) {
         contacts: List<Contact>,
         template: String,
         delayBetweenMessages: Long,
-        safeMode: Boolean = true
+        safeMode: Boolean = true,
+        subId: Int? = null
     ): Result {
         if (_isRunning.value) return Result(0, 0, false, 0L, 0L, false)
         _isRunning.value = true
@@ -156,7 +163,7 @@ class SmsSender(private val context: Context) {
                     .replace("{name}", contact.name)
                     .replace("{phone}", phone)
                 val success = try {
-                    val rowId = sendOne(phone, message)
+                    val rowId = sendOne(phone, message, subId)
                     if (firstRowId == 0L) firstRowId = rowId
                     lastRowId = rowId
                     true
@@ -220,7 +227,8 @@ class SmsSender(private val context: Context) {
 
     // Guarda el mensaje en la base local (respaldo), marca el estado como "enviando",
     // y registra un PendingIntent que el sistema ejecuta al confirmar el envío.
-    private suspend fun sendOne(phone: String, message: String): Long {
+    private suspend fun sendOne(phone: String, message: String, subId: Int? = null): Long {
+        val smsManager = smsManagerFor(subId)
         val parts = smsManager.divideMessage(message)
         val threadId = ThreadResolver.resolve(context, phone)
         val rowId = db.smsMessageDao().insert(
