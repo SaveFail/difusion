@@ -82,7 +82,7 @@ fun SettingsScreen(
     val context = LocalContext.current
         Column(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
         ) {
         ScreenHeader(
             title = "Ajustes",
@@ -110,6 +110,7 @@ fun SettingsScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .weight(1f)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
@@ -325,7 +326,6 @@ fun SettingsScreen(
             // tiene varias pestañas. El usuario elige una y pulsa "Finalizar
             // sincronización" para importar SOLO esa hoja.
         }
-    }
 
     Spacer(modifier = Modifier.height(16.dp))
 
@@ -1018,6 +1018,7 @@ fun SettingsScreen(
                 }
             }
             } // fin General
+            } // fin contenido de pestaña
         }
     }
 

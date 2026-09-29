@@ -1,5 +1,15 @@
 # Registro de cambios
 
+## [2.1] — 2026-09-28
+
+### Corregido
+- **Ajustes:** la tarjeta **"Contactos de la lista a llamar"** aparecía en todas
+  las pestañas (se dibujaba fuera del contenedor de pestañas porque la columna de
+  scroll se cerraba antes de tiempo). Ahora queda **solo en la pestaña Drive**.
+- **Ajustes:** el contenido de cada pestaña **vuelve a hacer scroll**
+  correctamente (contenedor con altura acotada); antes se desbordaba y no se veía
+  el resto.
+
 ## [2.0] — 2026-09-28
 
 ### Agregado

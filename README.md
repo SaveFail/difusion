@@ -8,7 +8,7 @@ pantalla de llamada y controlar el audio durante la llamada.
 
 - **Paquete:** `com.masstext.app`
 - **Nombre visible:** LEX RECOVER
-- **Versión:** 2.0 (`versionCode 11`)
+- **Versión:** 2.1 (`versionCode 12`)
 - **minSdk:** 26 (Android 8) · **targetSdk/compileSdk:** 35 (Android 15)
 
 ---
