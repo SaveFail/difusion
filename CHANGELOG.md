@@ -1,5 +1,22 @@
 # Registro de cambios
 
+## [2.7] — 2026-09-28
+
+### Cambiado (legal)
+- **Términos y Condiciones reforzados y de alcance internacional** (versión 2; al
+  subir la versión, la app los vuelve a pedir). Ahora incluyen:
+  - Naturaleza de la app (herramienta/medio; no presta telecomunicaciones ni
+    controla el contenido).
+  - Responsabilidad exclusiva del usuario (consentimiento, cumplimiento legal,
+    no spam, identificación, opt-out, consentimiento para grabar/mensaje
+    automático, datos).
+  - **Regiones y normativas aplicables** citadas de forma genérica (protección de
+    datos: RGPD/LGPD y equivalentes; anti-spam: CAN-SPAM/TCPA/CASL y similares;
+    telecomunicaciones y cobranza) **sin atarlo a un país**.
+  - **Sin garantías** (“tal cual”), **limitación de responsabilidad**,
+    **indemnización** a favor de los autores y **ley aplicable** con reserva de
+    normas imperativas.
+
 ## [2.6] — 2026-09-28
 
 ### Agregado (legal / responsabilidad)
