@@ -104,7 +104,7 @@ plantilla e historial. Al no incluir POI, el APK y el uso de memoria bajan mucho
 ## Actualizaciones
 
 `service/UpdateManager.kt` consulta la **última Release** del repositorio público
-de descargas (`SaveFail/lex-recover-releases`) mediante la **API de GitHub** (sin
+de descargas (`SaveFail/difusion-releases`) mediante la **API de GitHub** (sin
 caché), compara la versión con `BuildConfig.VERSION_NAME` y, si es más nueva,
 descarga el APK a la caché y lo instala con `FileProvider` +
 `Intent.ACTION_VIEW` (`REQUEST_INSTALL_PACKAGES`). El usuario confirma la

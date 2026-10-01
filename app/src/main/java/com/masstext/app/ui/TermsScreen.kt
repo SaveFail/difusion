@@ -123,7 +123,7 @@ fun TermsDialog(onDismiss: () -> Unit) {
 fun TermsText() {
     Column {
         Text(
-            "LEX RECOVER — Términos y Condiciones de uso",
+            "Difusión — Términos y Condiciones de uso",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold
         )
@@ -131,7 +131,7 @@ fun TermsText() {
 
         Term(
             "1. Naturaleza de la aplicación.",
-            "LEX RECOVER es una herramienta de software que facilita la gestión de " +
+            "Difusión es una herramienta de software que facilita la gestión de " +
                 "contactos y el envío de mensajes y llamadas, como MEDIO O FACILIDAD de " +
                 "apoyo para comunicarse con clientes o personas que hayan otorgado su " +
                 "consentimiento. La app NO presta servicios de telecomunicaciones (los " +

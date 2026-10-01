@@ -367,7 +367,7 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
         if (granted) {
             showSendScreen = true
         } else {
-            Toast.makeText(context, "Permiso para enviar SMS no concedido. Actívalo en Ajustes del sistema > LEX RECOVER > Permisos.", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Permiso para enviar SMS no concedido. Actívalo en Ajustes del sistema > Difusión > Permisos.", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -475,7 +475,7 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
             viewModel.reloadInbox()
             Toast.makeText(context, "Lectura de mensajes habilitada", Toast.LENGTH_SHORT).show()
         } else {
-            Toast.makeText(context, "Sin permiso de lectura no se mostrarán los chats. Actívalo en Ajustes del sistema > LEX RECOVER > Permisos.", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Sin permiso de lectura no se mostrarán los chats. Actívalo en Ajustes del sistema > Difusión > Permisos.", Toast.LENGTH_LONG).show()
         }
     }
     LaunchedEffect(Unit) {
@@ -511,7 +511,7 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
         Toast.makeText(
             context,
             when {
-                sms && dial -> "Listo: Mensajes y Llamadas son LEX RECOVER"
+                sms && dial -> "Listo: Mensajes y Llamadas son Difusión"
                 dial -> "Llamadas predeterminadas listas. Falta Mensajes."
                 else -> "No se aplicó. Revisa Ajustes > Aplicaciones > Aplicaciones predeterminadas."
             },
@@ -523,7 +523,7 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
         when {
             !isDefaultSmsApp(context) -> roleStep = 1
             !isDefaultDialerApp(context) -> roleStep = 2
-            else -> Toast.makeText(context, "Mensajes y llamadas ya son LEX RECOVER", Toast.LENGTH_SHORT).show()
+            else -> Toast.makeText(context, "Mensajes y llamadas ya son Difusión", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -544,7 +544,7 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
         } else {
             Toast.makeText(
                 context,
-                "Quedaron ${denied.size} permisos sin conceder. Actívalos en Ajustes del sistema > LEX RECOVER > Permisos.",
+                "Quedaron ${denied.size} permisos sin conceder. Actívalos en Ajustes del sistema > Difusión > Permisos.",
                 Toast.LENGTH_LONG
             ).show()
         }
@@ -648,7 +648,7 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                     updateStatus = "Activa \"Instalar apps desconocidas\" y vuelve a la app."
                     Toast.makeText(
                         context,
-                        "Permite instalar apps desconocidas para LEX RECOVER y vuelve a la app.",
+                        "Permite instalar apps desconocidas para Difusión y vuelve a la app.",
                         Toast.LENGTH_LONG
                     ).show()
                     com.masstext.app.service.UpdateManager.openInstallPermissionSettings(context)

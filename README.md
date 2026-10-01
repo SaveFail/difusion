@@ -1,4 +1,10 @@
-# LEX RECOVER — Aplicación de Masivos
+# Difusión
+
+<p align="center">
+  <a href="https://app.binance.com/uni-qr/keieoYWm">
+    <img src="docs/donar-banner.png" alt="Donar con Binance" width="440">
+  </a>
+</p>
 
 Aplicación Android (Kotlin + Jetpack Compose) para **gestión y envío masivo de
 SMS**, **campañas de llamadas masivas** con grabación, e importación de
@@ -7,8 +13,8 @@ contactos desde Excel/CSV/Google Sheets. Funciona como app de **SMS** y de
 pantalla de llamada y controlar el audio durante la llamada.
 
 - **Paquete:** `com.masstext.app`
-- **Nombre visible:** LEX RECOVER
-- **Versión:** 2.9 (`versionCode 20`)
+- **Nombre visible:** Difusión
+- **Versión:** 3.0 (`versionCode 21`)
 - **minSdk:** 26 (Android 8) · **targetSdk/compileSdk:** 35 (Android 15)
 
 ---
@@ -25,6 +31,7 @@ pantalla de llamada y controlar el audio durante la llamada.
 8. [Documentación adicional](#documentación-adicional)
 9. [Nota técnica: mensaje pregrabado en llamadas](#nota-técnica-mensaje-pregrabado-en-llamadas)
 10. [Seguridad](#seguridad)
+11. [Donar](#donar)
 
 ---
 
@@ -94,7 +101,7 @@ pantalla de llamada y controlar el audio durante la llamada.
 ### Actualizaciones
 - **Ajustes → Actualizaciones → “Buscar actualizaciones”**: consulta la última
   Release del repositorio público
-  [`SaveFail/lex-recover-releases`](https://github.com/SaveFail/lex-recover-releases/releases),
+  [`SaveFail/difusion-releases`](https://github.com/SaveFail/difusion-releases/releases),
   descarga el APK nuevo y abre el instalador (solo confirmas). El **código sigue
   privado**; únicamente el APK se publica. Requiere la misma clave de firma.
 
@@ -267,8 +274,30 @@ Servicios clave (`app/src/main/java/com/masstext/app/service/`):
 ## Comentarios y correcciones
 
 Los reportes de correcciones se gestionan en el repositorio público
-[`SaveFail/lex-recover-comentarios`](https://github.com/SaveFail/lex-recover-comentarios/issues)
+[`SaveFail/difusion-comentarios`](https://github.com/SaveFail/difusion-comentarios/issues)
 (solo Issues; no contiene código ni acceso a la app).
+
+---
+
+## Donar
+
+Si esta aplicación te resulta útil, puedes apoyar el proyecto con una donación
+por **Binance Pay**. Toca el botón o escanea el código QR.
+
+<p align="center">
+  <a href="https://app.binance.com/uni-qr/keieoYWm">
+    <img src="docs/donar-banner.png" alt="Donar con Binance" width="440">
+  </a>
+  <br><br>
+  <a href="https://app.binance.com/uni-qr/keieoYWm">
+    <img src="docs/donar-qr.png" alt="QR de Binance Pay para donar" width="240">
+  </a>
+  <br>
+  <b>Binance Pay</b> · <a href="https://app.binance.com/uni-qr/keieoYWm">Abrir billetera</a>
+</p>
+
+¡Gracias por el apoyo! También puedes hacerlo desde la app en
+**Ajustes → General → Apoyar el proyecto**.
 
 ---
 

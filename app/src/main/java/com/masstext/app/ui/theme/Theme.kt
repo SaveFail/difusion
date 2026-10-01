@@ -220,7 +220,7 @@ fun fontNameLabel(name: String): String = when (name) {
     "custom" -> "Archivo propio"
     "lato" -> "Lato"
     "motigen" -> "Motigen"
-    "lex" -> "LEX Recover"
+    "lex" -> "Difusión"
     else -> "Predeterminada"
 }
 
@@ -269,7 +269,7 @@ data class ThemePreset(
 )
 
 val THEME_PRESETS: List<ThemePreset> = listOf(
-    ThemePreset("lexrecover", "LEX Recover", 0xFF0000FF, 0xFF050A2E, 0xFFF3FCFB),
+    ThemePreset("lexrecover", "Difusión", 0xFF0000FF, 0xFF050A2E, 0xFFF3FCFB),
     ThemePreset("violeta", "Violeta", 0xFF7C3AED, 0xFF1B1023, 0xFFF7F4FF),
     ThemePreset("oceano", "Océano", 0xFF0E7C86, 0xFF06262B, 0xFFEAF7F6),
     ThemePreset("cielo", "Cielo", 0xFF2F6FED, 0xFF0B1E4B, 0xFFEEF4FF, cornerStyle = "pill"),

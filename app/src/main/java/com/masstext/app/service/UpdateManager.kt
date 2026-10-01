@@ -21,14 +21,14 @@ import java.net.URL
  * Consulta la última Release del repositorio público de descargas (API de
  * GitHub, sin caché) y, si hay una versión más nueva, descarga el APK adjunto y
  * abre el instalador del sistema (el usuario solo confirma). El APK debe estar
- * firmado con la misma clave que el instalado. El repositorio de código puede
- * seguir privado: solo el APK se publica en el canal público.
+ * firmado con la misma clave que el instalado. Tanto el código como el APK se
+ * publican en repositorios públicos.
  */
 object UpdateManager {
 
-    private const val TAG = "LEX-Update"
+    private const val TAG = "DIFUSION-Update"
     private const val RELEASES_API =
-        "https://api.github.com/repos/SaveFail/lex-recover-releases/releases/latest"
+        "https://api.github.com/repos/SaveFail/difusion-releases/releases/latest"
 
     data class Info(
         val versionName: String,
@@ -59,7 +59,7 @@ object UpdateManager {
                 connection.connectTimeout = 15000
                 connection.readTimeout = 15000
                 connection.instanceFollowRedirects = true
-                connection.setRequestProperty("User-Agent", "LEX-RECOVER")
+                connection.setRequestProperty("User-Agent", "DIFUSION")
                 connection.setRequestProperty("Accept", "application/vnd.github+json")
                 if (connection.responseCode !in 200..299) {
                     Log.w(TAG, "API de releases respondió ${connection.responseCode}")
@@ -97,13 +97,13 @@ object UpdateManager {
     suspend fun downloadApk(context: Context, url: String): File = withContext(Dispatchers.IO) {
         val dir = File(context.cacheDir, "updates").apply { mkdirs() }
         dir.listFiles()?.forEach { runCatching { it.delete() } }
-        val target = File(dir, "lex-recover-${System.currentTimeMillis()}.apk")
+        val target = File(dir, "difusion-${System.currentTimeMillis()}.apk")
         val connection = URL(url).openConnection() as HttpURLConnection
         try {
             connection.connectTimeout = 20000
             connection.readTimeout = 60000
             connection.instanceFollowRedirects = true
-            connection.setRequestProperty("User-Agent", "LEX-RECOVER")
+            connection.setRequestProperty("User-Agent", "DIFUSION")
             connection.setRequestProperty("Accept", "application/vnd.android.package-archive,*/*")
             if (connection.responseCode !in 200..299) {
                 throw IllegalStateException("La descarga respondió ${connection.responseCode}")

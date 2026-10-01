@@ -84,6 +84,7 @@ fun SettingsScreen(
     val context = LocalContext.current
     var showAbout by remember { mutableStateOf(false) }
     var showTerms by remember { mutableStateOf(false) }
+    var showDonate by remember { mutableStateOf(false) }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -1066,7 +1067,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(16.dp))
             SectionCard {
                 Text(
-                    "Acerca de LEX RECOVER",
+                    "Acerca de Difusión",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -1105,6 +1106,13 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     icon = Icons.Default.Gavel
                 )
+                Spacer(modifier = Modifier.height(8.dp))
+                PrimaryActionButton(
+                    text = "Apoyar el proyecto",
+                    onClick = { showDonate = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    icon = Icons.Default.Favorite
+                )
             }
             } // fin General
             } // fin contenido de pestaña
@@ -1121,13 +1129,17 @@ fun SettingsScreen(
         if (showTerms) {
             TermsDialog(onDismiss = { showTerms = false })
         }
+
+        if (showDonate) {
+            DonateDialog(onDismiss = { showDonate = false })
+        }
     }
 
 @Composable
 private fun AboutDialog(appVersion: String, repoVersion: String, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("LEX RECOVER") },
+        title = { Text("Difusión") },
         text = {
             Column {
                 Text(

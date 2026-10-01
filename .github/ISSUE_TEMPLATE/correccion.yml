@@ -1,12 +1,12 @@
 name: Corrección de la app
-description: Reporta algo que hay que corregir o mejorar en LEX RECOVER
+description: Reporta algo que hay que corregir o mejorar en Difusión
 title: "[Corrección] "
 labels: ["correccion"]
 body:
   - type: markdown
     attributes:
       value: |
-        Gracias por ayudar a mejorar **LEX RECOVER**. Rellena los campos y pulsa
+        Gracias por ayudar a mejorar **Difusión**. Rellena los campos y pulsa
         **Submit new issue**. No necesitas saber programar.
   - type: dropdown
     id: tipo

@@ -330,11 +330,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val app = getApplication<Application>()
             try {
                 _driveSyncStatus.value = "Descargando libro y leyendo la hoja \"$sheetName\"…"
-                Log.d("LEX-Sync", "finalize: sheetIndex=$sheetIndex sheet=$sheetName")
+                Log.d("DIFUSION-Sync", "finalize: sheetIndex=$sheetIndex sheet=$sheetName")
                 val rows = withContext(Dispatchers.IO) {
                     com.masstext.app.import.Importer.importSheet(url, sheetIndex)
                 }
-                Log.d("LEX-Sync", "finalize: importSheet -> ${rows.size} filas")
+                Log.d("DIFUSION-Sync", "finalize: importSheet -> ${rows.size} filas")
                 if (rows.isEmpty()) {
                     val msg = "La hoja \"$sheetName\" no tiene filas con nombre y teléfono."
                     _driveSyncStatus.value = msg
@@ -393,11 +393,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 _driveSyncStatus.value =
                     "Revisa la ventana flotante: ${unicas.size} contactos listos " +
                         "(de $total filas · $repetidas duplicados por cédula · $resumenCat)."
-                Log.d("LEX-Sync", "finalize: preview ${unicas.size} filas")
+                Log.d("DIFUSION-Sync", "finalize: preview ${unicas.size} filas")
             } catch (e: Throwable) {
                 val msg = "Error al importar \"$sheetName\": ${e.message ?: e.javaClass.simpleName}"
                 _driveSyncStatus.value = msg
-                Log.e("LEX-Sync", "finalize FAIL", e)
+                Log.e("DIFUSION-Sync", "finalize FAIL", e)
                 Toast.makeText(app, msg, Toast.LENGTH_LONG).show()
             }
         }
@@ -436,7 +436,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             pendingSheetName = ""
             pendingSheetTotal = 0
             pendingDuplicates = 0
-            Log.d("LEX-Sync", "commit OK: $msg")
+            Log.d("DIFUSION-Sync", "commit OK: $msg")
             Toast.makeText(
                 getApplication(),
                 "Cargados ${rows.size} contactos",

@@ -28,6 +28,8 @@ build_dir*.txt
 
 # ---- Respaldos / zips ----
 *.zip
+# Copias de respaldo del código (se quedan solo en local).
+backup/
 
 # ---- Proyectos externos (no forman parte de la app Android) ----
 _extras/

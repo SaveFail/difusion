@@ -126,7 +126,7 @@ class SmsSendService : Service() {
         )
         return builder
             .setSmallIcon(R.drawable.ic_launcher)
-            .setContentTitle("LEX RECOVER")
+            .setContentTitle("Difusión")
             .setContentText(text)
             .setStyle(Notification.BigTextStyle().bigText(text))
             .setContentIntent(openIntent)

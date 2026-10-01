@@ -75,7 +75,7 @@ class MassTextInCallService : InCallService() {
                         VoiceMessageStore.exists(this@MassTextInCallService)
                     ) {
                         android.util.Log.i(
-                            "LEX-Call",
+                            "DIFUSION-Call",
                             "Mensaje: ruta respetada (wired=${CallMonitor.hasWiredHeadset()}, " +
                                 "bt=${CallMonitor.bluetoothSupported()}, " +
                                 "altavoz=${CallMonitor.speaker.value})"

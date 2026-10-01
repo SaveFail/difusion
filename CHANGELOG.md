@@ -1,5 +1,23 @@
 # Registro de cambios
 
+## [3.0] — 2026-10-01
+
+### Cambiado
+- **Nuevo nombre: Difusión.** Se elimina por completo la marca anterior (LEX
+  RECOVER) de la app, los textos, los avisos, la notificación, los Términos y la
+  documentación. El paquete (`com.masstext.app`) y la firma **no cambian**, así
+  que la app se actualiza sin perder datos.
+- El repositorio pasa a ser **público** (código + APK), con licencia **MIT**.
+- El actualizador apunta al nuevo repositorio de releases
+  (`SaveFail/difusion-releases`).
+
+### Agregado
+- **Donación con Binance Pay:** botón **“Apoyar el proyecto”** en
+  **Ajustes → General**, junto a “Acerca de”. Abre un diálogo con el **QR** (sin
+  nombre de usuario) y un botón **“Abrir Binance”** que va directo a la billetera
+  (con respaldo a la tienda/web) más “Copiar enlace”.
+- El README público incluye una **banda grande de donación** y el QR.
+
 ## [2.9] — 2026-09-28
 
 ### Agregado
@@ -221,7 +239,7 @@ Envío · General**.
   - Permiso `REQUEST_INSTALL_PACKAGES` y `FileProvider` para instalar.
   - Si falta “Instalar apps desconocidas”, abre los ajustes y reintenta al volver.
   - `service/UpdateManager.kt` centraliza la comprobación, descarga e instalación.
-- **Repositorio público de descargas:** `SaveFail/lex-recover-releases` (solo el
+- **Repositorio público de descargas:** `SaveFail/difusion-releases` (solo el
   APK). El **código permanece privado**.
 
 ### Notas

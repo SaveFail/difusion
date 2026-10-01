@@ -34,7 +34,7 @@ En **Ajustes** de la app:
    Habilita la pantalla de llamada propia y el riel de controles (silenciar,
    altavoz, espera, teclado, colgar, Bluetooth).
 3. **Permisos** (el sistema los pedirá o ve a Ajustes del sistema → Apps →
-   LEX RECOVER → Permisos):
+   Difusión → Permisos):
    - SMS (enviar/recibir/leer)
    - Teléfono y estado de la llamada
    - Contactos
