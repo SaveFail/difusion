@@ -1,5 +1,18 @@
 # Registro de cambios
 
+## [2.8] — 2026-09-28
+
+### Corregido / cambiado
+- **Sincronización con Drive:** el selector de hoja y la revisión de importación
+  ahora son **diálogos dentro de la app** (`SheetPickerDialog` e
+  `ImportReviewDialog`) en lugar de ventanas flotantes del sistema. Así **siempre
+  aparecen**, sin depender del permiso de superposición (que era lo que hacía que
+  “no saliera la ventana”).
+- La **revisión conserva el sistema de categorías y filtros** (Tipificación,
+  Estado, Medio), casillas por fila, Marcar todo / Nada e Importar (N).
+- Al finalizar, el selector de hoja se cierra mientras se descarga y se abre la
+  revisión.
+
 ## [2.7] — 2026-09-28
 
 ### Cambiado (legal)

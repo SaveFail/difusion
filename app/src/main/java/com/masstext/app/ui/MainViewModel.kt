@@ -322,6 +322,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _driveSyncStatus.value = "Primero elige una hoja en la ventana flotante."
             return
         }
+        // Cierra el selector de hoja mientras se descarga y se abre la revisión.
+        _driveSheets.value = emptyList()
+        _driveSelectedSheetIndex.value = -1
         val url = _driveUrl.value.trim()
         viewModelScope.launch {
             val app = getApplication<Application>()
