@@ -55,6 +55,13 @@ fun ImportReviewDialog(
 
     fun hasBlank(selector: (ParsedRow) -> String) = rows.any { selector(it).isBlank() }
 
+    // Cantidad de contactos por cada opción (para mostrarla en los chips).
+    fun countFor(selector: (ParsedRow) -> String, value: String): Int = when (value) {
+        RF_ALL -> rows.size
+        RF_BLANK -> rows.count { selector(it).isBlank() }
+        else -> rows.count { selector(it).trim() == value }
+    }
+
     fun match(value: String, filter: String) = when (filter) {
         RF_ALL -> true
         RF_BLANK -> value.isBlank()
@@ -103,6 +110,7 @@ fun ImportReviewDialog(
                     hasBlank = hasBlank { it.gestion },
                     blankLabel = "Sin gestionar",
                     selected = gestionFilter,
+                    countFor = { value -> countFor({ r -> r.gestion }, value) },
                     onSelect = { gestionFilter = it }
                 )
                 ReviewFilterRow(
@@ -111,6 +119,7 @@ fun ImportReviewDialog(
                     hasBlank = hasBlank { it.estado },
                     blankLabel = "Sin estado",
                     selected = estadoFilter,
+                    countFor = { value -> countFor({ r -> r.estado }, value) },
                     onSelect = { estadoFilter = it }
                 )
                 ReviewFilterRow(
@@ -119,6 +128,7 @@ fun ImportReviewDialog(
                     hasBlank = hasBlank { it.medio },
                     blankLabel = "Sin medio",
                     selected = medioFilter,
+                    countFor = { value -> countFor({ r -> r.medio }, value) },
                     onSelect = { medioFilter = it }
                 )
 
@@ -231,6 +241,7 @@ private fun ReviewFilterRow(
     hasBlank: Boolean,
     blankLabel: String,
     selected: String,
+    countFor: (String) -> Int,
     onSelect: (String) -> Unit
 ) {
     Column(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
@@ -247,20 +258,20 @@ private fun ReviewFilterRow(
             FilterChip(
                 selected = selected == RF_ALL,
                 onClick = { onSelect(RF_ALL) },
-                label = { Text("Todos") }
+                label = { Text("Todos (${countFor(RF_ALL)})") }
             )
             values.forEach { v ->
                 FilterChip(
                     selected = selected == v,
                     onClick = { onSelect(v) },
-                    label = { Text(v, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                    label = { Text("$v (${countFor(v)})", maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 )
             }
             if (hasBlank) {
                 FilterChip(
                     selected = selected == RF_BLANK,
                     onClick = { onSelect(RF_BLANK) },
-                    label = { Text(blankLabel, maxLines = 1) }
+                    label = { Text("$blankLabel (${countFor(RF_BLANK)})", maxLines = 1) }
                 )
             }
         }

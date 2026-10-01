@@ -1,5 +1,13 @@
 # Registro de cambios
 
+## [2.9] — 2026-09-28
+
+### Agregado
+- **Conteo en los filtros de la revisión de importación:** cada chip muestra
+  ahora **cuántos contactos** tiene esa opción (p. ej. `NO CONTESTA (56)`,
+  `Todos (223)`, `Sin gestionar (163)`), tanto en Tipificación como en Estado y
+  Medio de contacto. En Mis Contactos ya se mostraba el conteo.
+
 ## [2.8] — 2026-09-28
 
 ### Corregido / cambiado
