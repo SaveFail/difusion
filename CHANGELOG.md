@@ -3,10 +3,10 @@
 ## [3.0] — 2026-10-01
 
 ### Cambiado
-- **Nuevo nombre: Difusión.** Se elimina por completo la marca anterior (LEX
-  RECOVER) de la app, los textos, los avisos, la notificación, los Términos y la
-  documentación. El paquete (`com.masstext.app`) y la firma **no cambian**, así
-  que la app se actualiza sin perder datos.
+- **Nuevo nombre: Difusión.** Se elimina por completo la marca anterior de la
+  app, los textos, los avisos, la notificación, los Términos y la documentación.
+  El paquete (`com.masstext.app`) y la firma **no cambian**, así que la app se
+  actualiza sin perder datos.
 - El repositorio pasa a ser **público** (código + APK), con licencia **MIT**.
 - El actualizador apunta al nuevo repositorio de releases
   (`SaveFail/difusion-releases`).
