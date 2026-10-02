@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "MassTextApp"
+rootProject.name = "DifusionApp"
 include(":app")

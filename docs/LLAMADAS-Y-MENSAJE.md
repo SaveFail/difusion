@@ -59,7 +59,7 @@ nula), lo descarta y lo informa. Las grabaciones quedan en la pestaña
 ## 4. Mensaje pregrabado automático
 
 - Se graba o importa en **Ajustes → Mensaje** (`VoiceMessageStore`).
-- Se reproduce al **contestar** la llamada, desde `MassTextInCallService`
+- Se reproduce al **contestar** la llamada, desde `DifusionInCallService`
   (`STATE_ACTIVE`), con `CallMessagePlayer`.
 - El audio usa `USAGE_VOICE_COMMUNICATION`, por lo que sale por la **ruta real
   de la llamada**: auricular, **audífonos con cable/USB** o Bluetooth. El

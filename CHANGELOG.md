@@ -1,5 +1,22 @@
 # Registro de cambios
 
+## [4.0] — 2026-10-02
+
+### Cambiado
+- **Rebranding interno completo: el paquete pasa a `com.difusion.app`.** Se
+  renombran las carpetas, los `import`, el `namespace`/`applicationId`, el tema
+  (`Theme.DifusionApp`), el `InCallService` (`DifusionInCallService`), la base de
+  datos (`difusion.db`), las preferencias (`difusion_prefs`) y los canales de
+  notificación. Todo el código queda coherente con el nombre **Difusión**.
+  ⚠️ Al cambiar el identificador, esta versión se instala como una **app nueva**:
+  no actualiza por encima de la versión anterior ni conserva sus datos.
+- **Ícono nuevo:** se reemplaza el ícono de la app (que aún mostraba la marca
+  anterior) por un diseño representativo de mensajería y llamadas masivas
+  (teléfono con ondas de difusión), sobre el azul de marca `#000EAD` con acento
+  cian `#02FBFF`.
+- Se elimina por completo cualquier referencia a nombres de marca anteriores en
+  archivos, documentación e historial del repositorio.
+
 ## [3.1] — 2026-10-01
 
 ### Cambiado
@@ -13,8 +30,7 @@
 ### Cambiado
 - **Nuevo nombre: Difusión.** Se elimina por completo la marca anterior de la
   app, los textos, los avisos, la notificación, los Términos y la documentación.
-  El paquete (`com.masstext.app`) y la firma **no cambian**, así que la app se
-  actualiza sin perder datos.
+  La firma **no cambia**, así que la app se actualiza sin perder datos.
 - El repositorio pasa a ser **público** (código + APK), con licencia **MIT**.
 - El actualizador apunta al nuevo repositorio de releases
   (`SaveFail/difusion-releases`).

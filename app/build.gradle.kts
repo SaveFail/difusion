@@ -17,15 +17,15 @@ val keystoreProperties = Properties().apply {
 }
 
 android {
-    namespace = "com.masstext.app"
+    namespace = "com.difusion.app"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.masstext.app"
+        applicationId = "com.difusion.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 22
-        versionName = "3.1"
+        versionCode = 23
+        versionName = "4.0"
     }
 
     signingConfigs {

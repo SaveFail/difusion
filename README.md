@@ -12,9 +12,9 @@ contactos desde Excel/CSV/Google Sheets. Funciona como app de **SMS** y de
 **teléfono (marcador) predeterminada**, de modo que puede mostrar su propia
 pantalla de llamada y controlar el audio durante la llamada.
 
-- **Paquete:** `com.masstext.app`
+- **Paquete:** `com.difusion.app`
 - **Nombre visible:** Difusión
-- **Versión:** 3.1 (`versionCode 22`)
+- **Versión:** 4.0 (`versionCode 23`)
 - **minSdk:** 26 (Android 8) · **targetSdk/compileSdk:** 35 (Android 15)
 
 ---
@@ -102,8 +102,9 @@ pantalla de llamada y controlar el audio durante la llamada.
 - **Ajustes → Actualizaciones → “Buscar actualizaciones”**: consulta la última
   Release del repositorio público
   [`SaveFail/difusion-releases`](https://github.com/SaveFail/difusion-releases/releases),
-  descarga el APK nuevo y abre el instalador (solo confirmas). El **código sigue
-  privado**; únicamente el APK se publica. Requiere la misma clave de firma.
+  descarga el APK nuevo y abre el instalador (solo confirmas). El **código fuente**
+  ([`SaveFail/difusion`](https://github.com/SaveFail/difusion)) y el **APK** se
+  publican en repositorios públicos. Requiere la misma clave de firma.
 
 ### Historial, respaldo y apariencia
 - Historial de envíos y llamadas con **exportación a Excel**.
@@ -164,8 +165,8 @@ La firma se lee de `keystore.properties` (en la raíz). **Ese archivo y el
 2. Genera tu keystore si no tienes uno:
 
    ```bash
-   keytool -genkeypair -v -keystore masstext-release.jks \
-     -alias masstext -keyalg RSA -keysize 2048 -validity 10000
+   keytool -genkeypair -v -keystore difusion-release.jks \
+     -alias difusion -keyalg RSA -keysize 2048 -validity 10000
    ```
 
 3. Compila:
@@ -224,7 +225,7 @@ En **Ajustes** hay botones para dejarlo listo rápido:
 │   ├── build.gradle.kts            # módulo app (deps, firma)
 │   └── src/main/
 │       ├── AndroidManifest.xml
-│       ├── java/com/masstext/app/
+│       ├── java/com/difusion/app/
 │       │   ├── MainActivity.kt     # navegación y pantallas principales
 │       │   ├── data/               # Room: contactos, SMS, llamadas, plantillas
 │       │   ├── import/Importer.kt  # lectura Excel/CSV (streaming, sin OOM)
@@ -242,14 +243,14 @@ En **Ajustes** hay botones para dejarlo listo rápido:
 └── docs/                           # documentación detallada
 ```
 
-Servicios clave (`app/src/main/java/com/masstext/app/service/`):
+Servicios clave (`app/src/main/java/com/difusion/app/service/`):
 
 | Archivo | Función |
 |---|---|
 | `SmsSender.kt` / `SmsController.kt` / `SmsBatchTask.kt` | Envío masivo de SMS y progreso |
 | `SmsSendService.kt` | Servicio en primer plano del envío |
 | `CallSequencer.kt` | Secuencia de llamadas masivas |
-| `MassTextInCallService.kt` | `InCallService`: pantalla/riel de llamada, mensaje y ruteo |
+| `DifusionInCallService.kt` | `InCallService`: pantalla/riel de llamada, mensaje y ruteo |
 | `CallMonitor.kt` | Estado de la llamada y control de ruta (altavoz, BT) |
 | `CallRecorder.kt` | Grabación de llamadas |
 | `CallMessagePlayer.kt` | Reproduce el mensaje pregrabado en la ruta actual |
@@ -364,9 +365,9 @@ hay que aceptar (se pueden consultar luego en Ajustes → General). En resumen:
 
 ## Respaldo (punto base)
 
-En [`backup/`](backup/) se guarda una **copia congelada** del código fuente de
-cada versión estable. La actual es **v2.5** (`versionCode 16`), nuestro punto
-base. Ver [`backup/README.md`](backup/README.md) para restaurar.
+En `backup/` (solo local, no se sube al repositorio) se guarda una **copia
+congelada** del código fuente de cada versión estable. La copia base es **v2.5**.
+La versión estable actual es **4.0** (`versionCode 23`).
 
 ---
 

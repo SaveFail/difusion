@@ -53,13 +53,13 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.MassTextApp">
+        android:theme="@style/Theme.DifusionApp">
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:windowSoftInputMode="adjustResize"
-            android:theme="@style/Theme.MassTextApp">
+            android:theme="@style/Theme.DifusionApp">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -85,7 +85,7 @@
             android:name=".ui.DialerActivity"
             android:exported="true"
             android:launchMode="singleTask"
-            android:theme="@style/Theme.MassTextApp">
+            android:theme="@style/Theme.DifusionApp">
             <intent-filter>
                 <action android:name="android.intent.action.DIAL" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -123,7 +123,7 @@
             android:taskAffinity=""
             android:showWhenLocked="true"
             android:turnScreenOn="true"
-            android:theme="@style/Theme.MassTextApp" />
+            android:theme="@style/Theme.DifusionApp" />
 
         <receiver
             android:name=".service.CallActionReceiver"
@@ -173,10 +173,10 @@
             android:name=".smsrole.SmsSentReceiver"
             android:exported="false">
             <intent-filter>
-                <action android:name="com.masstext.app.SMS_SENT" />
+                <action android:name="com.difusion.app.SMS_SENT" />
             </intent-filter>
             <intent-filter>
-                <action android:name="com.masstext.app.MMS_SENT" />
+                <action android:name="com.difusion.app.MMS_SENT" />
             </intent-filter>
         </receiver>
 
@@ -196,7 +196,7 @@
             android:foregroundServiceType="dataSync" />
 
 <service
-            android:name=".service.MassTextInCallService"
+            android:name=".service.DifusionInCallService"
             android:permission="android.permission.BIND_INCALL_SERVICE"
             android:exported="true">
             <intent-filter>

@@ -57,7 +57,7 @@ Almacenamiento auxiliar: `storage/UserStore.kt` (usuarios) y
 - **`SmsController`** — singleton compartido entre UI y servicio.
 - **`CallSequencer`** — orquesta la secuencia de llamadas masivas (timbrado,
   tope, repetición).
-- **`MassTextInCallService`** — `InCallService` de Telecom: recibe la llamada,
+- **`DifusionInCallService`** — `InCallService` de Telecom: recibe la llamada,
   muestra overlay, controla ruta de audio y dispara la grabación y el mensaje.
 - **`CallRecordingService`** — grabación en primer plano (`microphone`).
 - **`CallMonitor`** — estado de la llamada y control de ruta (`setAudioRoute`).
@@ -114,7 +114,7 @@ instalación; el código del proyecto permanece privado.
 
 - **SMS predeterminado** (`smsrole/`): `SmsReceiver`, `MmsReceiver`,
   `HeadlessSmsSendService`, `SmsSentReceiver`.
-- **Teléfono predeterminado**: `MassTextInCallService` (declarado en el
+- **Teléfono predeterminado**: `DifusionInCallService` (declarado en el
   manifiesto con `BIND_INCALL_SERVICE`).
 
 ## Concurrencia

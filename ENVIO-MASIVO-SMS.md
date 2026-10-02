@@ -1,4 +1,4 @@
-# Pipeline de envío masivo SMS — MassTextApp
+# Pipeline de envío masivo SMS — DifusionApp
 *(Documentado desde el código en disco, no de memoria)*
 
 ## 1. Núcleo: SmsSender.kt (service/)
