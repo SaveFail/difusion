@@ -366,8 +366,9 @@ hay que aceptar (se pueden consultar luego en Ajustes → General). En resumen:
 ## Respaldo (punto base)
 
 En `backup/` (solo local, no se sube al repositorio) se guarda una **copia
-congelada** del código fuente de cada versión estable. La copia base es **v2.5**.
-La versión estable actual es **4.0** (`versionCode 23`).
+congelada** del código fuente de cada versión estable (*core*). El **core actual
+es `v4.0`** (`versionCode 23`); también se conserva `v2.5` como punto base
+anterior. Ver `backup/README.md` para restaurar.
 
 ---
 
