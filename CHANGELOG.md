@@ -1,5 +1,13 @@
 # Registro de cambios
 
+## [3.1] — 2026-10-01
+
+### Cambiado
+- **Se eliminaron las últimas claves internas con el nombre anterior** en
+  Apariencia: el identificador del tema, la clave de la fuente y el nombre del
+  archivo de apariencia exportado. La apariencia guardada **se conserva**: los
+  valores antiguos se migran automáticamente a los nuevos al abrir la app.
+
 ## [3.0] — 2026-10-01
 
 ### Cambiado

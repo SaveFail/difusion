@@ -558,7 +558,7 @@ fun AppearanceScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    listOf("lex", "default", "sans", "serif", "mono", "cursive", "lato", "motigen").forEach { f ->
+                    listOf("difusion", "default", "sans", "serif", "mono", "cursive", "lato", "motigen").forEach { f ->
                         FilterChip(
                             selected = config.font == f,
                             onClick = { onConfigChange(config.copy(font = f)) },

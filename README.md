@@ -14,7 +14,7 @@ pantalla de llamada y controlar el audio durante la llamada.
 
 - **Paquete:** `com.masstext.app`
 - **Nombre visible:** Difusión
-- **Versión:** 3.0 (`versionCode 21`)
+- **Versión:** 3.1 (`versionCode 22`)
 - **minSdk:** 26 (Android 8) · **targetSdk/compileSdk:** 35 (Android 15)
 
 ---

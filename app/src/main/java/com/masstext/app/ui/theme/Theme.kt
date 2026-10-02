@@ -34,7 +34,7 @@ data class ThemeConfig(
     val accent: Long = 0xFF0000FF,
     val text: Long = 0xFF050A2E,
     val background: Long = 0xFFF3FCFB,
-    val font: String = "lex",
+    val font: String = "difusion",
     val textScale: Float = 1f,
     val iconScale: Float = 1f,
     val darkMode: Boolean = false,
@@ -45,7 +45,7 @@ data class ThemeConfig(
     val soundEnabled: Boolean = true,
     val vibrationEnabled: Boolean = true,
     val notificationSound: String = "",
-    val preset: String = "lexrecover",
+    val preset: String = "difusion",
     // Colores del estado de los mensajes en el chat.
     val statusSent: Long = 0xFF2E7D32,
     val statusSending: Long = 0xFFF9A825,
@@ -57,6 +57,11 @@ data class ThemeConfig(
     val showMessageStatus: Boolean = true,
     val showMessageTime: Boolean = true,
     val showSmsCounter: Boolean = true
+)
+
+/** Claves de fuente válidas; cualquier valor desconocido cae a la predeterminada. */
+private val KNOWN_FONTS = setOf(
+    "difusion", "default", "sans", "serif", "mono", "cursive", "custom", "lato", "motigen"
 )
 
 object ThemePrefs {
@@ -96,11 +101,13 @@ object ThemePrefs {
             prefs.edit().putInt(KEY_VERSION, VERSION).apply()
             return defaults
         }
+        val rawFont = prefs.getString(KEY_FONT, defaults.font) ?: defaults.font
+        val rawPreset = prefs.getString(KEY_PRESET, defaults.preset) ?: defaults.preset
         return ThemeConfig(
             accent = prefs.getLong(KEY_ACCENT, defaults.accent),
             text = prefs.getLong(KEY_TEXT, defaults.text),
             background = prefs.getLong(KEY_BG, defaults.background),
-            font = prefs.getString(KEY_FONT, defaults.font) ?: defaults.font,
+            font = if (rawFont in KNOWN_FONTS) rawFont else defaults.font,
             textScale = prefs.getFloat(KEY_TEXT_SCALE, defaults.textScale),
             iconScale = prefs.getFloat(KEY_ICON_SCALE, defaults.iconScale),
             darkMode = prefs.getBoolean(KEY_DARK, defaults.darkMode),
@@ -111,7 +118,7 @@ object ThemePrefs {
             soundEnabled = prefs.getBoolean(KEY_SOUND, defaults.soundEnabled),
             vibrationEnabled = prefs.getBoolean(KEY_VIBRATION, defaults.vibrationEnabled),
             notificationSound = prefs.getString(KEY_NOTIFICATION_SOUND, defaults.notificationSound) ?: defaults.notificationSound,
-            preset = prefs.getString(KEY_PRESET, defaults.preset) ?: defaults.preset,
+            preset = if (THEME_PRESETS.any { it.id == rawPreset }) rawPreset else defaults.preset,
             statusSent = prefs.getLong(KEY_STATUS_SENT, defaults.statusSent),
             statusSending = prefs.getLong(KEY_STATUS_SENDING, defaults.statusSending),
             statusFailed = prefs.getLong(KEY_STATUS_FAILED, defaults.statusFailed),
@@ -185,7 +192,7 @@ fun fontFamilyFor(name: String, context: Context): FontFamily = when (name) {
     "custom" -> customFontFamily(context) ?: FontFamily.Default
     "lato" -> resFontFamily(context, "lato") ?: FontFamily.Default
     "motigen" -> resFontFamily(context, "motigen") ?: FontFamily.Default
-    "lex" -> resFontFamily(context, "lato") ?: FontFamily.Default
+    "difusion" -> resFontFamily(context, "lato") ?: FontFamily.Default
     else -> FontFamily.Default
 }
 
@@ -220,7 +227,7 @@ fun fontNameLabel(name: String): String = when (name) {
     "custom" -> "Archivo propio"
     "lato" -> "Lato"
     "motigen" -> "Motigen"
-    "lex" -> "Difusión"
+    "difusion" -> "Difusión"
     else -> "Predeterminada"
 }
 
@@ -269,7 +276,7 @@ data class ThemePreset(
 )
 
 val THEME_PRESETS: List<ThemePreset> = listOf(
-    ThemePreset("lexrecover", "Difusión", 0xFF0000FF, 0xFF050A2E, 0xFFF3FCFB),
+    ThemePreset("difusion", "Difusión", 0xFF0000FF, 0xFF050A2E, 0xFFF3FCFB),
     ThemePreset("violeta", "Violeta", 0xFF7C3AED, 0xFF1B1023, 0xFFF7F4FF),
     ThemePreset("oceano", "Océano", 0xFF0E7C86, 0xFF06262B, 0xFFEAF7F6),
     ThemePreset("cielo", "Cielo", 0xFF2F6FED, 0xFF0B1E4B, 0xFFEEF4FF, cornerStyle = "pill"),
@@ -335,7 +342,7 @@ fun configFromJson(json: String): ThemeConfig? {
             accent = o.optLong("accent", 0xFF0000FF),
             text = o.optLong("text", 0xFF050A2E),
             background = o.optLong("background", 0xFFF3FCFB),
-            font = o.optString("font", "lex"),
+            font = o.optString("font", "difusion"),
             textScale = o.optDouble("textScale", 1.0).toFloat(),
             iconScale = o.optDouble("iconScale", 1.0).toFloat(),
             darkMode = o.optBoolean("darkMode", false),
@@ -373,7 +380,7 @@ fun readConfigFromUri(context: Context, uri: Uri): ThemeConfig? {
 
 fun exportConfig(context: Context, config: ThemeConfig): String {
     val bytes = configToJson(config).toString(4).toByteArray(Charsets.UTF_8)
-    val fileName = "apariencia_lexrecover.json"
+    val fileName = "apariencia_difusion.json"
     return try {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val values = android.content.ContentValues().apply {
@@ -486,13 +493,13 @@ private fun buildScheme(config: ThemeConfig): ColorScheme {
 
 private fun buildTypography(fontName: String, context: Context): Typography {
     val headings = when (fontName) {
-        "lex" -> resFontFamily(context, "motigen")
+        "difusion" -> resFontFamily(context, "motigen")
             ?: resFontFamily(context, "lato")
             ?: FontFamily.Default
         else -> fontFamilyFor(fontName, context)
     }
     val body = when (fontName) {
-        "lex" -> resFontFamily(context, "lato") ?: FontFamily.Default
+        "difusion" -> resFontFamily(context, "lato") ?: FontFamily.Default
         else -> headings
     }
     val base = Typography()
