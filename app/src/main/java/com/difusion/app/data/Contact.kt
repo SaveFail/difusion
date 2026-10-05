@@ -16,5 +16,7 @@ data class Contact(
     // estado = columna STATUS (PROMESA DE PAGO, PAGO…).
     val estado: String = "",
     // medio = columna MEDIO DE CONTACTO (LLAMADA, WHATSAPP…).
-    val medio: String = ""
+    val medio: String = "",
+    val idCuota: String = "",
+    val monto: String = ""
 )

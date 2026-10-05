@@ -12,7 +12,9 @@ import java.io.InputStreamReader
     val assignment: String = "",
     val gestion: String = "",
     val estado: String = "",
-    val medio: String = ""
+    val medio: String = "",
+    val idCuota: String = "",
+    val monto: String = ""
 )
 
 object Importer {
@@ -120,20 +122,22 @@ object Importer {
         val cedulaIdx: Int = -1,
         val gestionIdx: Int = -1,
         val statusIdx: Int = -1,
-        val medioIdx: Int = -1
+        val medioIdx: Int = -1,
+        val idCuotaIdx: Int = -1,
+        val montoIdx: Int = -1
     )
 
     private val nameKeywords = setOf(
-        "nombre", "name", "cliente", "clientes", "nombres", "contacto", "razon", "apellidos", "apellido"
+        "nombre", "nombres", "name", "cliente", "clientes", "contacto", "razon", "apellidos", "apellido"
     )
     private val phoneKeywords = setOf(
-        "telefono", "numero", "numeros", "celular", "movil", "moviles", "phone", "tel", "whatsapp"
+        "telefono", "tel", "celular", "movil", "moviles", "phone", "whatsapp", "numero", "numeros"
     )
     private val assignKeywords = setOf(
         "asignado", "asignacion", "encargado", "responsable", "cobrador", "agente", "gestor",
         "repartidor", "ruta", "equipo", "lista", "representante", "vendedor", "asesor", "coordinador",
         "grupo", "segmento", "categoria", "agencia", "promotor", "tecnico", "instalador", "supervisor",
-        "jefe", "comercial", "ejecutivo"
+        "jefe", "comercial", "ejecutivo", "ejecutiva", "ejecutivo"
     )
     private val cedulaKeywords = setOf(
         "cedula", "cédula", "documento", "doc", "identificacion", "identificación",
@@ -152,6 +156,8 @@ object Importer {
     private val statusKeywords = setOf("status", "estado", "estatus")
     // Medio/canal de contacto.
     private val medioKeywords = setOf("medio", "canal", "via", "vía", "canal de contacto")
+    private val idCuotaKeywords = setOf("id cuota", "idcuota", "cuota id", "nro cuota", "nro_cuota", "cuota")
+    private val montoKeywords = setOf("monto", "importe", "valor", "total", "abono", "saldo")
 
     // Normaliza un encabezado: minúsculas y sin tildes, para reconocer encabezados
     // con o sin acentos (ej. "Teléfono", "Asignación").
@@ -159,9 +165,34 @@ object Importer {
         val normalized = java.text.Normalizer.normalize(value, java.text.Normalizer.Form.NFD)
         val sb = StringBuilder()
         for (c in normalized) {
-            if (c.code < 128) sb.append(Character.toLowerCase(c))
+            when (c.lowercaseChar()) {
+                'á' -> sb.append('a')
+                'é' -> sb.append('e')
+                'í' -> sb.append('i')
+                'ó' -> sb.append('o')
+                'ú' -> sb.append('u')
+                'ü' -> sb.append('u')
+                'ñ' -> sb.append('n')
+                else -> {
+                    val ch = c.lowercaseChar()
+                    if (ch.code < 128) sb.append(ch) else {
+                        // strip combining marks already done? fallback
+                        sb.append(ch)
+                    }
+                }
+            }
         }
-        return sb.toString()
+        val s = sb.toString()
+        // remove any non-alnum/spaces? keep spaces/punct basic
+        val out = StringBuilder()
+        for (c in s) {
+            if (c.isLetterOrDigit() || c == ' ' || c == '_' || c == '-') out.append(c)
+            else if (c == '\u00B0' || c == '\u00BA' || c == '\u00AA') out.append(c) // no
+            // keep space
+            else if (c.isWhitespace()) out.append(' ')
+            else out.append(c)
+        }
+        return out.toString()
     }
 
     private fun analyzeColumns(header: List<String>): ColumnMap {
@@ -187,6 +218,8 @@ object Importer {
         val assignIdx = folded.indexOfFirst { h ->
             matches(h, assignKeywords) && !matches(h, gestionKeywords)
         }
+        val idCuotaIdx = folded.indexOfFirst { matches(it, idCuotaKeywords) }
+        val montoIdx = folded.indexOfFirst { matches(it, montoKeywords) }
         if (phoneIdx >= 0) {
             // Hay encabezado (al menos se reconoce el teléfono). Si el nombre no
             // tiene encabezado claro ("Columna 1", "ID", …) se usa la primera
@@ -199,7 +232,8 @@ object Importer {
             }
             return ColumnMap(
                 resolvedName, phoneIdx, assignIdx, true,
-                cedulaIdx, gestionIdx, statusIdx, medioIdx
+                cedulaIdx, gestionIdx, statusIdx, medioIdx,
+                idCuotaIdx, montoIdx
             )
         }
         // Sin encabezado reconocible: se asume primera columna = nombre,
@@ -210,6 +244,8 @@ object Importer {
             false,
             -1,
             if (header.size > 3) 3 else -1,
+            -1,
+            -1,
             -1,
             -1
         )
@@ -234,7 +270,9 @@ object Importer {
             val gestion = row.getOrNull(map.gestionIdx).orEmpty().trim()
             val estado = row.getOrNull(map.statusIdx).orEmpty().trim()
             val medio = row.getOrNull(map.medioIdx).orEmpty().trim()
-            result.add(ParsedRow(name, phone, cedula, assignment, gestion, estado, medio))
+            val idCuota = row.getOrNull(map.idCuotaIdx).orEmpty().trim()
+            val monto = row.getOrNull(map.montoIdx).orEmpty().trim()
+            result.add(ParsedRow(name, phone, cedula, assignment, gestion, estado, medio, idCuota, monto))
         }
         return result
     }
