@@ -1206,7 +1206,13 @@ fun SettingsScreen(
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                SmtpConfigCard(onSaved = {})
+                SmtpConfigCard(onSaved = {
+                    Toast.makeText(
+                        context,
+                        "Correo configurado. Ve a la pestaña Mensaje ▸ Correo para ver la bandeja.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                })
 
                 Spacer(modifier = Modifier.height(20.dp))
 

@@ -1,6 +1,7 @@
 package com.difusion.app.service
 
 import android.content.Context
+import android.util.Log
 import com.difusion.app.storage.SmtpPrefs
 import java.util.Date
 import java.util.Properties
@@ -22,6 +23,7 @@ import javax.mail.internet.MimeMessage
  * "contraseña de aplicación" del usuario. No requiere Google Cloud.
  */
 object MailClient {
+    private const val TAG = "DIFUSION-MAIL"
     private const val SMTP_HOST = "smtp.gmail.com"
     private const val SMTP_PORT = "465"
     private const val IMAP_HOST = "imap.gmail.com"
@@ -65,7 +67,8 @@ object MailClient {
             store.close()
             true to "Conectado ($n mensajes en la bandeja)"
         } catch (e: Exception) {
-            false to (e.message ?: "No se pudo conectar")
+            Log.e(TAG, "testConnection: ${e.javaClass.name}: ${e.message}", e)
+            false to (e.message ?: e.javaClass.simpleName)
         }
     }
 
@@ -98,7 +101,8 @@ object MailClient {
         if (!references.isNullOrBlank()) msg.setHeader("References", references)
         Transport.send(msg)
         true
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+        Log.e(TAG, "send: ${e.javaClass.name}: ${e.message}", e)
         false
     }
 
@@ -140,7 +144,8 @@ object MailClient {
             store.close()
             EmailSyncService.InboxResult(true, out)
         } catch (e: Exception) {
-            EmailSyncService.InboxResult(false, error = e.message ?: "Error IMAP")
+            Log.e(TAG, "listInbox: ${e.javaClass.name}: ${e.message}", e)
+            EmailSyncService.InboxResult(false, error = e.message ?: e.javaClass.simpleName)
         }
     }
 
@@ -177,7 +182,8 @@ object MailClient {
             inbox.close(true)
             store.close()
             result
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.e(TAG, "readMessage: ${e.javaClass.name}: ${e.message}", e)
             null
         }
     }
@@ -206,7 +212,8 @@ object MailClient {
             inbox.close(false)
             store.close()
             sendMessage(user, pass, to, subject, body, messageId, messageId)
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.e(TAG, "reply: ${e.javaClass.name}: ${e.message}", e)
             false
         }
     }

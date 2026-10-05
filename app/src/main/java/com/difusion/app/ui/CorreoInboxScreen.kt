@@ -54,6 +54,7 @@ fun CorreoInboxScreen() {
     var showConfig by rememberSaveable { mutableStateOf(false) }
 
     var loading by remember { mutableStateOf(false) }
+    var errorMsg by remember { mutableStateOf("") }
     var inbox by remember { mutableStateOf<List<EmailSyncService.MailSummary>>(emptyList()) }
     var unread by remember { mutableStateOf(0) }
     var openThread by remember { mutableStateOf<EmailSyncService.MailThread?>(null) }
@@ -82,7 +83,9 @@ fun CorreoInboxScreen() {
             if (res.success) {
                 inbox = res.messages
                 unread = res.unread
+                errorMsg = ""
             } else {
+                errorMsg = res.error
                 Toast.makeText(context, res.error, Toast.LENGTH_LONG).show()
             }
         }
@@ -283,6 +286,25 @@ fun CorreoInboxScreen() {
             }
             IconButton(onClick = { showConfig = !showConfig }) {
                 Icon(Icons.Default.Settings, contentDescription = "Configurar")
+            }
+        }
+
+        if (errorMsg.isNotBlank()) {
+            Surface(
+                color = MaterialTheme.colorScheme.errorContainer,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
+            ) {
+                Column(Modifier.padding(10.dp)) {
+                    Text(
+                        errorMsg,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    TextButton(onClick = { loadInbox() }) { Text("Reintentar") }
+                }
             }
         }
 
@@ -575,12 +597,19 @@ fun SmtpConfigCard(onSaved: () -> Unit) {
                     onClick = {
                         SmtpPrefs.setEmail(context, email)
                         SmtpPrefs.setPassword(context, pass)
-                        Toast.makeText(context, "Correo guardado", Toast.LENGTH_SHORT).show()
-                        onSaved()
+                        scope.launch {
+                            val (ok, msg) = withContext(Dispatchers.IO) { MailClient.testConnection(context) }
+                            if (ok) {
+                                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                onSaved()
+                            } else {
+                                Toast.makeText(context, smtpHint(msg), Toast.LENGTH_LONG).show()
+                            }
+                        }
                     },
                     enabled = email.isNotBlank() && pass.isNotBlank(),
                     modifier = Modifier.weight(1f)
-                ) { Text("Guardar") }
+                ) { Text("Guardar y cargar") }
                 Spacer(Modifier.width(8.dp))
                 OutlinedButton(
                     onClick = {
@@ -590,7 +619,7 @@ fun SmtpConfigCard(onSaved: () -> Unit) {
                             val (ok, msg) = withContext(Dispatchers.IO) { MailClient.testConnection(context) }
                             Toast.makeText(
                                 context,
-                                if (ok) msg else "No se pudo conectar: $msg",
+                                if (ok) msg else smtpHint(msg),
                                 Toast.LENGTH_LONG
                             ).show()
                         }
@@ -600,5 +629,21 @@ fun SmtpConfigCard(onSaved: () -> Unit) {
                 ) { Text("Probar") }
             }
         }
+    }
+}
+
+private fun smtpHint(msg: String): String {
+    val m = msg.lowercase()
+    return when {
+        m.contains("authentication") || m.contains("535") ||
+            m.contains("username and password") || m.contains("not accepted") ||
+            m.contains("credential") || m.contains("login") ->
+            "No se pudo conectar.\n\nUsa una CONTRASEÑA DE APLICACIÓN de 16 letras " +
+                "(NO tu contraseña normal de Gmail) y activa la verificación en 2 pasos.\n\n" +
+                "Detalle: $msg"
+        m.contains("imap") || m.contains("not enabled") || m.contains("disabled") ->
+            "No se pudo conectar.\n\nActiva IMAP en Gmail ▸ Configuración ▸ " +
+                "Reenvío y POP/IMAP.\n\nDetalle: $msg"
+        else -> "No se pudo conectar: $msg"
     }
 }
