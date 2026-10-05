@@ -421,7 +421,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         assignment = row.assignment.trim(),
                         gestion = row.gestion.trim(),
                         estado = row.estado.trim(),
-                        medio = row.medio.trim()
+                        medio = row.medio.trim(),
+                        idCuota = row.idCuota.trim(),
+                        monto = row.monto.trim()
                     )
                 )
             }
@@ -772,7 +774,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         assignment = row.assignment,
                         gestion = row.gestion.trim(),
                         estado = row.estado.trim(),
-                        medio = row.medio.trim()
+                        medio = row.medio.trim(),
+                        idCuota = row.idCuota.trim(),
+                        monto = row.monto.trim()
                     )
                 )
             }
