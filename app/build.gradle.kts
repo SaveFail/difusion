@@ -29,6 +29,8 @@ val emailBridgeUrl: String = integraciones.getProperty("emailBridgeUrl", "")
 val emailBridgeToken: String = integraciones.getProperty("emailBridgeToken", "")
 val driveBridgeUrl: String = integraciones.getProperty("driveBridgeUrl", "")
 val driveBridgeToken: String = integraciones.getProperty("driveBridgeToken", "")
+val smtpUser: String = integraciones.getProperty("smtpUser", "")
+val smtpAppPassword: String = integraciones.getProperty("smtpAppPassword", "")
 
 android {
     namespace = "com.difusion.app"
@@ -45,6 +47,8 @@ android {
         buildConfigField("String", "EMAIL_BRIDGE_TOKEN", "\"$emailBridgeToken\"")
         buildConfigField("String", "DRIVE_BRIDGE_URL", "\"$driveBridgeUrl\"")
         buildConfigField("String", "DRIVE_BRIDGE_TOKEN", "\"$driveBridgeToken\"")
+        buildConfigField("String", "SMTP_USER", "\"$smtpUser\"")
+        buildConfigField("String", "SMTP_APP_PASSWORD", "\"$smtpAppPassword\"")
     }
 
     signingConfigs {
@@ -89,6 +93,9 @@ android {
             excludes += "META-INF/LICENSE.txt"
             excludes += "META-INF/NOTICE"
             excludes += "META-INF/NOTICE.txt"
+            excludes += "META-INF/NOTICE.md"
+            excludes += "META-INF/LICENSE.md"
+            excludes += "META-INF/DEPENDENCIES.md"
         }
     }
 }
@@ -124,6 +131,10 @@ dependencies {
 
     // Inicio de sesión con Google y autorización de Gmail (Identity Services).
     implementation("com.google.android.gms:play-services-auth:21.2.0")
+
+    // Envío y lectura de correo por SMTP/IMAP (Gmail con contraseña de aplicación).
+    implementation("com.sun.mail:android-mail:1.6.7")
+    implementation("com.sun.mail:android-activation:1.6.7")
 
     // Escáner de QR con la cámara. Google Code Scanner lo provee Play Services
     // (no requiere permiso de cámara y casi no aumenta el APK).

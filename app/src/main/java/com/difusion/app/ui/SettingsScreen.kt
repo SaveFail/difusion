@@ -1200,6 +1200,16 @@ fun SettingsScreen(
             if (settingsTab == 7) {
                 Spacer(modifier = Modifier.height(16.dp))
 
+                Text(
+                    "Opción sin Google Cloud (recomendada): Gmail con contraseña de aplicación",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                SmtpConfigCard(onSaved = {})
+
+                Spacer(modifier = Modifier.height(20.dp))
+
                 GmailSignInSection()
 
                 Spacer(modifier = Modifier.height(16.dp))

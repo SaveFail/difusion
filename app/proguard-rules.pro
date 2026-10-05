@@ -16,3 +16,10 @@
 
 # Corrutinas de Kotlin.
 -dontwarn kotlinx.coroutines.**
+
+# JavaMail (SMTP/IMAP) usa reflexión: conservar sus clases.
+-keep class javax.mail.** { *; }
+-keep class com.sun.mail.** { *; }
+-dontwarn javax.mail.**
+-dontwarn com.sun.mail.**
+-dontwarn org.apache.**

@@ -21,13 +21,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.difusion.app.service.EmailSyncService
 import com.difusion.app.service.GmailApiService
 import com.difusion.app.service.GmailAuth
+import com.difusion.app.service.MailClient
 import com.difusion.app.storage.EmailSyncPrefs
+import com.difusion.app.storage.SmtpPrefs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -44,9 +47,11 @@ fun CorreoInboxScreen() {
     val scope = rememberCoroutineScope()
 
     var signedIn by remember { mutableStateOf(GmailAuth.isSignedIn(context)) }
+    var smtpConfigured by remember { mutableStateOf(MailClient.isConfigured(context)) }
     var url by rememberSaveable { mutableStateOf(EmailSyncPrefs.getUrl(context)) }
     var token by rememberSaveable { mutableStateOf(EmailSyncPrefs.getToken(context)) }
     var showBridge by rememberSaveable { mutableStateOf(false) }
+    var showConfig by rememberSaveable { mutableStateOf(false) }
 
     var loading by remember { mutableStateOf(false) }
     var inbox by remember { mutableStateOf<List<EmailSyncService.MailSummary>>(emptyList()) }
@@ -58,16 +63,20 @@ fun CorreoInboxScreen() {
 
     val bridge = EmailSyncService.EmailConfig(url.trim(), token.trim())
     fun nativeToken(): String? = GmailAuth.token(context)
-    fun canUseMailbox() = nativeToken() != null || url.isNotBlank()
+    fun canUseMailbox() = nativeToken() != null || smtpConfigured || url.isNotBlank()
 
     fun loadInbox() {
         if (!canUseMailbox()) return
         loading = true
         val nt = nativeToken()
+        val useSmtp = nt == null && smtpConfigured
         scope.launch {
             val res = withContext(Dispatchers.IO) {
-                if (nt != null) GmailApiService.listInbox(nt, 15)
-                else EmailSyncService.listInbox(context, bridge, 25)
+                when {
+                    nt != null -> GmailApiService.listInbox(nt, 15)
+                    useSmtp -> MailClient.listInbox(context, 15)
+                    else -> EmailSyncService.listInbox(context, bridge, 25)
+                }
             }
             loading = false
             if (res.success) {
@@ -97,10 +106,14 @@ fun CorreoInboxScreen() {
         openThreadId = id
         loading = true
         val nt = nativeToken()
+        val useSmtp = nt == null && smtpConfigured
         scope.launch {
             openThread = withContext(Dispatchers.IO) {
-                if (nt != null) GmailApiService.readThread(nt, id)
-                else EmailSyncService.readThread(bridge, id)
+                when {
+                    nt != null -> GmailApiService.readThread(nt, id)
+                    useSmtp -> MailClient.readMessage(context, id)
+                    else -> EmailSyncService.readThread(bridge, id)
+                }
             }
             loading = false
         }
@@ -128,34 +141,13 @@ fun CorreoInboxScreen() {
                 if (GmailAuth.hasBakedClientId()) {
                     GmailSignInSection { signedIn = true; loadInbox() }
                     Spacer(Modifier.height(12.dp))
-                    TextButton(onClick = { showBridge = !showBridge }) {
-                        Text(if (showBridge) "Ocultar" else "Usar Apps Script en su lugar")
-                    }
-                    if (showBridge) {
-                        BridgeConfigCard(
-                            url = url,
-                            token = token,
-                            onUrlChange = { url = it },
-                            onTokenChange = { token = it },
-                            onSave = {
-                                EmailSyncPrefs.setUrl(context, url.trim())
-                                EmailSyncPrefs.setToken(context, token.trim())
-                                EmailSyncPrefs.setEnabled(context, true)
-                                Toast.makeText(context, "Puente configurado", Toast.LENGTH_SHORT).show()
-                                loadInbox()
-                            },
-                            onTest = { testBridge() }
-                        )
-                    }
-                } else {
-                    Text(
-                        "Para enviar y ver tus correos, configura una vez el puente de correo " +
-                            "(Apps Script). No requiere Google Cloud. Si ya te lo dejaron " +
-                            "configurado, no verás esta pantalla.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(10.dp))
+                }
+                SmtpConfigCard(onSaved = { smtpConfigured = true; loadInbox() })
+                Spacer(Modifier.height(12.dp))
+                TextButton(onClick = { showBridge = !showBridge }) {
+                    Text(if (showBridge) "Ocultar Apps Script" else "Usar Apps Script en su lugar")
+                }
+                if (showBridge) {
                     BridgeConfigCard(
                         url = url,
                         token = token,
@@ -165,7 +157,7 @@ fun CorreoInboxScreen() {
                             EmailSyncPrefs.setUrl(context, url.trim())
                             EmailSyncPrefs.setToken(context, token.trim())
                             EmailSyncPrefs.setEnabled(context, true)
-                            Toast.makeText(context, "Correo configurado", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Puente configurado", Toast.LENGTH_SHORT).show()
                             loadInbox()
                         },
                         onTest = { testBridge() }
@@ -241,10 +233,14 @@ fun CorreoInboxScreen() {
                             val body = replyText.trim()
                             val id = openThreadId ?: return@FilledIconButton
                             val nt = nativeToken()
+                            val useSmtp = nt == null && smtpConfigured
                             scope.launch {
                                 val ok = withContext(Dispatchers.IO) {
-                                    if (nt != null) GmailApiService.reply(nt, id, body)
-                                    else EmailSyncService.reply(bridge, id, body)
+                                    when {
+                                        nt != null -> GmailApiService.reply(nt, id, body)
+                                        useSmtp -> MailClient.reply(context, id, body)
+                                        else -> EmailSyncService.reply(bridge, id, body)
+                                    }
                                 }
                                 Toast.makeText(
                                     context,
@@ -253,8 +249,11 @@ fun CorreoInboxScreen() {
                                 ).show()
                                 replyText = ""
                                 openThread = withContext(Dispatchers.IO) {
-                                    if (nt != null) GmailApiService.readThread(nt, id)
-                                    else EmailSyncService.readThread(bridge, id)
+                                    when {
+                                        nt != null -> GmailApiService.readThread(nt, id)
+                                        useSmtp -> MailClient.readMessage(context, id)
+                                        else -> EmailSyncService.readThread(bridge, id)
+                                    }
                                 }
                             }
                         }
@@ -282,8 +281,20 @@ fun CorreoInboxScreen() {
             IconButton(onClick = { loadInbox() }) {
                 Icon(Icons.Default.Refresh, contentDescription = "Actualizar")
             }
-            IconButton(onClick = { showBridge = !showBridge }) {
+            IconButton(onClick = { showConfig = !showConfig }) {
                 Icon(Icons.Default.Settings, contentDescription = "Configurar")
+            }
+        }
+
+        if (showConfig) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 12.dp)
+            ) {
+                SmtpConfigCard(onSaved = { smtpConfigured = true; showConfig = false; loadInbox() })
+                Spacer(Modifier.height(12.dp))
             }
         }
 
@@ -504,6 +515,89 @@ private fun ComposeDialog(
                         enabled = to.isNotBlank() && subject.isNotBlank() && body.isNotBlank()
                     ) { Text("Enviar") }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun SmtpConfigCard(onSaved: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var email by rememberSaveable { mutableStateOf(SmtpPrefs.getEmail(context)) }
+    var pass by rememberSaveable { mutableStateOf(SmtpPrefs.getPassword(context)) }
+
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Text(
+                "Tu Gmail (correo y contraseña de aplicación)",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "No necesitas Google Cloud. Solo:\n" +
+                    "1. En tu cuenta de Google activa la verificación en 2 pasos.\n" +
+                    "2. Entra a myaccount.google.com/apppasswords y crea una " +
+                    "\"Contraseña de aplicación\".\n" +
+                    "3. Escribe aquí tu correo y esa contraseña de 16 letras.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(10.dp))
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it },
+                label = { Text("Correo de Gmail") },
+                placeholder = { Text("tucorreo@gmail.com") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp)
+            )
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = pass,
+                onValueChange = { pass = it },
+                label = { Text("Contraseña de aplicación") },
+                placeholder = { Text("abcd efgh ijkl mnop") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                visualTransformation = PasswordVisualTransformation(),
+                shape = RoundedCornerShape(14.dp)
+            )
+            Spacer(Modifier.height(10.dp))
+            Row {
+                Button(
+                    onClick = {
+                        SmtpPrefs.setEmail(context, email)
+                        SmtpPrefs.setPassword(context, pass)
+                        Toast.makeText(context, "Correo guardado", Toast.LENGTH_SHORT).show()
+                        onSaved()
+                    },
+                    enabled = email.isNotBlank() && pass.isNotBlank(),
+                    modifier = Modifier.weight(1f)
+                ) { Text("Guardar") }
+                Spacer(Modifier.width(8.dp))
+                OutlinedButton(
+                    onClick = {
+                        SmtpPrefs.setEmail(context, email)
+                        SmtpPrefs.setPassword(context, pass)
+                        scope.launch {
+                            val (ok, msg) = withContext(Dispatchers.IO) { MailClient.testConnection(context) }
+                            Toast.makeText(
+                                context,
+                                if (ok) msg else "No se pudo conectar: $msg",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    },
+                    enabled = email.isNotBlank() && pass.isNotBlank(),
+                    modifier = Modifier.weight(1f)
+                ) { Text("Probar") }
             }
         }
     }

@@ -39,3 +39,6 @@ node_modules/
 # ---- Basura del sistema ----
 .DS_Store
 Thumbs.db
+
+# ---- Credenciales de integracion (solo local, NO subir) ----
+integraciones.properties

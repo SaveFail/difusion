@@ -171,6 +171,14 @@ object EmailSyncService {
             }
             return EmailResult(success = sent > 0, sent = sent, failed = failed, total = list.size)
         }
+        if (MailClient.isConfigured(context)) {
+            var sent = 0
+            var failed = 0
+            for (r in list) {
+                if (MailClient.send(context, r, subject, body)) sent++ else failed++
+            }
+            return EmailResult(success = sent > 0, sent = sent, failed = failed, total = list.size)
+        }
         return sendBulk(context, config(context), list, subject, body)
     }
 
