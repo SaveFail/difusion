@@ -16,14 +16,19 @@ val keystoreProperties = Properties().apply {
     }
 }
 
-// Client ID de OAuth de Google (incrustado en la app para que NADIE lo pegue).
-// Se lee de gmail.properties (local, no se sube al repo).
-val gmailPropertiesFile = rootProject.file("gmail.properties")
-val gmailClientId: String = Properties().apply {
-    if (gmailPropertiesFile.exists()) {
-        gmailPropertiesFile.inputStream().use { load(it) }
+// Configuración incrustada (para que los usuarios NO tengan que configurar nada).
+// Se lee de integraciones.properties (local).
+val integracionesFile = rootProject.file("integraciones.properties")
+val integraciones: Properties = Properties().apply {
+    if (integracionesFile.exists()) {
+        integracionesFile.inputStream().use { load(it) }
     }
-}.getProperty("clientId", "")
+}
+val gmailClientId: String = integraciones.getProperty("oauthClientId", "")
+val emailBridgeUrl: String = integraciones.getProperty("emailBridgeUrl", "")
+val emailBridgeToken: String = integraciones.getProperty("emailBridgeToken", "")
+val driveBridgeUrl: String = integraciones.getProperty("driveBridgeUrl", "")
+val driveBridgeToken: String = integraciones.getProperty("driveBridgeToken", "")
 
 android {
     namespace = "com.difusion.app"
@@ -36,6 +41,10 @@ android {
         versionCode = 23
         versionName = "4.0"
         buildConfigField("String", "GMAIL_OAUTH_CLIENT_ID", "\"$gmailClientId\"")
+        buildConfigField("String", "EMAIL_BRIDGE_URL", "\"$emailBridgeUrl\"")
+        buildConfigField("String", "EMAIL_BRIDGE_TOKEN", "\"$emailBridgeToken\"")
+        buildConfigField("String", "DRIVE_BRIDGE_URL", "\"$driveBridgeUrl\"")
+        buildConfigField("String", "DRIVE_BRIDGE_TOKEN", "\"$driveBridgeToken\"")
     }
 
     signingConfigs {

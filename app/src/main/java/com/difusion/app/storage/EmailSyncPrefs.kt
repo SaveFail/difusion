@@ -14,11 +14,19 @@ object EmailSyncPrefs {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     fun setUrl(context: Context, url: String) = prefs(context).edit().putString(KEY_URL, url).apply()
-    fun getUrl(context: Context): String = prefs(context).getString(KEY_URL, "") ?: ""
+    fun getUrl(context: Context): String {
+        val v = prefs(context).getString(KEY_URL, "") ?: ""
+        return if (v.isNotBlank()) v else com.difusion.app.BuildConfig.EMAIL_BRIDGE_URL
+    }
 
     fun setToken(context: Context, token: String) = prefs(context).edit().putString(KEY_TOKEN, token).apply()
-    fun getToken(context: Context): String = prefs(context).getString(KEY_TOKEN, "") ?: ""
+    fun getToken(context: Context): String {
+        val v = prefs(context).getString(KEY_TOKEN, "") ?: ""
+        return if (v.isNotBlank()) v else com.difusion.app.BuildConfig.EMAIL_BRIDGE_TOKEN
+    }
 
     fun setEnabled(context: Context, enabled: Boolean) = prefs(context).edit().putBoolean(KEY_ENABLED, enabled).apply()
-    fun isEnabled(context: Context): Boolean = prefs(context).getBoolean(KEY_ENABLED, false)
+    fun isEnabled(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_ENABLED, false) ||
+            com.difusion.app.BuildConfig.EMAIL_BRIDGE_URL.isNotBlank()
 }

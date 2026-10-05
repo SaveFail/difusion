@@ -79,6 +79,20 @@ fun CorreoInboxScreen() {
         }
     }
 
+    fun testBridge() {
+        scope.launch {
+            val res = withContext(Dispatchers.IO) {
+                EmailSyncService.ping(EmailSyncService.EmailConfig(url.trim(), token.trim()))
+            }
+            Toast.makeText(
+                context,
+                if (res.success) "Conectado: " + res.email.ifBlank { "Gmail" }
+                else "No se pudo conectar: ${res.error}",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
     fun openThreadById(id: String) {
         openThreadId = id
         loading = true
@@ -111,12 +125,37 @@ fun CorreoInboxScreen() {
                     .verticalScroll(rememberScrollState())
                     .padding(16.dp)
             ) {
-                GmailSignInSection { signedIn = true; loadInbox() }
-                Spacer(Modifier.height(12.dp))
-                TextButton(onClick = { showBridge = !showBridge }) {
-                    Text(if (showBridge) "Ocultar opción avanzada (Apps Script)" else "¿Sin Google Cloud? Usar Apps Script (avanzado)")
-                }
-                if (showBridge) {
+                if (GmailAuth.hasBakedClientId()) {
+                    GmailSignInSection { signedIn = true; loadInbox() }
+                    Spacer(Modifier.height(12.dp))
+                    TextButton(onClick = { showBridge = !showBridge }) {
+                        Text(if (showBridge) "Ocultar" else "Usar Apps Script en su lugar")
+                    }
+                    if (showBridge) {
+                        BridgeConfigCard(
+                            url = url,
+                            token = token,
+                            onUrlChange = { url = it },
+                            onTokenChange = { token = it },
+                            onSave = {
+                                EmailSyncPrefs.setUrl(context, url.trim())
+                                EmailSyncPrefs.setToken(context, token.trim())
+                                EmailSyncPrefs.setEnabled(context, true)
+                                Toast.makeText(context, "Puente configurado", Toast.LENGTH_SHORT).show()
+                                loadInbox()
+                            },
+                            onTest = { testBridge() }
+                        )
+                    }
+                } else {
+                    Text(
+                        "Para enviar y ver tus correos, configura una vez el puente de correo " +
+                            "(Apps Script). No requiere Google Cloud. Si ya te lo dejaron " +
+                            "configurado, no verás esta pantalla.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(10.dp))
                     BridgeConfigCard(
                         url = url,
                         token = token,
@@ -126,22 +165,10 @@ fun CorreoInboxScreen() {
                             EmailSyncPrefs.setUrl(context, url.trim())
                             EmailSyncPrefs.setToken(context, token.trim())
                             EmailSyncPrefs.setEnabled(context, true)
-                            Toast.makeText(context, "Puente configurado", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Correo configurado", Toast.LENGTH_SHORT).show()
                             loadInbox()
                         },
-                        onTest = {
-                            scope.launch {
-                                val res = withContext(Dispatchers.IO) {
-                                    EmailSyncService.ping(EmailSyncService.EmailConfig(url.trim(), token.trim()))
-                                }
-                                Toast.makeText(
-                                    context,
-                                    if (res.success) "Conectado: " + res.email.ifBlank { "Gmail" }
-                                    else "No se pudo conectar: ${res.error}",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                            }
-                        }
+                        onTest = { testBridge() }
                     )
                 }
             }
