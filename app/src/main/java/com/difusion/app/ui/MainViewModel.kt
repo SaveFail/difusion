@@ -291,6 +291,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         com.difusion.app.storage.EmailSyncPrefs.setEnabled(getApplication(), enabled)
     }
 
+    /** Prueba la conexión con el Gmail del Web App y avisa con qué cuenta quedó. */
+    fun testEmailConnection() {
+        viewModelScope.launch {
+            val cfg = com.difusion.app.service.EmailSyncService.config(getApplication())
+            val res = withContext(Dispatchers.IO) {
+                com.difusion.app.service.EmailSyncService.ping(cfg)
+            }
+            val msg = if (res.success) {
+                if (res.email.isBlank()) "Conexión correcta con tu Gmail"
+                else "Conectado con ${res.email} · ${res.unread} sin leer"
+            } else {
+                "No se pudo conectar: ${res.error}"
+            }
+            Toast.makeText(getApplication(), msg, Toast.LENGTH_LONG).show()
+        }
+    }
+
     suspend fun sendBulkEmail(
         recipients: List<String>,
         subject: String,

@@ -1171,7 +1171,8 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                         emailSyncToken = viewModel.emailSyncToken.collectAsStateWithLifecycle().value,
                         onEmailSyncTokenChange = { viewModel.setEmailSyncToken(it) },
                         emailSyncEnabled = viewModel.emailSyncEnabled.collectAsStateWithLifecycle().value,
-                        onEmailSyncEnabledChange = { viewModel.setEmailSyncEnabled(it) }
+                        onEmailSyncEnabledChange = { viewModel.setEmailSyncEnabled(it) },
+                        onTestEmailConnection = { viewModel.testEmailConnection() }
                     )
                 }
             }

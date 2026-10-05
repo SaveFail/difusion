@@ -37,6 +37,7 @@ function doPost(e) {
     }
     var action = (data.action || 'send').toString();
     switch (action) {
+      case 'ping':  return actionPing();
       case 'list':  return actionList(data);
       case 'read':  return actionRead(data);
       case 'reply': return actionReply(data);
@@ -46,6 +47,13 @@ function doPost(e) {
   } catch (err) {
     return json({ ok: false, error: String(err) });
   }
+}
+
+// --- Probar conexión (devuelve la cuenta de Gmail conectada) ---
+function actionPing() {
+  var email = '';
+  try { email = Session.getActiveUser().getEmail(); } catch (e) {}
+  return json({ ok: true, email: email, unread: GmailApp.getInboxUnreadCount() });
 }
 
 // --- Enviar (masivo o uno) ---

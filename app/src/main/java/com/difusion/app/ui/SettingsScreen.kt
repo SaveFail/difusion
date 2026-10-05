@@ -93,7 +93,8 @@ fun SettingsScreen(
     emailSyncToken: String,
     onEmailSyncTokenChange: (String) -> Unit,
     emailSyncEnabled: Boolean,
-    onEmailSyncEnabledChange: (Boolean) -> Unit
+    onEmailSyncEnabledChange: (Boolean) -> Unit,
+    onTestEmailConnection: () -> Unit
 ) {
     val context = LocalContext.current
     var showAbout by remember { mutableStateOf(false) }
@@ -110,7 +111,7 @@ fun SettingsScreen(
         )
 
         // Pestañas para ordenar la configuración por temas.
-        val settingsTabs = listOf("Permisos", "Actualizaciones", "Drive", "Llamadas", "Apariencia", "Envío", "General")
+        val settingsTabs = listOf("Permisos", "Actualizaciones", "Drive", "Llamadas", "Apariencia", "Envío", "General", "Correo")
         var settingsTab by remember { mutableStateOf(0) }
         ScrollableTabRow(
             selectedTabIndex = settingsTab,
@@ -456,47 +457,18 @@ fun SettingsScreen(
 
         SectionCard {
             Text(
-                "Envío masivo por correo",
+                "Correo (Gmail)",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                "Los correos se envían desde tu cuenta de Google con un Web App de Apps " +
-                    "Script (EmailSyncAppsScript.gs), sin abrir la app de correo y respetando " +
-                    "los límites de Gmail para evitar spam. Pega aquí la URL .../exec.",
+                "La configuración y el paso a paso para conectar tu Gmail están en la " +
+                    "pestaña \"Correo\" de Ajustes (tap arriba). Ese mismo correo se usa " +
+                    "para el envío masivo y programado.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.height(10.dp))
-            OutlinedTextField(
-                value = emailSyncUrl,
-                onValueChange = onEmailSyncUrlChange,
-                label = { Text("URL del Web App (correo)") },
-                placeholder = { Text("https://script.google.com/macros/s/.../exec") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(14.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = emailSyncToken,
-                onValueChange = onEmailSyncTokenChange,
-                label = { Text("Token (opcional)") },
-                placeholder = { Text("Solo si configuraste API_TOKEN") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(14.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = emailSyncEnabled,
-                    onCheckedChange = onEmailSyncEnabledChange
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Activar envío masivo por correo")
-            }
         }
             } // fin Drive
             if (settingsTab == 0) {
@@ -1225,6 +1197,107 @@ fun SettingsScreen(
                 )
             }
             } // fin General
+            if (settingsTab == 7) {
+                Spacer(modifier = Modifier.height(16.dp))
+
+                SectionCard {
+                    Text(
+                        "Conectar tu Gmail — paso a paso",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        "Haz esto UNA sola vez. Con esto podrás ver tu bandeja, leer, " +
+                            "responder, enviar y programar correos desde la app, sin abrir " +
+                            "otra aplicación.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        "1. En la computadora abre: script.google.com\n" +
+                            "2. Toca \"Nuevo proyecto\".\n" +
+                            "3. Borra todo el código de ejemplo.\n" +
+                            "4. Pega el contenido del archivo EmailSyncAppsScript.gs.\n" +
+                            "5. En la línea API_TOKEN escribe un token largo y secreto y " +
+                            "guárdalo (lo pondrás igual en la app abajo).\n" +
+                            "6. Guarda con Ctrl+S.\n" +
+                            "7. Implementar ▸ Nueva implementación.\n" +
+                            "8. En ⚙️ elige tipo \"Aplicación web\".\n" +
+                            "9. Ejecutar como: Yo. Quién tiene acceso: Cualquier persona.\n" +
+                            "10. Implementar.\n" +
+                            "11. Autoriza con tu cuenta de Google (Configuración avanzada ▸ " +
+                            "Ir a... ▸ Permitir). ESTO ES TU INICIO DE SESIÓN.\n" +
+                            "12. Copia la URL que termina en /exec.\n" +
+                            "13. Pégala abajo, escribe el mismo token y toca " +
+                            "\"Probar conexión\".",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Nota: para el envío masivo/programado, los contactos deben tener " +
+                            "correo. Agrega una columna \"CORREO\" o \"EMAIL\" en tu hoja " +
+                            "(se detecta al importar) o escríbelo al crear el contacto.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                SectionCard {
+                    Text(
+                        "Datos de conexión",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = emailSyncUrl,
+                        onValueChange = onEmailSyncUrlChange,
+                        label = { Text("URL del Web App (Gmail)") },
+                        placeholder = { Text("https://script.google.com/macros/s/.../exec") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(14.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = emailSyncToken,
+                        onValueChange = onEmailSyncTokenChange,
+                        label = { Text("Token (el mismo del script)") },
+                        placeholder = { Text("El API_TOKEN que pusiste en el script") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(14.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(
+                            checked = emailSyncEnabled,
+                            onCheckedChange = onEmailSyncEnabledChange
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Activar correo (ver bandeja y envío masivo)")
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    PrimaryActionButton(
+                        text = "Probar conexión",
+                        onClick = onTestEmailConnection,
+                        modifier = Modifier.fillMaxWidth(),
+                        icon = Icons.Default.Email
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        "Al probar, la app consulta tu Gmail y te dice con qué cuenta quedó " +
+                            "conectada. Si falla, revisa la URL (/exec) y el token.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+            } // fin Correo
             } // fin contenido de pestaña
         }
 

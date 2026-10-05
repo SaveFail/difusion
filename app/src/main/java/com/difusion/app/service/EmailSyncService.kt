@@ -68,6 +68,33 @@ object EmailSyncService {
         val error: String = ""
     )
 
+    data class PingResult(
+        val success: Boolean,
+        val email: String = "",
+        val unread: Int = 0,
+        val error: String = ""
+    )
+
+    /** Prueba la conexión con el Web App y devuelve la cuenta de Gmail conectada. */
+    fun ping(config: EmailConfig): PingResult {
+        if (config.url.isBlank()) return PingResult(false, error = "Falta la URL del Web App")
+        val obj = post(
+            config,
+            JSONObject().apply {
+                put("action", "ping")
+                if (config.token.isNotBlank()) put("token", config.token)
+            }
+        ) ?: return PingResult(false, error = "No se pudo conectar (revisa la URL /exec)")
+        if (!obj.optBoolean("ok", false)) {
+            return PingResult(false, error = obj.optString("error", "Error del servidor"))
+        }
+        return PingResult(
+            success = true,
+            email = obj.optString("email", ""),
+            unread = obj.optInt("unread", 0)
+        )
+    }
+
     fun isEnabled(context: Context): Boolean = EmailSyncPrefs.isEnabled(context)
 
     fun config(context: Context): EmailConfig = EmailConfig(

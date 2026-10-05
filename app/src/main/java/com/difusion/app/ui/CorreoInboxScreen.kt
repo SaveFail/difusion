@@ -97,6 +97,36 @@ fun CorreoInboxScreen() {
                     showConfig = false
                     Toast.makeText(context, "Correo configurado", Toast.LENGTH_SHORT).show()
                     loadInbox()
+                },
+                onTest = {
+                    if (url.isBlank()) {
+                        Toast.makeText(context, "Pega primero la URL del Web App", Toast.LENGTH_LONG).show()
+                    } else {
+                        scope.launch {
+                            val res = withContext(Dispatchers.IO) {
+                                EmailSyncService.ping(config())
+                            }
+                            if (res.success) {
+                                EmailSyncPrefs.setUrl(context, url.trim())
+                                EmailSyncPrefs.setToken(context, token.trim())
+                                EmailSyncPrefs.setEnabled(context, true)
+                                Toast.makeText(
+                                    context,
+                                    "Conectado: " + res.email.ifBlank { "Gmail" } +
+                                        " · ${res.unread} sin leer",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                showConfig = false
+                                loadInbox()
+                            } else {
+                                Toast.makeText(
+                                    context,
+                                    "No se pudo conectar: ${res.error}",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                    }
                 }
             )
             return@Column
@@ -311,7 +341,8 @@ private fun ConfigCard(
     token: String,
     onUrlChange: (String) -> Unit,
     onTokenChange: (String) -> Unit,
-    onSave: () -> Unit
+    onSave: () -> Unit,
+    onTest: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -362,6 +393,12 @@ private fun ConfigCard(
                     enabled = url.isNotBlank(),
                     modifier = Modifier.fillMaxWidth()
                 ) { Text("Guardar y conectar") }
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = onTest,
+                    enabled = url.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Probar conexión") }
             }
         }
     }
