@@ -22,10 +22,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.difusion.app.data.MessageTemplate
 import com.difusion.app.data.ScheduledSend
+import com.difusion.app.storage.RecipientsPrefs
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -38,16 +40,16 @@ fun MessageEditorScreen(
     messageBody: String,
     onMessageChange: (String) -> Unit,
     templates: List<MessageTemplate>,
-    onSaveTemplate: (String, String) -> Unit,
+    onSaveTemplate: (String, String, String) -> Unit,
     onDeleteTemplate: (MessageTemplate) -> Unit,
     selectedCount: Int,
     showSmsCounter: Boolean = true,
     onSend: () -> Unit,
-    // Correo masivo (opcional).
-    onSendEmail: ((subject: String, body: String) -> Unit)? = null,
+    // Correo masivo (opcional). mode: 0=seleccionados, 1=lista, 2=individual.
+    onSendEmail: ((subject: String, body: String, mode: Int, emails: List<String>) -> Unit)? = null,
     emailAvailable: Boolean = false,
     // Envío programado: canal 0 = SMS, 1 = correo.
-    onSchedule: ((subject: String, body: String, channel: Int, atMillis: Long) -> Unit)? = null,
+    onSchedule: ((subject: String, body: String, channel: Int, atMillis: Long, mode: Int, emails: List<String>) -> Unit)? = null,
     scheduledSends: List<ScheduledSend> = emptyList(),
     onCancelScheduled: ((ScheduledSend) -> Unit)? = null
 ) {
@@ -58,6 +60,12 @@ fun MessageEditorScreen(
     // Canal: 0 = SMS, 1 = Correo.
     var channel by rememberSaveable { mutableStateOf(0) }
     var subject by rememberSaveable { mutableStateOf("") }
+    // Correos precargados (se guardan para el próximo envío).
+    val localContext = LocalContext.current
+    var emailList by rememberSaveable { mutableStateOf(RecipientsPrefs.get(localContext)) }
+    // Destinatarios del correo: 0 = contactos seleccionados, 1 = lista, 2 = individual.
+    var emailMode by rememberSaveable { mutableStateOf(0) }
+    var singleEmail by rememberSaveable { mutableStateOf("") }
 
     // Programación.
     var scheduleEnabled by rememberSaveable { mutableStateOf(false) }
@@ -124,6 +132,73 @@ fun MessageEditorScreen(
                     shape = RoundedCornerShape(14.dp)
                 )
                 Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    "Destinatarios",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    SegmentedButton(
+                        selected = emailMode == 0,
+                        onClick = { emailMode = 0 },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
+                        label = { Text("Seleccionados") }
+                    )
+                    SegmentedButton(
+                        selected = emailMode == 1,
+                        onClick = { emailMode = 1 },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
+                        label = { Text("Lista") }
+                    )
+                    SegmentedButton(
+                        selected = emailMode == 2,
+                        onClick = { emailMode = 2 },
+                        shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
+                        label = { Text("Individual") }
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                when (emailMode) {
+                    0 -> Text(
+                        "Un correo INDIVIDUAL a cada uno de los $selectedCount contactos " +
+                            "seleccionados que tengan correo (sin CC ni CCO).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    1 -> {
+                        OutlinedTextField(
+                            value = emailList,
+                            onValueChange = {
+                                emailList = it
+                                RecipientsPrefs.set(localContext, it)
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 90.dp),
+                            label = { Text("Correos precargados (coma o línea)") },
+                            placeholder = { Text("cliente1@correo.com, cliente2@correo.com") },
+                            shape = RoundedCornerShape(14.dp)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "${RecipientsPrefs.parse(emailList).size} correos válidos",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    else -> OutlinedTextField(
+                        value = singleEmail,
+                        onValueChange = { singleEmail = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Correo individual") },
+                        placeholder = { Text("persona@correo.com") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(14.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(10.dp))
             }
 
             if (templates.isNotEmpty()) {
@@ -143,6 +218,7 @@ fun MessageEditorScreen(
                                 selectedTemplateBody = template.body
                                 templateName = template.name
                                 onMessageChange(template.body)
+                                if (template.subject.isNotBlank()) subject = template.subject
                             },
                             label = { Text(template.name) },
                             trailingIcon = {
@@ -270,7 +346,7 @@ fun MessageEditorScreen(
                 },
                 onClick = {
                     if (templateName.isNotBlank()) {
-                        onSaveTemplate(templateName, messageBody)
+                        onSaveTemplate(templateName, messageBody, subject)
                         selectedTemplateBody = messageBody
                     }
                 },
@@ -278,6 +354,14 @@ fun MessageEditorScreen(
                 icon = Icons.Default.BookmarkAdd,
                 enabled = canSave
             )
+            if (channel == 1) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    "La plantilla guarda también el Asunto, para reutilizarla en correos.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -338,8 +422,13 @@ fun MessageEditorScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            val emailReady = when (emailMode) {
+                0 -> selectedCount > 0
+                1 -> RecipientsPrefs.parse(emailList).isNotEmpty()
+                else -> singleEmail.contains("@")
+            }
             val canAct = messageBody.isNotBlank() &&
-                (channel == 0 || subject.isNotBlank())
+                (channel == 0 || (subject.isNotBlank() && emailReady))
             val label = when {
                 scheduleEnabled -> "Programar envío (${selectedCount})"
                 channel == 1 -> "Enviar correo a $selectedCount"
@@ -359,9 +448,19 @@ fun MessageEditorScreen(
                             set(Calendar.SECOND, 0)
                             set(Calendar.MILLISECOND, 0)
                         }
-                        onSchedule?.invoke(subject, messageBody, channel, cal.timeInMillis)
+                        onSchedule?.invoke(
+                            subject, messageBody, channel, cal.timeInMillis, emailMode,
+                            if (emailMode == 1) RecipientsPrefs.parse(emailList)
+                            else if (emailMode == 2) listOf(singleEmail.trim()).filter { it.isNotBlank() }
+                            else emptyList()
+                        )
                     } else if (channel == 1) {
-                        onSendEmail?.invoke(subject, messageBody)
+                        onSendEmail?.invoke(
+                            subject, messageBody, emailMode,
+                            if (emailMode == 1) RecipientsPrefs.parse(emailList)
+                            else if (emailMode == 2) listOf(singleEmail.trim()).filter { it.isNotBlank() }
+                            else emptyList()
+                        )
                     } else {
                         onSend()
                     }

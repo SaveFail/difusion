@@ -13,10 +13,12 @@ import javax.mail.Multipart
 import javax.mail.Part
 import javax.mail.PasswordAuthentication
 import javax.mail.Session
+import javax.mail.Store
 import javax.mail.Transport
 import javax.mail.UIDFolder
 import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeMessage
+import com.sun.mail.imap.IMAPFolder
 
 /**
  * Envía y lee correo de Gmail por SMTP/IMAP usando la cuenta y la
@@ -73,14 +75,80 @@ object MailClient {
     }
 
     // --- Enviar ---
-    fun send(context: Context, to: String, subject: String, body: String): Boolean {
+    fun send(context: Context, to: String, subject: String, body: String): Boolean =
+        sendWithError(context, to, subject, body).first
+
+    /** Devuelve (éxito, mensajeDeError). */
+    fun sendWithError(context: Context, to: String, subject: String, body: String): Pair<Boolean, String> {
         val user = SmtpPrefs.getEmail(context)
         val pass = SmtpPrefs.getPassword(context)
-        if (user.isBlank() || pass.isBlank()) return false
-        return sendMessage(user, pass, to, subject, body, null, null)
+        if (user.isBlank() || pass.isBlank()) return false to "Correo no configurado"
+        val err = sendMessageOrError(user, pass, to, subject, body, null, null)
+        return if (err == null) true to "" else false to err
     }
 
-    private fun sendMessage(
+    data class BulkResult(val sent: Int, val failed: Int, val firstError: String)
+
+    /**
+     * Envía a muchos destinatarios reutilizando UNA sola conexión SMTP (mucho
+     * más rápido que abrir conexión por cada correo). Llama a [onProgress] con
+     * (enviados+fallidos, total) después de cada mensaje.
+     */
+    fun sendBulk(
+        context: Context,
+        recipients: List<String>,
+        subject: String,
+        body: String,
+        onProgress: ((Int, Int) -> Unit)? = null,
+        delayMs: Long = 0L
+    ): BulkResult {
+        val user = SmtpPrefs.getEmail(context)
+        val pass = SmtpPrefs.getPassword(context)
+        if (user.isBlank() || pass.isBlank()) {
+            return BulkResult(0, recipients.size, "Correo no configurado")
+        }
+        if (recipients.isEmpty()) return BulkResult(0, 0, "")
+
+        var sent = 0
+        var failed = 0
+        var firstError = ""
+        val s = session(user, pass)
+        val transport = s.getTransport("smtp")
+        try {
+            transport.connect(SMTP_HOST, SMTP_PORT.toInt(), user, pass)
+            for (r in recipients) {
+                try {
+                    val msg = MimeMessage(s)
+                    msg.setFrom(InternetAddress(user, "Difusión"))
+                    val toAddrs = InternetAddress.parse(r, false).map { it as javax.mail.Address }.toTypedArray()
+                    msg.setRecipients(Message.RecipientType.TO, toAddrs)
+                    msg.setSubject(subject, "UTF-8")
+                    msg.setText(body, "UTF-8")
+                    msg.setSentDate(Date())
+                    transport.sendMessage(msg, msg.allRecipients)
+                    sent++
+                } catch (e: Exception) {
+                    failed++
+                    val m = e.message ?: e.javaClass.simpleName
+                    if (firstError.isBlank()) firstError = m
+                    Log.e(TAG, "sendBulk item ($r): ${e.javaClass.name}: $m")
+                }
+                onProgress?.invoke(sent + failed, recipients.size)
+                if (delayMs > 0) Thread.sleep(delayMs)
+            }
+        } catch (e: Exception) {
+            // Falló la conexión: cuenta el resto como fallidos.
+            val m = e.message ?: e.javaClass.simpleName
+            if (firstError.isBlank()) firstError = m
+            Log.e(TAG, "sendBulk connect: ${e.javaClass.name}: $m", e)
+            failed += recipients.size - (sent + failed)
+        } finally {
+            runCatching { transport.close() }
+        }
+        return BulkResult(sent, failed, firstError)
+    }
+
+    private fun sendMessageOrError(
         user: String,
         pass: String,
         to: String,
@@ -88,7 +156,7 @@ object MailClient {
         body: String,
         inReplyTo: String?,
         references: String?
-    ): Boolean = try {
+    ): String? = try {
         val s = session(user, pass)
         val msg = MimeMessage(s)
         msg.setFrom(InternetAddress(user, "Difusión"))
@@ -100,14 +168,46 @@ object MailClient {
         if (!inReplyTo.isNullOrBlank()) msg.setHeader("In-Reply-To", inReplyTo)
         if (!references.isNullOrBlank()) msg.setHeader("References", references)
         Transport.send(msg)
-        true
+        null
     } catch (e: Exception) {
         Log.e(TAG, "send: ${e.javaClass.name}: ${e.message}", e)
-        false
+        e.message ?: e.javaClass.simpleName
     }
 
-    // --- Bandeja ---
-    fun listInbox(context: Context, max: Int = 15): EmailSyncService.InboxResult {
+    fun listInbox(context: Context, max: Int = 15): EmailSyncService.InboxResult =
+        listFolder(context, "inbox", max)
+
+    /** Carpetas: inbox, sent, spam, trash. */
+    private fun resolveFolder(store: Store, key: String): Folder? = try {
+        when (key) {
+            "sent" -> special(store, "\\Sent") ?: store.getFolder("[Gmail]/Sent Mail")
+            "spam" -> special(store, "\\Junk") ?: store.getFolder("[Gmail]/Spam")
+            "trash" -> special(store, "\\Trash") ?: store.getFolder("[Gmail]/Trash")
+            "all" -> special(store, "\\All") ?: store.getFolder("[Gmail]/All Mail")
+            else -> store.getFolder("INBOX")
+        }
+    } catch (_: Exception) {
+        null
+    }
+
+    private fun special(store: Store, attr: String): Folder? {
+        val def = store.defaultFolder ?: return null
+        val top = def.list("*") ?: return null
+        for (f in top) {
+            val attrs = (f as? IMAPFolder)?.attributes
+            if (attrs != null && attrs.any { it.equals(attr, ignoreCase = true) }) return f
+        }
+        for (f in top) {
+            val sub = runCatching { f.list("*") }.getOrNull() ?: continue
+            for (g in sub) {
+                val attrs = (g as? IMAPFolder)?.attributes
+                if (attrs != null && attrs.any { it.equals(attr, ignoreCase = true) }) return g
+            }
+        }
+        return null
+    }
+
+    fun listFolder(context: Context, key: String, max: Int = 15): EmailSyncService.InboxResult {
         val user = SmtpPrefs.getEmail(context)
         val pass = SmtpPrefs.getPassword(context)
         if (user.isBlank() || pass.isBlank()) {
@@ -116,15 +216,18 @@ object MailClient {
         return try {
             val store = session(user, pass).getStore("imaps")
             store.connect(IMAP_HOST, user, pass)
-            val inbox = store.getFolder("INBOX")
-            inbox.open(Folder.READ_ONLY)
-            val count = inbox.messageCount
-            val uidFolder = inbox as? UIDFolder
+            val folder = resolveFolder(store, key) ?: run {
+                store.close()
+                return EmailSyncService.InboxResult(false, error = "No encontré la carpeta")
+            }
+            folder.open(Folder.READ_ONLY)
+            val count = folder.messageCount
+            val uidFolder = folder as? UIDFolder
             val out = ArrayList<EmailSyncService.MailSummary>()
             var taken = 0
             var i = count
             while (i >= 1 && taken < max) {
-                val m = inbox.getMessage(i)
+                val m = folder.getMessage(i)
                 val uid = uidFolder?.getUID(m) ?: i.toLong()
                 out.add(
                     EmailSyncService.MailSummary(
@@ -140,17 +243,17 @@ object MailClient {
                 taken++
                 i--
             }
-            inbox.close(false)
+            folder.close(false)
             store.close()
             EmailSyncService.InboxResult(true, out)
         } catch (e: Exception) {
-            Log.e(TAG, "listInbox: ${e.javaClass.name}: ${e.message}", e)
+            Log.e(TAG, "listFolder($key): ${e.javaClass.name}: ${e.message}", e)
             EmailSyncService.InboxResult(false, error = e.message ?: e.javaClass.simpleName)
         }
     }
 
     // --- Leer un mensaje ---
-    fun readMessage(context: Context, uid: String): EmailSyncService.MailThread? {
+    fun readMessage(context: Context, key: String, uid: String): EmailSyncService.MailThread? {
         val user = SmtpPrefs.getEmail(context)
         val pass = SmtpPrefs.getPassword(context)
         if (user.isBlank() || pass.isBlank()) return null
@@ -158,8 +261,8 @@ object MailClient {
             val id = uid.toLongOrNull() ?: return null
             val store = session(user, pass).getStore("imaps")
             store.connect(IMAP_HOST, user, pass)
-            val inbox = store.getFolder("INBOX")
-            inbox.open(Folder.READ_WRITE)
+            val inbox = resolveFolder(store, key) ?: run { store.close(); return null }
+            runCatching { inbox.open(Folder.READ_WRITE) }.onFailure { inbox.open(Folder.READ_ONLY) }
             val uidFolder = inbox as? UIDFolder ?: run {
                 inbox.close(false); store.close(); return null
             }
@@ -189,7 +292,7 @@ object MailClient {
     }
 
     // --- Responder ---
-    fun reply(context: Context, uid: String, body: String): Boolean {
+    fun reply(context: Context, key: String, uid: String, body: String): Boolean {
         val user = SmtpPrefs.getEmail(context)
         val pass = SmtpPrefs.getPassword(context)
         if (user.isBlank() || pass.isBlank()) return false
@@ -197,7 +300,7 @@ object MailClient {
             val id = uid.toLongOrNull() ?: return false
             val store = session(user, pass).getStore("imaps")
             store.connect(IMAP_HOST, user, pass)
-            val inbox = store.getFolder("INBOX")
+            val inbox = resolveFolder(store, key) ?: run { store.close(); return false }
             inbox.open(Folder.READ_ONLY)
             val uidFolder = inbox as? UIDFolder ?: run {
                 inbox.close(false); store.close(); return false
@@ -211,7 +314,7 @@ object MailClient {
             val messageId = m.getHeader("Message-ID")?.firstOrNull()
             inbox.close(false)
             store.close()
-            sendMessage(user, pass, to, subject, body, messageId, messageId)
+            sendMessageOrError(user, pass, to, subject, body, messageId, messageId) == null
         } catch (e: Exception) {
             Log.e(TAG, "reply: ${e.javaClass.name}: ${e.message}", e)
             false

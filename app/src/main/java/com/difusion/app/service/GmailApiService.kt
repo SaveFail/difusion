@@ -49,9 +49,18 @@ object GmailApiService {
     }
 
     // --- Listar bandeja ---
-    fun listInbox(token: String, max: Int = 15): EmailSyncService.InboxResult {
-        val list = getJson(token, "$BASE/threads?maxResults=$max&labelIds=INBOX")
-            ?: return EmailSyncService.InboxResult(false, error = "No se pudo leer la bandeja")
+    fun listInbox(token: String, max: Int = 15): EmailSyncService.InboxResult =
+        listFolder(token, "INBOX", max)
+
+    /** label: INBOX, SENT, SPAM, TRASH, ALL (todos los correos) */
+    fun listFolder(token: String, label: String, max: Int = 15): EmailSyncService.InboxResult {
+        val url = if (label == "ALL") {
+            "$BASE/threads?maxResults=$max"
+        } else {
+            "$BASE/threads?maxResults=$max&labelIds=$label"
+        }
+        val list = getJson(token, url)
+            ?: return EmailSyncService.InboxResult(false, error = "No se pudo leer la carpeta")
         val arr = list.optJSONArray("threads") ?: JSONArray()
         val out = ArrayList<EmailSyncService.MailSummary>()
         for (i in 0 until arr.length()) {

@@ -1,5 +1,36 @@
 # Registro de cambios
 
+## [4.1] — 2026-10-05
+
+### Agregado
+- **Cliente de correo (Gmail) integrado en la sección Mensaje**, sin Google
+  Cloud y sin Play Store, usando **SMTP/IMAP con contraseña de aplicación**.
+  - Carpetas **Recibidos**, **Todos** (All Mail), **Enviados**, **Spam** y
+    **Papelera**; leer y responder.
+  - **Envío individual, correo por correo** (sin CC ni CCO) y **masivo** con
+    **correos precargados**.
+  - **Envío en segundo plano** con **contador de progreso** y notificación
+    (worker en primer plano); botón **"Segundo plano"**.
+  - Motor de envío **optimizado**: una sola conexión SMTP para todos los
+    correos (mucho más rápido).
+  - **Plantillas de correo con Asunto**.
+- **Gestión del cliente desde la llamada y el chat** con **desplegables**
+  (Seguimiento, Status, Medio) y **fecha de gestión**.
+- **Marcado automático**: `MEDIO = LLAMADA` al llamar, `NO CONTESTA` si no
+  contesta, `MEDIO = SMS` + `Enviado por SMS` al enviar.
+- **Escritura a Google Sheets** de las gestiones vía Apps Script, y respaldo
+  con Apps Script para el correo.
+- **Exportación** con el formato estándar de Drive (`ID CUOTA, NOMBRES,
+  CEDULA, MONTO, Telefono, SEGUIMIENTO, STATUS, EJECUTIVO, MEDIO DE CONTACTO,
+  FECHA DE GESTION`) y **fecha de gestión en el nombre del archivo**.
+- **Envíos programados** (SMS y correo) con **histórico de destinatarios**.
+- Documentación en **`docs/CORREO-GMAIL.md`**.
+
+### Cambiado
+- Base de datos a la **versión 15** (correo en contactos, envíos programados,
+  asunto de plantillas).
+- La versión sube a **4.1 (`versionCode 24`)**.
+
 ## [4.0] — 2026-10-02
 
 ### Cambiado

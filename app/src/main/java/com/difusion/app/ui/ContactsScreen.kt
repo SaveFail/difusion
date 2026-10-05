@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Phone
@@ -56,6 +57,7 @@ fun ContactsScreen(
     onExportTemplate: () -> Unit,
     onCallContact: (Contact) -> Unit,
     onCallSelected: () -> Unit,
+    onEmailSelected: () -> Unit = {},
     onDeleteSelected: () -> Unit,
     onExportByAssignment: () -> Unit,
     onAssignUser: (Set<Long>, String) -> Unit,
@@ -202,6 +204,14 @@ fun ContactsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         icon = Icons.Default.Phone,
                         containerColor = MaterialTheme.colorScheme.tertiary,
+                        compact = true
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    PrimaryActionButton(
+                        text = "Correo individual a ${selected.size}",
+                        onClick = onEmailSelected,
+                        modifier = Modifier.fillMaxWidth(),
+                        icon = Icons.Default.Email,
                         compact = true
                     )
                     Spacer(modifier = Modifier.height(6.dp))
@@ -507,6 +517,16 @@ private fun ContactRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                if (contact.email.isNotBlank()) {
+                    Text(
+                        contact.email,
+                        style = MaterialTheme.typography.bodySmall,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
                 if (contact.assignment.isNotBlank()) {
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(

@@ -21,6 +21,9 @@ interface TemplateDao {
     @Query("UPDATE templates SET body = :body WHERE id = :id")
     suspend fun updateBody(id: Long, body: String)
 
+    @Query("UPDATE templates SET body = :body, subject = :subject WHERE id = :id")
+    suspend fun updateBodyAndSubject(id: Long, body: String, subject: String)
+
     @Update
     suspend fun update(template: MessageTemplate)
 

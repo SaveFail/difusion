@@ -7,5 +7,7 @@ import androidx.room.PrimaryKey
 data class MessageTemplate(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
-    val body: String
+    val body: String,
+    // Asunto para plantillas de correo (vacío en plantillas de SMS).
+    val subject: String = ""
 )

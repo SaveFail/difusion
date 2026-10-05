@@ -327,6 +327,8 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
     }
 
     var showAddDialog by remember { mutableStateOf(false) }
+    var showEmailToSelected by remember { mutableStateOf(false) }
+    var emailProgressHidden by remember { mutableStateOf(false) }
     var importedRows by remember { mutableStateOf<List<ParsedRow>>(emptyList()) }
     var showImport by remember { mutableStateOf(false) }
     var importing by remember { mutableStateOf(false) }
@@ -899,6 +901,13 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                                 }
                             }
                         },
+                        onEmailSelected = {
+                            if (selected.isEmpty()) {
+                                Toast.makeText(context, "Selecciona al menos un contacto", Toast.LENGTH_LONG).show()
+                            } else {
+                                showEmailToSelected = true
+                            }
+                        },
                         onDeleteSelected = {
                             if (selected.isEmpty()) {
                                 Toast.makeText(context, "Selecciona al menos un contacto", Toast.LENGTH_LONG).show()
@@ -937,8 +946,8 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                         messageBody = messageBody,
                         onMessageChange = { viewModel.setMessageBody(it) },
                         templates = templates,
-                        onSaveTemplate = { name, body ->
-                            scope.launch { viewModel.saveTemplate(name, body) }
+                        onSaveTemplate = { name, body, subject ->
+                            scope.launch { viewModel.saveTemplate(name, body, subject) }
                         },
                         onDeleteTemplate = {
                             scope.launch { viewModel.deleteTemplate(it) }
@@ -961,43 +970,46 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                             }
                         },
                         emailAvailable = viewModel.emailSyncEnabled.collectAsStateWithLifecycle().value,
-                        onSendEmail = { subject, body ->
+                        onSendEmail = { subject, body, mode, emails ->
                             val sel = contacts.filter { selected.contains(it.id) }
-                            if (sel.isEmpty()) {
-                                Toast.makeText(context, "Selecciona al menos un contacto", Toast.LENGTH_LONG).show()
-                            } else if (!viewModel.emailSyncEnabled.value) {
-                                Toast.makeText(context, "Activa y configura el correo en Ajustes ▸ Drive", Toast.LENGTH_LONG).show()
+                            val contactEmails = sel.mapNotNull {
+                                it.email.trim().takeIf { e -> e.isNotBlank() }
+                            }
+                            val recipients = (if (mode == 0) contactEmails else emails).distinct()
+                            val hasProvider =
+                                com.difusion.app.storage.SmtpPrefs.isConfigured(context) ||
+                                    com.difusion.app.service.GmailAuth.token(context) != null ||
+                                    com.difusion.app.storage.EmailSyncPrefs.getUrl(context).isNotBlank()
+                            if (!hasProvider) {
+                                Toast.makeText(
+                                    context,
+                                    "Configura tu correo primero en Mensaje ▸ Correo.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            } else if (recipients.isEmpty()) {
+                                Toast.makeText(
+                                    context,
+                                    "Agrega correos precargados o selecciona contactos con correo.",
+                                    Toast.LENGTH_LONG
+                                ).show()
                             } else {
-                                scope.launch {
-                                    val recipients = sel.mapNotNull {
-                                        it.email.trim().takeIf { e -> e.isNotBlank() }
-                                    }.distinct()
-                                    if (recipients.isEmpty()) {
-                                        Toast.makeText(
-                                            context,
-                                            "Ningún contacto seleccionado tiene correo. Añádelo al contacto o impórtalo con una columna Correo/Email.",
-                                            Toast.LENGTH_LONG
-                                        ).show()
-                                    } else {
-                                        val res = viewModel.sendBulkEmail(recipients, subject, body)
-                                        Toast.makeText(
-                                            context,
-                                            if (res.success) "Correo enviado: ${res.sent} de ${res.total}"
-                                            else "Error al enviar correo: ${res.error}",
-                                            Toast.LENGTH_LONG
-                                        ).show()
-                                    }
-                                }
+                                emailProgressHidden = false
+                                viewModel.sendBulkEmailBackground(recipients, subject, body)
                             }
                         },
-                        onSchedule = { subject, body, channel, at ->
+                        onSchedule = { subject, body, channel, at, mode, emails ->
                             val sel = contacts.filter { selected.contains(it.id) }
-                            if (sel.isEmpty()) {
-                                Toast.makeText(context, "Selecciona al menos un contacto", Toast.LENGTH_LONG).show()
-                            } else if (at <= System.currentTimeMillis()) {
+                            val useContacts = mode == 0
+                            if (at <= System.currentTimeMillis()) {
                                 Toast.makeText(context, "Elige una fecha y hora futuras", Toast.LENGTH_LONG).show()
+                            } else if ((useContacts && sel.isEmpty()) || (!useContacts && emails.isEmpty())) {
+                                Toast.makeText(context, "Selecciona contactos o agrega correos", Toast.LENGTH_LONG).show()
                             } else {
-                                viewModel.scheduleSend(sel, body, subject, channel, at)
+                                viewModel.scheduleSend(
+                                    if (useContacts) sel else emptyList(),
+                                    body, subject, channel, at,
+                                    if (useContacts) emptyList() else emails
+                                )
                                 Toast.makeText(context, "Envío programado", Toast.LENGTH_LONG).show()
                             }
                         },
@@ -1364,12 +1376,112 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
         )
     }
 
+    val emailProgress by viewModel.emailProgress.collectAsStateWithLifecycle()
+    val emailResult by viewModel.emailResult.collectAsStateWithLifecycle()
+    LaunchedEffect(emailResult) {
+        val r = emailResult
+        if (!r.isNullOrBlank()) {
+            Toast.makeText(context, r, Toast.LENGTH_LONG).show()
+            viewModel.clearEmailResult()
+        }
+    }
+    if (emailProgress != null && !emailProgressHidden) {
+        val prog = emailProgress!!
+        AlertDialog(
+            onDismissRequest = { emailProgressHidden = true },
+            confirmButton = {
+                TextButton(onClick = { emailProgressHidden = true }) {
+                    Text("Segundo plano")
+                }
+            },
+            title = { Text("Enviando correos") },
+            text = {
+                Column {
+                    Text("${prog.first} de ${prog.second}")
+                    Spacer(Modifier.height(10.dp))
+                    LinearProgressIndicator(
+                        progress = { if (prog.second > 0) prog.first.toFloat() / prog.second else 0f },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "Toca \"Segundo plano\" para seguir usando la app: el envío continúa " +
+                            "y verás el avance en la notificación.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        )
+    }
+
     if (showAddDialog) {
         AddContactDialog(
             onDismiss = { showAddDialog = false },
             onSave = { name, phone, email ->
                 viewModel.saveContact(name, phone, email = email)
                 showAddDialog = false
+            }
+        )
+    }
+
+    if (showEmailToSelected) {
+        var subj by remember { mutableStateOf("") }
+        var msg by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showEmailToSelected = false },
+            title = { Text("Correo individual a los seleccionados") },
+            text = {
+                Column {
+                    Text(
+                        "Se enviará un correo aparte a cada contacto con correo " +
+                            "(sin CC ni CCO, uno por uno).",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = subj,
+                        onValueChange = { subj = it },
+                        label = { Text("Asunto") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = msg,
+                        onValueChange = { msg = it },
+                        label = { Text("Mensaje") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(140.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = subj.isNotBlank() && msg.isNotBlank(),
+                    onClick = {
+                        val sel = contacts.filter { selected.contains(it.id) }
+                        val recipients = sel.mapNotNull {
+                            it.email.trim().takeIf { e -> e.isNotBlank() }
+                        }.distinct()
+                        if (recipients.isEmpty()) {
+                            Toast.makeText(
+                                context,
+                                "Ningún seleccionado tiene correo. Agrégalo al contacto o impórtalo con una columna Correo/Email.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        } else {
+                            showEmailToSelected = false
+                            emailProgressHidden = false
+                            viewModel.sendBulkEmailBackground(recipients, subj, msg)
+                        }
+                    }
+                ) { Text("Enviar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEmailToSelected = false }) { Text("Cancelar") }
             }
         )
     }

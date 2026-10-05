@@ -38,6 +38,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
+import androidx.work.await
 import java.io.File
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -291,6 +293,55 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         com.difusion.app.storage.EmailSyncPrefs.setEnabled(getApplication(), enabled)
     }
 
+    // --- Envío de correos en segundo plano ---
+    private val _emailProgress = MutableStateFlow<Pair<Int, Int>?>(null)
+    val emailProgress: StateFlow<Pair<Int, Int>?> = _emailProgress.asStateFlow()
+    private val _emailResult = MutableStateFlow<String?>(null)
+    val emailResult: StateFlow<String?> = _emailResult.asStateFlow()
+
+    fun clearEmailResult() { _emailResult.value = null }
+
+    fun sendBulkEmailBackground(recipients: List<String>, subject: String, body: String) {
+        val list = recipients.map { it.trim() }.filter { it.isNotBlank() }.distinct()
+        if (list.isEmpty()) {
+            _emailResult.value = "Sin destinatarios"
+            return
+        }
+        val data = androidx.work.workDataOf(
+            com.difusion.app.worker.EmailSendWorker.KEY_RECIPIENTS to org.json.JSONArray(list).toString(),
+            com.difusion.app.worker.EmailSendWorker.KEY_SUBJECT to subject,
+            com.difusion.app.worker.EmailSendWorker.KEY_BODY to body
+        )
+        val req = androidx.work.OneTimeWorkRequestBuilder<com.difusion.app.worker.EmailSendWorker>()
+            .setInputData(data)
+            .build()
+        val wm = androidx.work.WorkManager.getInstance(getApplication())
+        wm.enqueue(req)
+        _emailResult.value = null
+        _emailProgress.value = 0 to list.size
+        viewModelScope.launch {
+            while (true) {
+                val info = runCatching { wm.getWorkInfoById(req.id).await() }.getOrNull() ?: break
+                val sent = info.progress.getInt(com.difusion.app.worker.EmailSendWorker.KEY_SENT, 0)
+                val total = info.progress.getInt(com.difusion.app.worker.EmailSendWorker.KEY_TOTAL, list.size)
+                if (info.state.isFinished) {
+                    _emailProgress.value = null
+                    val fsent = info.outputData.getInt(com.difusion.app.worker.EmailSendWorker.KEY_SENT, sent)
+                    val ffailed = info.outputData.getInt("failed", 0)
+                    val ferr = info.outputData.getString("error") ?: ""
+                    _emailResult.value = if (fsent == 0 && ferr.isNotBlank()) {
+                        "Error: $ferr"
+                    } else {
+                        "Enviado: $fsent · Fallidos: $ffailed" + if (ferr.isNotBlank()) " ($ferr)" else ""
+                    }
+                    break
+                }
+                _emailProgress.value = sent to total
+                delay(400)
+            }
+        }
+    }
+
     /** Prueba la conexión con el Gmail del Web App y avisa con qué cuenta quedó. */
     fun testEmailConnection() {
         viewModelScope.launch {
@@ -332,9 +383,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         message: String,
         subject: String,
         channel: Int,
-        scheduledAtMillis: Long
+        scheduledAtMillis: Long,
+        extraEmails: List<String> = emptyList()
     ) {
-        if (contacts.isEmpty() || message.isBlank()) return
+        if (contacts.isEmpty() && extraEmails.isEmpty()) return
+        if (message.isBlank()) return
         if (scheduledAtMillis <= System.currentTimeMillis()) return
         viewModelScope.launch {
             val phones = org.json.JSONArray()
@@ -351,6 +404,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         put("email", c.email)
                     }
                 )
+            }
+            // Correos precargados manualmente (sin contacto asociado).
+            extraEmails.forEach { e ->
+                if (e.isNotBlank()) {
+                    emails.put(e)
+                    snapshot.put(
+                        org.json.JSONObject().apply {
+                            put("name", e)
+                            put("phone", "")
+                            put("email", e)
+                        }
+                    )
+                }
             }
             val item = com.difusion.app.data.ScheduledSend(
                 phonesJson = phones.toString(),
@@ -962,16 +1028,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun saveTemplate(name: String, body: String) {
+    fun saveTemplate(name: String, body: String, subject: String = "") {
         viewModelScope.launch {
             // Si ya existe una plantilla con ese nombre se ACTUALIZA (no se
             // duplica). Así, al reenviar una plantilla existente no se crean
             // copias repetidas.
             val existing = db.templateDao().getByName(name)
             if (existing != null) {
-                db.templateDao().updateBody(existing.id, body)
+                db.templateDao().updateBodyAndSubject(existing.id, body, subject)
             } else {
-                db.templateDao().insert(MessageTemplate(name = name, body = body))
+                db.templateDao().insert(MessageTemplate(name = name, body = body, subject = subject))
             }
         }
     }

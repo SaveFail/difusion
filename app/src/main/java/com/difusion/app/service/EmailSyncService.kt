@@ -159,25 +159,39 @@ object EmailSyncService {
      * Envía usando lo mejor disponible: si hay sesión de Google activa, usa la
      * API de Gmail directamente; si no, usa el puente de Apps Script.
      */
-    fun sendSmart(context: Context, recipients: List<String>, subject: String, body: String): EmailResult {
+    fun sendSmart(
+        context: Context,
+        recipients: List<String>,
+        subject: String,
+        body: String,
+        onProgress: ((enviados: Int, total: Int) -> Unit)? = null
+    ): EmailResult {
         val list = recipients.map { it.trim() }.filter { it.isNotBlank() }.distinct()
         if (list.isEmpty()) return EmailResult(false, error = "Sin destinatarios")
         val token = GmailAuth.token(context)
         if (token != null) {
             var sent = 0
             var failed = 0
+            var firstError = ""
             for (r in list) {
-                if (GmailApiService.send(token, r, subject, body)) sent++ else failed++
+                if (GmailApiService.send(token, r, subject, body)) sent++
+                else {
+                    failed++
+                    if (firstError.isBlank()) firstError = "La sesión de Google falló (puede haber caducado). Vuelve a iniciar sesión."
+                }
+                onProgress?.invoke(sent + failed, list.size)
             }
-            return EmailResult(success = sent > 0, sent = sent, failed = failed, total = list.size)
+            return EmailResult(success = sent > 0, sent = sent, failed = failed, total = list.size, error = firstError)
         }
         if (MailClient.isConfigured(context)) {
-            var sent = 0
-            var failed = 0
-            for (r in list) {
-                if (MailClient.send(context, r, subject, body)) sent++ else failed++
-            }
-            return EmailResult(success = sent > 0, sent = sent, failed = failed, total = list.size)
+            val bulk = MailClient.sendBulk(context, list, subject, body, onProgress)
+            return EmailResult(
+                success = bulk.sent > 0,
+                sent = bulk.sent,
+                failed = bulk.failed,
+                total = list.size,
+                error = bulk.firstError
+            )
         }
         return sendBulk(context, config(context), list, subject, body)
     }

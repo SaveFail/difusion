@@ -1,5 +1,7 @@
 package com.difusion.app.ui
 
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -52,6 +54,8 @@ fun CorreoInboxScreen() {
     var token by rememberSaveable { mutableStateOf(EmailSyncPrefs.getToken(context)) }
     var showBridge by rememberSaveable { mutableStateOf(false) }
     var showConfig by rememberSaveable { mutableStateOf(false) }
+    // Carpeta: inbox, sent, spam, trash.
+    var folder by rememberSaveable { mutableStateOf("inbox") }
 
     var loading by remember { mutableStateOf(false) }
     var errorMsg by remember { mutableStateOf("") }
@@ -71,11 +75,18 @@ fun CorreoInboxScreen() {
         loading = true
         val nt = nativeToken()
         val useSmtp = nt == null && smtpConfigured
+        val label = when (folder) {
+            "sent" -> "SENT"
+            "spam" -> "SPAM"
+            "trash" -> "TRASH"
+            "all" -> "ALL"
+            else -> "INBOX"
+        }
         scope.launch {
             val res = withContext(Dispatchers.IO) {
                 when {
-                    nt != null -> GmailApiService.listInbox(nt, 15)
-                    useSmtp -> MailClient.listInbox(context, 15)
+                    nt != null -> GmailApiService.listFolder(nt, label, 15)
+                    useSmtp -> MailClient.listFolder(context, folder, 15)
                     else -> EmailSyncService.listInbox(context, bridge, 25)
                 }
             }
@@ -114,7 +125,7 @@ fun CorreoInboxScreen() {
             openThread = withContext(Dispatchers.IO) {
                 when {
                     nt != null -> GmailApiService.readThread(nt, id)
-                    useSmtp -> MailClient.readMessage(context, id)
+                    useSmtp -> MailClient.readMessage(context, folder, id)
                     else -> EmailSyncService.readThread(bridge, id)
                 }
             }
@@ -122,9 +133,16 @@ fun CorreoInboxScreen() {
         }
     }
 
-    LaunchedEffect(signedIn, url) {
+    LaunchedEffect(signedIn, url, smtpConfigured, folder) {
         if (canUseMailbox()) loadInbox()
     }
+    val folders = listOf(
+        "inbox" to "Recibidos",
+        "all" to "Todos",
+        "sent" to "Enviados",
+        "spam" to "Spam",
+        "trash" to "Papelera"
+    )
 
     Column(Modifier.fillMaxSize()) {
         ScreenHeader(
@@ -133,6 +151,24 @@ fun CorreoInboxScreen() {
             else "Tu Gmail: ver, responder y enviar",
             icon = Icons.Default.Email
         )
+
+        if (canUseMailbox() && openThread == null) {
+            ScrollableTabRow(
+                selectedTabIndex = folders.indexOfFirst { it.first == folder }.coerceAtLeast(0),
+                containerColor = MaterialTheme.colorScheme.surface
+            ) {
+                folders.forEach { (key, label) ->
+                    Tab(
+                        selected = folder == key,
+                        onClick = {
+                            folder = key
+                            loadInbox()
+                        },
+                        text = { Text(label) }
+                    )
+                }
+            }
+        }
 
         if (!canUseMailbox()) {
             Column(
@@ -241,7 +277,7 @@ fun CorreoInboxScreen() {
                                 val ok = withContext(Dispatchers.IO) {
                                     when {
                                         nt != null -> GmailApiService.reply(nt, id, body)
-                                        useSmtp -> MailClient.reply(context, id, body)
+                                        useSmtp -> MailClient.reply(context, folder, id, body)
                                         else -> EmailSyncService.reply(bridge, id, body)
                                     }
                                 }
@@ -254,7 +290,7 @@ fun CorreoInboxScreen() {
                                 openThread = withContext(Dispatchers.IO) {
                                     when {
                                         nt != null -> GmailApiService.readThread(nt, id)
-                                        useSmtp -> MailClient.readMessage(context, id)
+                                        useSmtp -> MailClient.readMessage(context, folder, id)
                                         else -> EmailSyncService.readThread(bridge, id)
                                     }
                                 }
@@ -548,6 +584,7 @@ fun SmtpConfigCard(onSaved: () -> Unit) {
     val scope = rememberCoroutineScope()
     var email by rememberSaveable { mutableStateOf(SmtpPrefs.getEmail(context)) }
     var pass by rememberSaveable { mutableStateOf(SmtpPrefs.getPassword(context)) }
+    var testError by remember { mutableStateOf("") }
 
     Surface(
         shape = RoundedCornerShape(16.dp),
@@ -600,10 +637,12 @@ fun SmtpConfigCard(onSaved: () -> Unit) {
                         scope.launch {
                             val (ok, msg) = withContext(Dispatchers.IO) { MailClient.testConnection(context) }
                             if (ok) {
+                                testError = ""
                                 Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                                 onSaved()
                             } else {
-                                Toast.makeText(context, smtpHint(msg), Toast.LENGTH_LONG).show()
+                                testError = smtpHint(msg)
+                                Toast.makeText(context, testError, Toast.LENGTH_LONG).show()
                             }
                         }
                     },
@@ -617,9 +656,10 @@ fun SmtpConfigCard(onSaved: () -> Unit) {
                         SmtpPrefs.setPassword(context, pass)
                         scope.launch {
                             val (ok, msg) = withContext(Dispatchers.IO) { MailClient.testConnection(context) }
+                            testError = if (ok) "" else smtpHint(msg)
                             Toast.makeText(
                                 context,
-                                if (ok) msg else smtpHint(msg),
+                                if (ok) msg else testError,
                                 Toast.LENGTH_LONG
                             ).show()
                         }
@@ -628,13 +668,52 @@ fun SmtpConfigCard(onSaved: () -> Unit) {
                     modifier = Modifier.weight(1f)
                 ) { Text("Probar") }
             }
+            if (testError.isNotBlank()) {
+                Spacer(Modifier.height(10.dp))
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        testError,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(10.dp)
+                    )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Button(
+                onClick = { openUrl(context, "https://myaccount.google.com/apppasswords") },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Paso 1: Crear contraseña de aplicación") }
+            Spacer(Modifier.height(6.dp))
+            OutlinedButton(
+                onClick = { openUrl(context, "https://mail.google.com/mail/u/0/#settings/fwdandpop") },
+                modifier = Modifier.fillMaxWidth()
+            ) { Text("Paso 2: Activar IMAP en Gmail") }
         }
+    }
+}
+
+private fun openUrl(context: android.content.Context, url: String) {
+    runCatching {
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
     }
 }
 
 private fun smtpHint(msg: String): String {
     val m = msg.lowercase()
     return when {
+        m.contains("application-specific password") || m.contains("application specific") ->
+            "Google exige una CONTRASEÑA DE APLICACIÓN.\n\n" +
+                "1. Activa la verificación en 2 pasos en tu cuenta Google.\n" +
+                "2. Abre myaccount.google.com/apppasswords y crea una (nombre: Difusión).\n" +
+                "3. Copia las 16 letras y pégalas aquí (NO tu contraseña normal)."
         m.contains("authentication") || m.contains("535") ||
             m.contains("username and password") || m.contains("not accepted") ||
             m.contains("credential") || m.contains("login") ->
