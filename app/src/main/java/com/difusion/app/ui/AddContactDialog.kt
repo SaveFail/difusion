@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.AlertDialog
@@ -22,10 +23,11 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun AddContactDialog(
     onDismiss: () -> Unit,
-    onSave: (String, String) -> Unit
+    onSave: (String, String, String) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
     val valid = name.isNotBlank() && phone.isNotBlank()
 
     AlertDialog(
@@ -53,13 +55,24 @@ fun AddContactDialog(
                     leadingIcon = { AppIcon(Icons.Default.Phone, contentDescription = null) },
                     modifier = Modifier.fillMaxWidth()
                 )
+                Spacer(modifier = Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Correo (opcional)") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    leadingIcon = { AppIcon(Icons.Default.Email, contentDescription = null) },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         },
         confirmButton = {
             TextButton(
                 onClick = {
                     if (valid) {
-                        onSave(name, phone)
+                        onSave(name, phone, email)
                         onDismiss()
                     }
                 },

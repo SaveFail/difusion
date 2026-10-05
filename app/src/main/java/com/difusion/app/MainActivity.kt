@@ -1366,8 +1366,8 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
     if (showAddDialog) {
         AddContactDialog(
             onDismiss = { showAddDialog = false },
-            onSave = { name, phone ->
-                viewModel.saveContact(name, phone)
+            onSave = { name, phone, email ->
+                viewModel.saveContact(name, phone, email = email)
                 showAddDialog = false
             }
         )
