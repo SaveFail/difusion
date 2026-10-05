@@ -97,6 +97,12 @@ dependencies {
     // streaming: no se usa Apache POI ni CSV extra (menos APK y menos memoria).
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
+    // Sincronización con Google Sheets (Apps Script) y envío de correo masivo.
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    // Envíos programados en segundo plano.
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
+
     // Escáner de QR con la cámara. Google Code Scanner lo provee Play Services
     // (no requiere permiso de cámara y casi no aumenta el APK).
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")

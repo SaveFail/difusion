@@ -17,6 +17,9 @@ import com.difusion.app.data.SmsStatus
 import com.difusion.app.data.ThreadResolver
 import com.difusion.app.import.Importer
 import androidx.core.app.NotificationCompat
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -99,6 +102,7 @@ class SmsSender(private val context: Context) {
         val normalized = Importer.normalizePhone(phone)
         try {
             sendOne(normalized, message, subId)
+            markSmsSentByPhone(normalized)
         } catch (_: Exception) {
         }
     }
@@ -173,6 +177,7 @@ class SmsSender(private val context: Context) {
                 if (success) {
                     sent++
                     consecutiveFailures = 0
+                    markSmsSent(contact)
                 } else {
                     failed++
                     consecutiveFailures++
@@ -222,6 +227,37 @@ class SmsSender(private val context: Context) {
             _waitingWindow.value = false
             _nextWindowAtMs.value = 0L
             _isRunning.value = false
+        }
+    }
+
+    private fun nowStamp(): String =
+        SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
+
+    // Al enviar un SMS se marca el contacto: medio = SMS y seguimiento
+    // "Enviado por SMS", con la fecha de gestión actualizada.
+    private suspend fun markSmsSent(contact: Contact) {
+        try {
+            val fresh = db.contactDao().getById(contact.id) ?: contact
+            val updated = fresh.copy(
+                medio = "SMS",
+                gestion = "Enviado por SMS",
+                fechaGestion = nowStamp()
+            )
+            db.contactDao().update(updated)
+            DriveSyncService.enqueue(context, updated)
+        } catch (_: Exception) {
+        }
+    }
+
+    private suspend fun markSmsSentByPhone(phone: String) {
+        try {
+            val key = phone.filter { it.isDigit() }.takeLast(10)
+            if (key.isBlank()) return
+            val found = db.contactDao().getAllOnce().firstOrNull {
+                it.phone.filter { c -> c.isDigit() }.takeLast(10) == key
+            } ?: return
+            markSmsSent(found)
+        } catch (_: Exception) {
         }
     }
 

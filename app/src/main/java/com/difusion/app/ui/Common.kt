@@ -298,3 +298,16 @@ fun InitialsAvatar(
         )
     }
 }
+// Compara dos teléfonos por sus últimos 10 dígitos, ignorando el 0 inicial y
+// el prefijo internacional +58. Se usa para asociar llamadas/chats a contactos.
+fun samePhoneNumber(a: String, b: String): Boolean {
+    fun digits(s: String): String {
+        var d = s.filter { it.isDigit() }
+        if (d.startsWith("58")) d = d.removePrefix("58")
+        if (d.startsWith("0")) d = d.removePrefix("0")
+        return d.takeLast(10)
+    }
+    val da = digits(a)
+    val db = digits(b)
+    return da.isNotBlank() && da == db
+}

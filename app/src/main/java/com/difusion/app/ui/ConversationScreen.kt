@@ -56,9 +56,12 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.difusion.app.data.*
+import com.difusion.app.service.DriveSyncService
 import com.difusion.app.ui.theme.ThemeConfig
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -97,6 +100,37 @@ fun ConversationScreen(
 
     var text by rememberSaveable { mutableStateOf("") }
     var selectionCleared by rememberSaveable { mutableStateOf(false) }
+
+    // Contacto asociado a esta conversación (para la gestión por desplegables).
+    val allContacts by viewModel.contacts.collectAsStateWithLifecycle()
+    val gestionContact = remember(allContacts, conversation.address) {
+        allContacts.firstOrNull { samePhoneNumber(it.phone, conversation.address) }
+    }
+    var showGestionDialog by remember { mutableStateOf(false) }
+
+    if (showGestionDialog && gestionContact != null) {
+        GestionDialog(
+            contact = gestionContact,
+            onDismiss = { showGestionDialog = false },
+            onSave = { g, e, m, f ->
+                val base = gestionContact ?: return@GestionDialog
+                scope.launch {
+                    withContext(Dispatchers.IO) {
+                        runCatching {
+                            val dao = AppDatabase.getInstance(context).contactDao()
+                            val fresh = dao.getById(base.id) ?: base
+                            val updated = fresh.copy(
+                                gestion = g, estado = e, medio = m, fechaGestion = f
+                            )
+                            dao.update(updated)
+                            DriveSyncService.syncNow(context, updated)
+                        }
+                    }
+                }
+                showGestionDialog = false
+            }
+        )
+    }
 
     val listState = rememberLazyListState()
     var pendingJumpId by remember { mutableStateOf<Long?>(null) }
@@ -245,6 +279,11 @@ fun ConversationScreen(
                     }
                 },
                 actions = {
+                    if (gestionContact != null) {
+                        IconButton(onClick = { showGestionDialog = true }) {
+                            Icon(Icons.Default.Edit, contentDescription = "Gestionar cliente")
+                        }
+                    }
                     IconButton(onClick = {
                         filtering = true
                         query = ""

@@ -79,7 +79,21 @@ fun SettingsScreen(
     driveSheets: List<String>,
     driveSelectedSheetIndex: Int,
     onDriveSheetSelect: (Int) -> Unit,
-    onFinalizeSyncFromDrive: () -> Unit
+    onFinalizeSyncFromDrive: () -> Unit,
+    // Sincronización de gestiones DE VUELTA a la hoja (escritura vía Apps Script).
+    driveSyncUrl: String,
+    onDriveSyncUrlChange: (String) -> Unit,
+    driveSyncToken: String,
+    onDriveSyncTokenChange: (String) -> Unit,
+    driveSyncEnabled: Boolean,
+    onDriveSyncEnabledChange: (Boolean) -> Unit,
+    // Envío masivo de correo (Apps Script).
+    emailSyncUrl: String,
+    onEmailSyncUrlChange: (String) -> Unit,
+    emailSyncToken: String,
+    onEmailSyncTokenChange: (String) -> Unit,
+    emailSyncEnabled: Boolean,
+    onEmailSyncEnabledChange: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
     var showAbout by remember { mutableStateOf(false) }
@@ -388,6 +402,102 @@ fun SettingsScreen(
                     icon = Icons.Default.Person
                 )
             }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        SectionCard {
+            Text(
+                "Sincronizar gestiones a la hoja (escritura)",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                "Al llamar, enviar SMS o guardar una gestión, los cambios (SEGUIMIENTO, " +
+                    "STATUS, MEDIO DE CONTACTO y FECHA DE GESTION) se escriben de vuelta en la " +
+                    "hoja. Se usa un Web App de Google Apps Script (DriveSyncAppsScript.gs). " +
+                    "Cada fila se identifica por ID CUOTA o Cédula+Teléfono, así varias " +
+                    "personas pueden trabajar a la vez sin interferir.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            OutlinedTextField(
+                value = driveSyncUrl,
+                onValueChange = onDriveSyncUrlChange,
+                label = { Text("URL del Web App (Apps Script)") },
+                placeholder = { Text("https://script.google.com/macros/s/.../exec") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = driveSyncToken,
+                onValueChange = onDriveSyncTokenChange,
+                label = { Text("Token (opcional)") },
+                placeholder = { Text("Solo si configuraste API_TOKEN") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(
+                    checked = driveSyncEnabled,
+                    onCheckedChange = onDriveSyncEnabledChange
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Activar sincronización automática a Drive")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        SectionCard {
+            Text(
+                "Envío masivo por correo",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                "Los correos se envían desde tu cuenta de Google con un Web App de Apps " +
+                    "Script (EmailSyncAppsScript.gs), sin abrir la app de correo y respetando " +
+                    "los límites de Gmail para evitar spam. Pega aquí la URL .../exec.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            OutlinedTextField(
+                value = emailSyncUrl,
+                onValueChange = onEmailSyncUrlChange,
+                label = { Text("URL del Web App (correo)") },
+                placeholder = { Text("https://script.google.com/macros/s/.../exec") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = emailSyncToken,
+                onValueChange = onEmailSyncTokenChange,
+                label = { Text("Token (opcional)") },
+                placeholder = { Text("Solo si configuraste API_TOKEN") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(
+                    checked = emailSyncEnabled,
+                    onCheckedChange = onEmailSyncEnabledChange
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Activar envío masivo por correo")
+            }
+        }
             } // fin Drive
             if (settingsTab == 0) {
 

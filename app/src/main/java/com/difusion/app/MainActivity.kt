@@ -951,6 +951,52 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                             } else {
                                 sendSmsPermissionLauncher.launch(Manifest.permission.SEND_SMS)
                             }
+                        },
+                        emailAvailable = viewModel.emailSyncEnabled.collectAsStateWithLifecycle().value,
+                        onSendEmail = { subject, body ->
+                            val sel = contacts.filter { selected.contains(it.id) }
+                            if (sel.isEmpty()) {
+                                Toast.makeText(context, "Selecciona al menos un contacto", Toast.LENGTH_LONG).show()
+                            } else if (!viewModel.emailSyncEnabled.value) {
+                                Toast.makeText(context, "Activa y configura el correo en Ajustes ▸ Drive", Toast.LENGTH_LONG).show()
+                            } else {
+                                scope.launch {
+                                    val recipients = sel.mapNotNull {
+                                        it.email.trim().takeIf { e -> e.isNotBlank() }
+                                    }.distinct()
+                                    if (recipients.isEmpty()) {
+                                        Toast.makeText(
+                                            context,
+                                            "Ningún contacto seleccionado tiene correo. Añádelo al contacto o impórtalo con una columna Correo/Email.",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    } else {
+                                        val res = viewModel.sendBulkEmail(recipients, subject, body)
+                                        Toast.makeText(
+                                            context,
+                                            if (res.success) "Correo enviado: ${res.sent} de ${res.total}"
+                                            else "Error al enviar correo: ${res.error}",
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
+                                }
+                            }
+                        },
+                        onSchedule = { subject, body, channel, at ->
+                            val sel = contacts.filter { selected.contains(it.id) }
+                            if (sel.isEmpty()) {
+                                Toast.makeText(context, "Selecciona al menos un contacto", Toast.LENGTH_LONG).show()
+                            } else if (at <= System.currentTimeMillis()) {
+                                Toast.makeText(context, "Elige una fecha y hora futuras", Toast.LENGTH_LONG).show()
+                            } else {
+                                viewModel.scheduleSend(sel, body, subject, channel, at)
+                                Toast.makeText(context, "Envío programado", Toast.LENGTH_LONG).show()
+                            }
+                        },
+                        scheduledSends = viewModel.scheduledSends.collectAsStateWithLifecycle().value,
+                        onCancelScheduled = { item ->
+                            viewModel.cancelScheduledSend(item)
+                            Toast.makeText(context, "Envío cancelado", Toast.LENGTH_SHORT).show()
                         }
                     )
                 }
@@ -1096,7 +1142,19 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                         driveSheets = viewModel.driveSheets.collectAsStateWithLifecycle().value,
                         driveSelectedSheetIndex = viewModel.driveSelectedSheetIndex.collectAsStateWithLifecycle().value,
                         onDriveSheetSelect = { viewModel.selectDriveSheet(it) },
-                        onFinalizeSyncFromDrive = { viewModel.finalizeSyncFromDrive() }
+                        onFinalizeSyncFromDrive = { viewModel.finalizeSyncFromDrive() },
+                        driveSyncUrl = viewModel.driveSyncUrl.collectAsStateWithLifecycle().value,
+                        onDriveSyncUrlChange = { viewModel.setDriveSyncUrl(it) },
+                        driveSyncToken = viewModel.driveSyncToken.collectAsStateWithLifecycle().value,
+                        onDriveSyncTokenChange = { viewModel.setDriveSyncToken(it) },
+                        driveSyncEnabled = viewModel.driveSyncEnabled.collectAsStateWithLifecycle().value,
+                        onDriveSyncEnabledChange = { viewModel.setDriveSyncEnabled(it) },
+                        emailSyncUrl = viewModel.emailSyncUrl.collectAsStateWithLifecycle().value,
+                        onEmailSyncUrlChange = { viewModel.setEmailSyncUrl(it) },
+                        emailSyncToken = viewModel.emailSyncToken.collectAsStateWithLifecycle().value,
+                        onEmailSyncTokenChange = { viewModel.setEmailSyncToken(it) },
+                        emailSyncEnabled = viewModel.emailSyncEnabled.collectAsStateWithLifecycle().value,
+                        onEmailSyncEnabledChange = { viewModel.setEmailSyncEnabled(it) }
                     )
                 }
             }
@@ -1622,11 +1680,14 @@ private fun findActivityInternal(context: android.content.Context): android.app.
 
 private fun exportContacts(context: android.content.Context, contacts: List<com.difusion.app.data.Contact>) {
     try {
-        val bytes = ReportExporter.buildContactExcel(contacts)
+        // Orden por fecha de gestión y nombre con el rango de fechas.
+        val sorted = ReportExporter.sortByFechaGestion(contacts)
+        val bytes = ReportExporter.buildContactExcel(sorted)
+        val fileName = ReportExporter.exportBaseName(sorted) + ".xlsx"
         val dir = context.getExternalFilesDir(null) ?: context.filesDir
-        val file = File(dir, "contactos_export.xlsx")
+        val file = File(dir, fileName)
         FileOutputStream(file).use { it.write(bytes) }
-        Toast.makeText(context, "Exportado en ${file.absolutePath}", Toast.LENGTH_LONG).show()
+        Toast.makeText(context, "Exportado: $fileName", Toast.LENGTH_LONG).show()
     } catch (e: Exception) {
         Toast.makeText(context, "Error al exportar: ${e.message}", Toast.LENGTH_LONG).show()
     }
@@ -1640,12 +1701,14 @@ private fun exportContactsByAssignment(context: android.content.Context, contact
         var saved = 0
         val resolver = context.contentResolver
         for ((assignment, list) in grouped) {
-            val bytes = ReportExporter.buildContactExcel(list)
+            val sortedList = ReportExporter.sortByFechaGestion(list)
+            val bytes = ReportExporter.buildContactExcel(sortedList)
             val safe = assignment
                 .replace(Regex("""[\\/:*?"<>|]"""), "_")
                 .trim()
                 .ifBlank { "Sin-asignacion" }
-            val fileName = "contactos_${safe}.xlsx"
+            val gestionPart = ReportExporter.exportBaseName(sortedList).removePrefix("contactos_")
+            val fileName = "contactos_${safe}_${gestionPart}.xlsx"
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val values = android.content.ContentValues().apply {
                     put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, fileName)

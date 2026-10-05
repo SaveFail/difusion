@@ -19,5 +19,6 @@ data class Contact(
     val medio: String = "",
     val idCuota: String = "",
     val monto: String = "",
-    val fechaGestion: String = ""
+    val fechaGestion: String = "",
+    val email: String = ""
 )

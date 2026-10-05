@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Dialpad
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
@@ -47,10 +48,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.difusion.app.data.AppDatabase
+import com.difusion.app.data.Contact
 import com.difusion.app.service.CallMonitor
 import com.difusion.app.service.CallRecorder
+import com.difusion.app.service.CallSequencer
 import com.difusion.app.service.RecordingState
 import com.difusion.app.service.SimManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 fun openCallCenter(context: Context) {
     runCatching {
@@ -138,6 +145,59 @@ fun FullCallPanel(
         if (currentSim != null) SimManager.getOtherSim(context, currentSim.handle) else null
     }
     val incoming = CallMonitor.isIncoming(call)
+
+    // --- Gestión desde la llamada ---
+    // Se habilita cuando el cliente ya contestó ("En llamada"), tanto si la
+    // llamada la hizo la secuencia como si fue manual. Se busca el contacto por
+    // teléfono (comparando los últimos 10 dígitos) para no depender de que la
+    // llamada venga de la lista.
+    val gestionScope = rememberCoroutineScope()
+    val sequencer = remember { CallSequencer.getInstance(context) }
+    val seqContact by sequencer.currentContact.collectAsState()
+    val seqConnected by sequencer.callConnectedFlow.collectAsState()
+    val answered = seqConnected || current?.state == "En llamada"
+    val callNumber = current?.number ?: seqContact?.phone ?: ""
+    var gestionContact by remember { mutableStateOf<Contact?>(null) }
+    var showGestionDialog by remember { mutableStateOf(false) }
+
+    LaunchedEffect(callNumber, seqContact) {
+        gestionContact = if (seqContact != null && samePhone(seqContact!!.phone, callNumber)) {
+            seqContact
+        } else if (callNumber.isBlank()) {
+            null
+        } else {
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    AppDatabase.getInstance(context).contactDao().getAllOnce()
+                        .firstOrNull { samePhone(it.phone, callNumber) }
+                }.getOrNull()
+            }
+        }
+    }
+
+    if (showGestionDialog && gestionContact != null) {
+        GestionDialog(
+            contact = gestionContact,
+            onDismiss = { showGestionDialog = false },
+            onSave = { g, e, m, f ->
+                val base = gestionContact ?: return@GestionDialog
+                gestionScope.launch {
+                    withContext(Dispatchers.IO) {
+                        runCatching {
+                            val dao = AppDatabase.getInstance(context).contactDao()
+                            val fresh = dao.getById(base.id) ?: base
+                            val updated = fresh.copy(
+                                gestion = g, estado = e, medio = m, fechaGestion = f
+                            )
+                            dao.update(updated)
+                            com.difusion.app.service.DriveSyncService.syncNow(context, updated)
+                        }
+                    }
+                }
+                showGestionDialog = false
+            }
+        )
+    }
 
     Column(
         modifier = modifier
@@ -330,6 +390,24 @@ fun FullCallPanel(
                         tint = MaterialTheme.colorScheme.onError,
                         size = 32.dp
                     )
+                }
+            }
+
+            // Botón de gestión: aparece cuando el cliente contestó y el número
+            // corresponde a un contacto de la lista.
+            if (answered && gestionContact != null) {
+                Spacer(modifier = Modifier.height(18.dp))
+                Button(
+                    onClick = { showGestionDialog = true },
+                    modifier = Modifier.fillMaxWidth(0.85f)
+                ) {
+                    AppIcon(
+                        Icons.Default.Edit,
+                        contentDescription = null,
+                        size = 18.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Gestionar cliente")
                 }
             }
         } else {
@@ -933,6 +1011,19 @@ fun CallKeypad(
             }
         }
     }
+}
+
+// Compara dos teléfonos por sus últimos 10 dígitos (ignora 0 inicial y +58).
+private fun samePhone(a: String, b: String): Boolean {
+    fun digits(s: String): String {
+        var d = s.filter { it.isDigit() }
+        if (d.startsWith("58")) d = d.removePrefix("58")
+        if (d.startsWith("0")) d = d.removePrefix("0")
+        return d.takeLast(10)
+    }
+    val da = digits(a)
+    val db = digits(b)
+    return da.isNotBlank() && da == db
 }
 
 private fun lettersFor(c: Char): String? = when (c) {

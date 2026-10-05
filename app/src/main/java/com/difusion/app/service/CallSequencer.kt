@@ -19,6 +19,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 enum class RepeatMode { QUEUE, USER }
 
@@ -55,8 +58,15 @@ class CallSequencer private constructor(private val context: Context) {
     private var connectedAtMs = 0L
     private var currentIndex = 0
     private var total = 0
-    private var callActive = false
-    private var callConnected = false
+    // Estos dos valores se exponen como StateFlow (ver _callActive/_callConnected)
+    // para que la UI (CallActivity) sepa cuándo la llamada está en curso y cuándo
+    // el cliente contestó (para habilitar "Gestionar cliente").
+    private var callActive: Boolean
+        get() = _callActive.value
+        set(value) { _callActive.value = value }
+    private var callConnected: Boolean
+        get() = _callConnected.value
+        set(value) { _callConnected.value = value }
     private var redialActive = false
     private var resumeFast = false
     private var repeats = 1
@@ -120,6 +130,12 @@ class CallSequencer private constructor(private val context: Context) {
 
     private val _callState = MutableStateFlow<String>("Detenida")
     val callState: StateFlow<String> = _callState.asStateFlow()
+
+    private val _callActive = MutableStateFlow(false)
+    val callActiveFlow: StateFlow<Boolean> = _callActive.asStateFlow()
+
+    private val _callConnected = MutableStateFlow(false)
+    val callConnectedFlow: StateFlow<Boolean> = _callConnected.asStateFlow()
 
     private var contactsList: List<Contact> = emptyList()
 
@@ -337,6 +353,7 @@ class CallSequencer private constructor(private val context: Context) {
         }
 
         try {
+            markCallStarted(contact)
             val ok = com.difusion.app.service.SimManager.placeCall(context, phone, simHandle)
             if (!ok) {
                 callActive = false
@@ -529,6 +546,24 @@ class CallSequencer private constructor(private val context: Context) {
         }
     }
 
+    private fun nowStamp(): String =
+        SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
+
+    // Al iniciar una llamada se marca el contacto como contactado por LLAMADA
+    // y se actualiza la fecha de gestión.
+    private fun markCallStarted(contact: Contact) {
+        ioScope.launch {
+            try {
+                val dao = AppDatabase.getInstance(context).contactDao()
+                val fresh = dao.getById(contact.id) ?: contact
+                val updated = fresh.copy(medio = "LLAMADA", fechaGestion = nowStamp())
+                dao.update(updated)
+                DriveSyncService.enqueue(context, updated)
+            } catch (_: Exception) {
+            }
+        }
+    }
+
     private fun recordCall(contact: Contact?, success: Boolean) {
         val c = contact ?: return
         ioScope.launch {
@@ -543,6 +578,19 @@ class CallSequencer private constructor(private val context: Context) {
                 )
                 AppDatabase.getInstance(context).callDao().insert(rec)
                 RecordStore.appendCall(context, rec)
+                // Si la llamada NO fue contestada, el seguimiento queda en
+                // "NO CONTESTA" (con medio LLAMADA y fecha de gestión al día).
+                if (!success) {
+                    val dao = AppDatabase.getInstance(context).contactDao()
+                    val fresh = dao.getById(c.id) ?: c
+                    val updated = fresh.copy(
+                        medio = "LLAMADA",
+                        gestion = "NO CONTESTA",
+                        fechaGestion = nowStamp()
+                    )
+                    dao.update(updated)
+                    DriveSyncService.enqueue(context, updated)
+                }
             } catch (_: Exception) {
             }
         }

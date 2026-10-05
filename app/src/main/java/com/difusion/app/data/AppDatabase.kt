@@ -8,8 +8,8 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [Contact::class, MessageTemplate::class, SendRecord::class, SmsMessage::class, CallRecord::class, PurgedSms::class],
-    version = 12,
+    entities = [Contact::class, MessageTemplate::class, SendRecord::class, SmsMessage::class, CallRecord::class, PurgedSms::class, ScheduledSend::class],
+    version = 13,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -18,6 +18,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun sendDao(): SendDao
     abstract fun smsMessageDao(): SmsMessageDao
     abstract fun callDao(): CallDao
+    abstract fun scheduledSendDao(): ScheduledSendDao
 
     companion object {
         @Volatile
@@ -147,6 +148,26 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE contacts ADD COLUMN email TEXT NOT NULL DEFAULT ''")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `scheduled_sends` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`phonesJson` TEXT NOT NULL, " +
+                        "`emailsJson` TEXT NOT NULL, " +
+                        "`message` TEXT NOT NULL, " +
+                        "`subject` TEXT NOT NULL, " +
+                        "`channel` INTEGER NOT NULL, " +
+                        "`scheduledAt` INTEGER NOT NULL, " +
+                        "`status` INTEGER NOT NULL, " +
+                        "`createdAt` INTEGER NOT NULL, " +
+                        "`sentAt` INTEGER NOT NULL, " +
+                        "`result` TEXT NOT NULL)"
+                )
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -157,7 +178,7 @@ abstract class AppDatabase : RoomDatabase() {
                     .addMigrations(
                         MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
                         MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9,
-                        MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12
+                        MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13
                     )
                     .build()
                 INSTANCE = instance

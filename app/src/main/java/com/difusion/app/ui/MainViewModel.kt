@@ -245,6 +245,130 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var _driveSyncStatus = MutableStateFlow("Sin sincronizar")
     val driveSyncStatus: StateFlow<String> = _driveSyncStatus.asStateFlow()
 
+    // Configuración del Web App de Apps Script que ESCRIBE en la hoja (Drive).
+    private val _driveSyncUrl = MutableStateFlow(com.difusion.app.storage.DriveSyncPrefs.getUrl(getApplication()))
+    val driveSyncUrl: StateFlow<String> = _driveSyncUrl.asStateFlow()
+    private val _driveSyncToken = MutableStateFlow(com.difusion.app.storage.DriveSyncPrefs.getToken(getApplication()))
+    val driveSyncToken: StateFlow<String> = _driveSyncToken.asStateFlow()
+    private val _driveSyncEnabled = MutableStateFlow(com.difusion.app.storage.DriveSyncPrefs.isEnabled(getApplication()))
+    val driveSyncEnabled: StateFlow<Boolean> = _driveSyncEnabled.asStateFlow()
+
+    fun setDriveSyncUrl(url: String) {
+        _driveSyncUrl.value = url
+        com.difusion.app.storage.DriveSyncPrefs.setUrl(getApplication(), url)
+    }
+
+    fun setDriveSyncToken(token: String) {
+        _driveSyncToken.value = token
+        com.difusion.app.storage.DriveSyncPrefs.setToken(getApplication(), token)
+    }
+
+    fun setDriveSyncEnabled(enabled: Boolean) {
+        _driveSyncEnabled.value = enabled
+        com.difusion.app.storage.DriveSyncPrefs.setEnabled(getApplication(), enabled)
+    }
+
+    // --- Correo masivo ---
+    private val _emailSyncUrl = MutableStateFlow(com.difusion.app.storage.EmailSyncPrefs.getUrl(getApplication()))
+    val emailSyncUrl: StateFlow<String> = _emailSyncUrl.asStateFlow()
+    private val _emailSyncToken = MutableStateFlow(com.difusion.app.storage.EmailSyncPrefs.getToken(getApplication()))
+    val emailSyncToken: StateFlow<String> = _emailSyncToken.asStateFlow()
+    private val _emailSyncEnabled = MutableStateFlow(com.difusion.app.storage.EmailSyncPrefs.isEnabled(getApplication()))
+    val emailSyncEnabled: StateFlow<Boolean> = _emailSyncEnabled.asStateFlow()
+
+    fun setEmailSyncUrl(url: String) {
+        _emailSyncUrl.value = url
+        com.difusion.app.storage.EmailSyncPrefs.setUrl(getApplication(), url)
+    }
+
+    fun setEmailSyncToken(token: String) {
+        _emailSyncToken.value = token
+        com.difusion.app.storage.EmailSyncPrefs.setToken(getApplication(), token)
+    }
+
+    fun setEmailSyncEnabled(enabled: Boolean) {
+        _emailSyncEnabled.value = enabled
+        com.difusion.app.storage.EmailSyncPrefs.setEnabled(getApplication(), enabled)
+    }
+
+    suspend fun sendBulkEmail(
+        recipients: List<String>,
+        subject: String,
+        body: String,
+        html: Boolean = false
+    ): com.difusion.app.service.EmailSyncService.EmailResult =
+        com.difusion.app.service.EmailSyncService.sendBulk(
+            getApplication(),
+            com.difusion.app.service.EmailSyncService.config(getApplication()),
+            recipients,
+            subject,
+            body,
+            html
+        )
+
+    // --- Envíos programados ---
+    val scheduledSends: StateFlow<List<com.difusion.app.data.ScheduledSend>> =
+        db.scheduledSendDao().getAll()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /** Programa un envío (SMS o correo) para una fecha/hora concreta. */
+    fun scheduleSend(
+        contacts: List<Contact>,
+        message: String,
+        subject: String,
+        channel: Int,
+        scheduledAtMillis: Long
+    ) {
+        if (contacts.isEmpty() || message.isBlank()) return
+        if (scheduledAtMillis <= System.currentTimeMillis()) return
+        viewModelScope.launch {
+            val phones = org.json.JSONArray()
+            val emails = org.json.JSONArray()
+            contacts.forEach { c ->
+                if (c.phone.isNotBlank()) phones.put(c.phone)
+                if (c.email.isNotBlank()) emails.put(c.email)
+            }
+            val item = com.difusion.app.data.ScheduledSend(
+                phonesJson = phones.toString(),
+                emailsJson = emails.toString(),
+                message = message,
+                subject = subject,
+                channel = channel,
+                scheduledAt = scheduledAtMillis,
+                status = 0
+            )
+            val id = db.scheduledSendDao().insert(item)
+            val delay = scheduledAtMillis - System.currentTimeMillis()
+            val req = androidx.work.OneTimeWorkRequestBuilder<com.difusion.app.worker.ScheduledSendWorker>()
+                .setInitialDelay(delay.coerceAtLeast(0), java.util.concurrent.TimeUnit.MILLISECONDS)
+                .build()
+            androidx.work.WorkManager.getInstance(getApplication()).enqueue(req)
+            _driveSyncStatus.value = "Envío programado para ${formatStamp(scheduledAtMillis)} (${contacts.size} destinatarios)"
+        }
+    }
+
+    fun cancelScheduledSend(item: com.difusion.app.data.ScheduledSend) {
+        viewModelScope.launch {
+            db.scheduledSendDao().update(item.copy(status = 3))
+        }
+    }
+
+    fun deleteScheduledSend(item: com.difusion.app.data.ScheduledSend) {
+        viewModelScope.launch {
+            db.scheduledSendDao().delete(item)
+        }
+    }
+
+    fun clearSentScheduled() {
+        viewModelScope.launch {
+            db.scheduledSendDao().clearSent()
+        }
+    }
+
+    private fun formatStamp(ms: Long): String =
+        java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault())
+            .format(java.util.Date(ms))
+
     // Hojas visibles del libro: del XLSX se saca la lista de tabs incluidas.
     private fun loadDriveUrl(): String =
         usersPrefs().getString(KEY_DRIVE_URL, "").orEmpty().trim()
@@ -424,8 +548,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         medio = row.medio.trim(),
                         idCuota = row.idCuota.trim(),
                         monto = row.monto.trim(),
-                        fechaGestion = row.fechaGestion.trim()
+                        fechaGestion = row.fechaGestion.trim(),
+                        email = row.email.trim()
                     )
+                )
+            }
+            // Guarda los valores vistos en la hoja para los desplegables de gestión.
+            runCatching {
+                com.difusion.app.data.GestionPresets.saveFromImport(
+                    getApplication(),
+                    rows.map { it.gestion },
+                    rows.map { it.estado },
+                    rows.map { it.medio },
+                    rows.map { it.assignment }
                 )
             }
             val sheet = pendingSheetName.ifBlank { "la hoja" }
@@ -756,15 +891,31 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         usersPrefs().edit().putBoolean(KEY_SAFE_MODE, enabled).apply()
     }
 
-    fun saveContact(name: String, phone: String, assignment: String = "") {
+    fun saveContact(name: String, phone: String, assignment: String = "", email: String = "") {
         viewModelScope.launch {
             // Se guarda el teléfono tal cual lo escribe el usuario.
-            db.contactDao().insert(Contact(name = name, phone = phone.trim(), assignment = assignment.trim()))
+            db.contactDao().insert(
+                Contact(
+                    name = name,
+                    phone = phone.trim(),
+                    assignment = assignment.trim(),
+                    email = email.trim()
+                )
+            )
         }
     }
 
     fun addContacts(rows: List<ParsedRow>) {
         viewModelScope.launch {
+            runCatching {
+                com.difusion.app.data.GestionPresets.saveFromImport(
+                    getApplication(),
+                    rows.map { it.gestion },
+                    rows.map { it.estado },
+                    rows.map { it.medio },
+                    rows.map { it.assignment }
+                )
+            }
             for (row in rows) {
                 // Se importan los teléfonos exactamente como vienen del archivo.
                 db.contactDao().insert(
@@ -778,7 +929,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         medio = row.medio.trim(),
                         idCuota = row.idCuota.trim(),
                         monto = row.monto.trim(),
-                        fechaGestion = row.fechaGestion.trim()
+                        fechaGestion = row.fechaGestion.trim(),
+                        email = row.email.trim()
                     )
                 )
             }
@@ -802,20 +954,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun updateContact(contact: Contact) {
         viewModelScope.launch {
             db.contactDao().update(contact)
+            com.difusion.app.service.DriveSyncService.enqueue(getApplication(), contact)
         }
     }
 
     fun updateContactGestion(contactId: Long, gestion: String, estado: String, medio: String, fechaGestion: String) {
         viewModelScope.launch {
             val c = db.contactDao().getById(contactId) ?: return@launch
-            db.contactDao().update(
-                c.copy(
-                    gestion = gestion.trim(),
-                    estado = estado.trim(),
-                    medio = medio.trim(),
-                    fechaGestion = fechaGestion.trim()
-                )
+            val updated = c.copy(
+                gestion = gestion.trim(),
+                estado = estado.trim(),
+                medio = medio.trim(),
+                fechaGestion = fechaGestion.trim()
             )
+            db.contactDao().update(updated)
+            com.difusion.app.service.DriveSyncService.enqueue(getApplication(), updated)
         }
     }
 
