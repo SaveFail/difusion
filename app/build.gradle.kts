@@ -16,6 +16,15 @@ val keystoreProperties = Properties().apply {
     }
 }
 
+// Client ID de OAuth de Google (incrustado en la app para que NADIE lo pegue).
+// Se lee de gmail.properties (local, no se sube al repo).
+val gmailPropertiesFile = rootProject.file("gmail.properties")
+val gmailClientId: String = Properties().apply {
+    if (gmailPropertiesFile.exists()) {
+        gmailPropertiesFile.inputStream().use { load(it) }
+    }
+}.getProperty("clientId", "")
+
 android {
     namespace = "com.difusion.app"
     compileSdk = 35
@@ -26,6 +35,7 @@ android {
         targetSdk = 35
         versionCode = 23
         versionName = "4.0"
+        buildConfigField("String", "GMAIL_OAUTH_CLIENT_ID", "\"$gmailClientId\"")
     }
 
     signingConfigs {

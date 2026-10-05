@@ -1212,15 +1212,17 @@ fun SettingsScreen(
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        "Haz esto UNA sola vez. Con la sesión de Google, la app pide permiso " +
-                            "directo a tu Gmail y lee/envía por la API de Gmail (más volumen y " +
-                            "sin intermediarios).",
+                        "USUARIO FINAL (lo que hace cada persona): abrir Mensaje ▸ Correo, " +
+                            "tocar \"Iniciar sesión con Google\" y aceptar. Nada más.\n\n" +
+                            "CONFIGURADOR (solo tú, UNA vez): los pasos de abajo. Se hace una " +
+                            "sola vez y queda para todos.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        "1. Entra a console.cloud.google.com y crea un proyecto.\n" +
+                        "Solo el configurador (una vez):\n" +
+                            "1. Entra a console.cloud.google.com y crea un proyecto.\n" +
                             "2. Configura la pantalla de consentimiento (tipo \"Externo\") y " +
                             "agrega tu correo como \"usuario de prueba\".\n" +
                             "3. En Credenciales, crea un ID de cliente OAuth tipo " +

@@ -41,7 +41,8 @@ internal fun Context.findActivity(): Activity? {
 fun GmailSignInSection(onSignedIn: () -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var clientId by rememberSaveable { mutableStateOf(GmailAuthPrefs.getClientId(context)) }
+    val baked = GmailAuth.hasBakedClientId()
+    var clientId by rememberSaveable { mutableStateOf(GmailAuth.clientId(context)) }
     var signedIn by remember { mutableStateOf(GmailAuth.isSignedIn(context)) }
     var account by remember { mutableStateOf(GmailAuth.account(context)) }
     val activity = remember(context) { context.findActivity() }
@@ -73,12 +74,12 @@ fun GmailSignInSection(onSignedIn: () -> Unit = {}) {
             Toast.makeText(context, "No se pudo abrir el inicio de sesión", Toast.LENGTH_LONG).show()
             return
         }
-        val id = clientId.trim()
+        val id = if (baked) GmailAuth.clientId(context) else clientId.trim()
         if (id.isBlank()) {
-            Toast.makeText(context, "Pega primero el Client ID (tipo Web)", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "La app aún no tiene el Client ID configurado", Toast.LENGTH_LONG).show()
             return
         }
-        GmailAuthPrefs.setClientId(context, id)
+        if (!baked) GmailAuthPrefs.setClientId(context, id)
         GmailAuth.request(act, id)
             .addOnSuccessListener { result ->
                 if (result.hasResolution()) {
@@ -114,21 +115,23 @@ fun GmailSignInSection(onSignedIn: () -> Unit = {}) {
             Spacer(Modifier.height(6.dp))
             Text(
                 if (signedIn) "Conectado como: " + account.ifBlank { "(cuenta de Google)" }
-                else "Pide permiso directamente a tu Gmail. Debes crear un Client ID OAuth " +
-                    "en Google Cloud (tipo Web) con los datos que ya conoces y pegarlo abajo.",
+                else "Toca el botón, elige tu cuenta de Google y acepta el permiso. " +
+                    "Así la app podrá ver tu bandeja y enviar correos directamente.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(Modifier.height(10.dp))
-            OutlinedTextField(
-                value = clientId,
-                onValueChange = { clientId = it },
-                label = { Text("Client ID de Google (tipo Web)") },
-                placeholder = { Text("xxxxxx.apps.googleusercontent.com") },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                shape = RoundedCornerShape(14.dp)
-            )
+            if (!baked) {
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = clientId,
+                    onValueChange = { clientId = it },
+                    label = { Text("Client ID de Google (solo configurador)") },
+                    placeholder = { Text("xxxxxx.apps.googleusercontent.com") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    shape = RoundedCornerShape(14.dp)
+                )
+            }
             Spacer(Modifier.height(10.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Button(onClick = { signIn() }, modifier = Modifier.weight(1f)) {

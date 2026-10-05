@@ -32,7 +32,18 @@ object GmailAuth {
 
     private val http = OkHttpClient()
 
-    fun isConfigured(context: Context) = GmailAuthPrefs.getClientId(context).isNotBlank()
+    /** true si el Client ID viene incrustado en la app (el caso normal). */
+    fun hasBakedClientId(): Boolean =
+        com.difusion.app.BuildConfig.GMAIL_OAUTH_CLIENT_ID.isNotBlank()
+
+    /** Client ID a usar: el incrustado en la app o, si no, el que se escriba. */
+    fun clientId(context: Context): String {
+        val pref = GmailAuthPrefs.getClientId(context)
+        if (pref.isNotBlank()) return pref
+        return com.difusion.app.BuildConfig.GMAIL_OAUTH_CLIENT_ID
+    }
+
+    fun isConfigured(context: Context) = clientId(context).isNotBlank()
     fun isSignedIn(context: Context) = GmailAuthPrefs.validToken(context) != null
     fun account(context: Context) = GmailAuthPrefs.getAccount(context)
     fun token(context: Context): String? = GmailAuthPrefs.validToken(context)
