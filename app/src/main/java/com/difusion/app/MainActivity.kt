@@ -1428,6 +1428,7 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
     if (showEmailToSelected) {
         var subj by remember { mutableStateOf("") }
         var msg by remember { mutableStateOf("") }
+        var scheduledAt by remember { mutableStateOf<Long?>(null) }
         AlertDialog(
             onDismissRequest = { showEmailToSelected = false },
             title = { Text("Correo individual a los seleccionados") },
@@ -1456,6 +1457,8 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                             .fillMaxWidth()
                             .height(140.dp)
                     )
+                    Spacer(Modifier.height(10.dp))
+                    ScheduleControls(onAtMillis = { scheduledAt = it })
                 }
             },
             confirmButton = {
@@ -1472,13 +1475,21 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                                 "Ningún seleccionado tiene correo. Agrégalo al contacto o impórtalo con una columna Correo/Email.",
                                 Toast.LENGTH_LONG
                             ).show()
+                        } else if (scheduledAt != null) {
+                            if (scheduledAt!! <= System.currentTimeMillis()) {
+                                Toast.makeText(context, "Elige una fecha y hora futuras", Toast.LENGTH_LONG).show()
+                            } else {
+                                viewModel.scheduleSend(sel, msg, subj, 1, scheduledAt!!)
+                                Toast.makeText(context, "Envío de correo programado", Toast.LENGTH_LONG).show()
+                                showEmailToSelected = false
+                            }
                         } else {
                             showEmailToSelected = false
                             emailProgressHidden = false
                             viewModel.sendBulkEmailBackground(recipients, subj, msg)
                         }
                     }
-                ) { Text("Enviar") }
+                ) { Text(if (scheduledAt != null) "Programar" else "Enviar") }
             },
             dismissButton = {
                 TextButton(onClick = { showEmailToSelected = false }) { Text("Cancelar") }
