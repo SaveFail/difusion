@@ -103,6 +103,9 @@ dependencies {
     // Envíos programados en segundo plano.
     implementation("androidx.work:work-runtime-ktx:2.9.1")
 
+    // Inicio de sesión con Google y autorización de Gmail (Identity Services).
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
+
     // Escáner de QR con la cámara. Google Code Scanner lo provee Play Services
     // (no requiere permiso de cámara y casi no aumenta el APK).
     implementation("com.google.android.gms:play-services-code-scanner:16.1.0")

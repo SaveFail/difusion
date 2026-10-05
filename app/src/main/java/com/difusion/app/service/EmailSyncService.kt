@@ -155,6 +155,25 @@ object EmailSyncService {
     fun sendOne(context: Context, config: EmailConfig, to: String, subject: String, body: String): EmailResult =
         sendBulk(context, config, listOf(to), subject, body)
 
+    /**
+     * Envía usando lo mejor disponible: si hay sesión de Google activa, usa la
+     * API de Gmail directamente; si no, usa el puente de Apps Script.
+     */
+    fun sendSmart(context: Context, recipients: List<String>, subject: String, body: String): EmailResult {
+        val list = recipients.map { it.trim() }.filter { it.isNotBlank() }.distinct()
+        if (list.isEmpty()) return EmailResult(false, error = "Sin destinatarios")
+        val token = GmailAuth.token(context)
+        if (token != null) {
+            var sent = 0
+            var failed = 0
+            for (r in list) {
+                if (GmailApiService.send(token, r, subject, body)) sent++ else failed++
+            }
+            return EmailResult(success = sent > 0, sent = sent, failed = failed, total = list.size)
+        }
+        return sendBulk(context, config(context), list, subject, body)
+    }
+
     private fun post(config: EmailConfig, json: JSONObject): JSONObject? {
         if (config.url.isBlank()) return null
         return try {

@@ -314,13 +314,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         body: String,
         html: Boolean = false
     ): com.difusion.app.service.EmailSyncService.EmailResult =
-        com.difusion.app.service.EmailSyncService.sendBulk(
+        com.difusion.app.service.EmailSyncService.sendSmart(
             getApplication(),
-            com.difusion.app.service.EmailSyncService.config(getApplication()),
             recipients,
             subject,
-            body,
-            html
+            body
         )
 
     // --- Envíos programados ---

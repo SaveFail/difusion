@@ -1200,44 +1200,58 @@ fun SettingsScreen(
             if (settingsTab == 7) {
                 Spacer(modifier = Modifier.height(16.dp))
 
+                GmailSignInSection()
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 SectionCard {
                     Text(
-                        "Conectar tu Gmail — paso a paso",
+                        "Iniciar sesión con Google — paso a paso",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        "Haz esto UNA sola vez. Con esto podrás ver tu bandeja, leer, " +
-                            "responder, enviar y programar correos desde la app, sin abrir " +
-                            "otra aplicación.",
+                        "Haz esto UNA sola vez. Con la sesión de Google, la app pide permiso " +
+                            "directo a tu Gmail y lee/envía por la API de Gmail (más volumen y " +
+                            "sin intermediarios).",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        "1. En la computadora abre: script.google.com\n" +
-                            "2. Toca \"Nuevo proyecto\".\n" +
-                            "3. Borra todo el código de ejemplo.\n" +
-                            "4. Pega el contenido del archivo EmailSyncAppsScript.gs.\n" +
-                            "5. En la línea API_TOKEN escribe un token largo y secreto y " +
-                            "guárdalo (lo pondrás igual en la app abajo).\n" +
-                            "6. Guarda con Ctrl+S.\n" +
-                            "7. Implementar ▸ Nueva implementación.\n" +
-                            "8. En ⚙️ elige tipo \"Aplicación web\".\n" +
-                            "9. Ejecutar como: Yo. Quién tiene acceso: Cualquier persona.\n" +
-                            "10. Implementar.\n" +
-                            "11. Autoriza con tu cuenta de Google (Configuración avanzada ▸ " +
-                            "Ir a... ▸ Permitir). ESTO ES TU INICIO DE SESIÓN.\n" +
-                            "12. Copia la URL que termina en /exec.\n" +
-                            "13. Pégala abajo, escribe el mismo token y toca " +
-                            "\"Probar conexión\".",
+                        "1. Entra a console.cloud.google.com y crea un proyecto.\n" +
+                            "2. Configura la pantalla de consentimiento (tipo \"Externo\") y " +
+                            "agrega tu correo como \"usuario de prueba\".\n" +
+                            "3. En Credenciales, crea un ID de cliente OAuth tipo " +
+                            "\"Android\" con:\n" +
+                            "     • Nombre del paquete: com.difusion.app\n" +
+                            "     • SHA-1: C0:F2:7D:36:C0:2D:94:A4:AB:06:26:55:55:83:F7:27:" +
+                            "F4:F3:D4:BE\n" +
+                            "   (y otro igual con el SHA-1 de depuración si pruebas en USB: " +
+                            "A4:8C:EA:70:00:BF:50:9A:73:12:45:B3:2C:B6:1F:87:DA:8E:23:92)\n" +
+                            "4. Crea además un ID de cliente OAuth tipo \"Aplicación web\" " +
+                            "(no hace falta configurar URLs).\n" +
+                            "5. Copia el Client ID de tipo \"Aplicación web\".\n" +
+                            "6. Pégalo arriba (\"Client ID de Google\") y toca " +
+                            "\"Iniciar sesión con Google\".\n" +
+                            "7. Elige tu cuenta y acepta el permiso de Gmail.\n" +
+                            "8. Listo: verás \"Conectado como: tu correo\".",
                         style = MaterialTheme.typography.bodySmall
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "Nota: para el envío masivo/programado, los contactos deben tener " +
-                            "correo. Agrega una columna \"CORREO\" o \"EMAIL\" en tu hoja " +
+                        "Nota: los permisos de Gmail son \"restringidos\"; en modo Prueba " +
+                            "funcionan con tus usuarios de prueba, pero el token dura ~1 hora y " +
+                            "se renueva al volver a tocar el botón. Para distribución pública " +
+                            "Google pide verificación.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.tertiary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Importante: para el envío masivo/programado, los contactos deben " +
+                            "tener correo. Agrega una columna \"CORREO\" o \"EMAIL\" en tu hoja " +
                             "(se detecta al importar) o escríbelo al crear el contacto.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.tertiary
@@ -1248,7 +1262,7 @@ fun SettingsScreen(
 
                 SectionCard {
                     Text(
-                        "Datos de conexión",
+                        "Respaldo con Apps Script (opcional)",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )

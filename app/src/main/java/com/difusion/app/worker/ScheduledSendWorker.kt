@@ -37,9 +37,8 @@ class ScheduledSendWorker(
                             db.scheduledSendDao().updateStatus(item.id, 2, now, "Sin correos")
                             continue
                         }
-                        val res = EmailSyncService.sendBulk(
+                        val res = EmailSyncService.sendSmart(
                             applicationContext,
-                            EmailSyncService.config(applicationContext),
                             emails,
                             item.subject.ifBlank { "Mensaje" },
                             item.message
