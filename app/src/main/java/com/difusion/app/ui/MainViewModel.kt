@@ -324,13 +324,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val phones = org.json.JSONArray()
             val emails = org.json.JSONArray()
+            // Snapshot: reimportar contactos NO debe afectar esta programación.
+            val snapshot = org.json.JSONArray()
             contacts.forEach { c ->
                 if (c.phone.isNotBlank()) phones.put(c.phone)
                 if (c.email.isNotBlank()) emails.put(c.email)
+                snapshot.put(
+                    org.json.JSONObject().apply {
+                        put("name", c.name)
+                        put("phone", c.phone)
+                        put("email", c.email)
+                    }
+                )
             }
             val item = com.difusion.app.data.ScheduledSend(
                 phonesJson = phones.toString(),
                 emailsJson = emails.toString(),
+                recipientsJson = snapshot.toString(),
                 message = message,
                 subject = subject,
                 channel = channel,

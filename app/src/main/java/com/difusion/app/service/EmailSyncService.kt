@@ -38,6 +38,36 @@ object EmailSyncService {
         val error: String = ""
     )
 
+    data class MailSummary(
+        val threadId: String,
+        val from: String,
+        val subject: String,
+        val snippet: String,
+        val date: String,
+        val unread: Boolean,
+        val messageCount: Int
+    )
+
+    data class MailMessage(
+        val from: String,
+        val to: String,
+        val date: String,
+        val body: String,
+        val isFromMe: Boolean
+    )
+
+    data class MailThread(
+        val subject: String,
+        val messages: List<MailMessage>
+    )
+
+    data class InboxResult(
+        val success: Boolean,
+        val messages: List<MailSummary> = emptyList(),
+        val unread: Int = 0,
+        val error: String = ""
+    )
+
     fun isEnabled(context: Context): Boolean = EmailSyncPrefs.isEnabled(context)
 
     fun config(context: Context): EmailConfig = EmailConfig(
@@ -92,5 +122,97 @@ object EmailSyncService {
             Log.d(TAG, "error: ${e.message}")
             EmailResult(false, error = e.message ?: "Error desconocido")
         }
+    }
+
+    /** Envía un correo suelto a una dirección. */
+    fun sendOne(context: Context, config: EmailConfig, to: String, subject: String, body: String): EmailResult =
+        sendBulk(context, config, listOf(to), subject, body)
+
+    private fun post(config: EmailConfig, json: JSONObject): JSONObject? {
+        if (config.url.isBlank()) return null
+        return try {
+            val body = json.toString().toRequestBody(JSON.toMediaType())
+            val request = Request.Builder()
+                .url(config.url)
+                .post(body)
+                .addHeader("Content-Type", "application/json")
+                .build()
+            client.newCall(request).execute().use { resp ->
+                val str = resp.body?.string() ?: return null
+                JSONObject(str)
+            }
+        } catch (e: Exception) {
+            Log.d(TAG, "post error: ${e.message}")
+            null
+        }
+    }
+
+    /** Lista la bandeja de entrada (Gmail real). Bloquea: usar en IO. */
+    fun listInbox(context: Context, config: EmailConfig, max: Int = 25): InboxResult {
+        if (config.url.isBlank()) return InboxResult(false, error = "URL del Web App no configurada")
+        val obj = post(
+            config,
+            JSONObject().apply {
+                put("action", "list")
+                put("max", max)
+                if (config.token.isNotBlank()) put("token", config.token)
+            }
+        ) ?: return InboxResult(false, error = "No se pudo conectar con el Web App")
+        if (!obj.optBoolean("ok", false)) {
+            return InboxResult(false, error = obj.optString("error", "Error del servidor"))
+        }
+        val arr = obj.optJSONArray("messages") ?: JSONArray()
+        val messages = (0 until arr.length()).map { i ->
+            val o = arr.getJSONObject(i)
+            MailSummary(
+                threadId = o.optString("threadId"),
+                from = o.optString("from"),
+                subject = o.optString("subject"),
+                snippet = o.optString("snippet"),
+                date = o.optString("date"),
+                unread = o.optBoolean("unread", false),
+                messageCount = o.optInt("messageCount", 1)
+            )
+        }
+        return InboxResult(true, messages, obj.optInt("unread", 0))
+    }
+
+    /** Lee una conversación completa. Bloquea: usar en IO. */
+    fun readThread(config: EmailConfig, threadId: String): MailThread? {
+        val obj = post(
+            config,
+            JSONObject().apply {
+                put("action", "read")
+                put("threadId", threadId)
+                if (config.token.isNotBlank()) put("token", config.token)
+            }
+        ) ?: return null
+        if (!obj.optBoolean("ok", false)) return null
+        val arr = obj.optJSONArray("messages") ?: JSONArray()
+        val messages = (0 until arr.length()).map { i ->
+            val o = arr.getJSONObject(i)
+            MailMessage(
+                from = o.optString("from"),
+                to = o.optString("to"),
+                date = o.optString("date"),
+                body = o.optString("body"),
+                isFromMe = o.optBoolean("isFromMe", false)
+            )
+        }
+        return MailThread(obj.optString("subject"), messages)
+    }
+
+    /** Responde una conversación. Bloquea: usar en IO. */
+    fun reply(config: EmailConfig, threadId: String, body: String): Boolean {
+        val obj = post(
+            config,
+            JSONObject().apply {
+                put("action", "reply")
+                put("threadId", threadId)
+                put("body", body)
+                if (config.token.isNotBlank()) put("token", config.token)
+            }
+        ) ?: return false
+        return obj.optBoolean("ok", false)
     }
 }

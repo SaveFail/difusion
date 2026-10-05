@@ -925,6 +925,14 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                     )
                 }
                 composable("editor") {
+                  var msgTab by remember { mutableStateOf(0) }
+                  Column(Modifier.fillMaxSize()) {
+                    TabRow(selectedTabIndex = msgTab) {
+                        Tab(selected = msgTab == 0, onClick = { msgTab = 0 }, text = { Text("Redactar") })
+                        Tab(selected = msgTab == 1, onClick = { msgTab = 1 }, text = { Text("Correo") })
+                    }
+                    Box(Modifier.weight(1f)) {
+                    if (msgTab == 0) {
                     MessageEditorScreen(
                         messageBody = messageBody,
                         onMessageChange = { viewModel.setMessageBody(it) },
@@ -999,6 +1007,11 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                             Toast.makeText(context, "Envío cancelado", Toast.LENGTH_SHORT).show()
                         }
                     )
+                    } else {
+                        CorreoInboxScreen()
+                    }
+                    }
+                  }
                 }
                 composable("history") {
                     val callRecords by viewModel.callRecords.collectAsStateWithLifecycle()
@@ -1013,7 +1026,11 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                             viewModel.setCallLabel(callId, label)
                         },
                         folderConfigured = backupConfigured,
-                        onConfigureFolder = { openBackupFolderPicker() }
+                        onConfigureFolder = { openBackupFolderPicker() },
+                        scheduledSends = viewModel.scheduledSends.collectAsStateWithLifecycle().value,
+                        onCancelScheduled = { viewModel.cancelScheduledSend(it) },
+                        onDeleteScheduled = { viewModel.deleteScheduledSend(it) },
+                        onClearSentScheduled = { viewModel.clearSentScheduled() }
                     )
                 }
                 composable("calls") {

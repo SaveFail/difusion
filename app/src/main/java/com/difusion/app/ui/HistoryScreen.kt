@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material.icons.filled.CallMissed
@@ -29,6 +30,7 @@ import androidx.compose.ui.unit.sp
 import com.difusion.app.data.CallLabels
 import com.difusion.app.data.CallRecord
 import com.difusion.app.data.FailureCount
+import com.difusion.app.data.ScheduledSend
 import com.difusion.app.data.SendRecord
 import com.difusion.app.storage.RecordStore
 import java.text.SimpleDateFormat
@@ -47,7 +49,11 @@ fun HistoryScreen(
     onExportBackup: () -> Unit,
     onSetLabel: (Long, String) -> Unit,
     folderConfigured: Boolean,
-    onConfigureFolder: () -> Unit
+    onConfigureFolder: () -> Unit,
+    scheduledSends: List<ScheduledSend> = emptyList(),
+    onCancelScheduled: (ScheduledSend) -> Unit = {},
+    onDeleteScheduled: (ScheduledSend) -> Unit = {},
+    onClearSentScheduled: () -> Unit = {}
 ) {
     var tab by rememberSaveable { mutableStateOf(0) }
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -118,11 +124,18 @@ fun HistoryScreen(
         ) {
             Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Mensajes") })
             Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Llamadas") })
+            Tab(selected = tab == 2, onClick = { tab = 2 }, text = { Text("Programados") })
         }
 
         when (tab) {
             0 -> MessagesTab(records, onExportExcel)
-            else -> CallsTab(successCalls, failedCalls, onSetLabel)
+            1 -> CallsTab(successCalls, failedCalls, onSetLabel)
+            else -> ScheduledTab(
+                items = scheduledSends,
+                onCancel = onCancelScheduled,
+                onDelete = onDeleteScheduled,
+                onClearSent = onClearSentScheduled
+            )
         }
     }
 }
@@ -558,6 +571,152 @@ private fun HistoryCard(record: SendRecord) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2
                     )
+                }
+            }
+        }
+    }
+}
+@Composable
+private fun ScheduledTab(
+    items: List<ScheduledSend>,
+    onCancel: (ScheduledSend) -> Unit,
+    onDelete: (ScheduledSend) -> Unit,
+    onClearSent: () -> Unit
+) {
+    val sdf = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()) }
+    val sentCount = items.count { it.status == 1 }
+    Column(Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "${items.count { it.status == 0 }} pendientes · $sentCount enviados",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
+            )
+            if (sentCount > 0) {
+                TextButton(onClick = onClearSent) { Text("Limpiar enviados") }
+            }
+        }
+
+        if (items.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    "No hay envíos programados.\nPrográmalos desde Mensaje ▸ Nuevo mensaje.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
+            return
+        }
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(items, key = { it.id }) { item ->
+                val (label, color) = when (item.status) {
+                    0 -> "Pendiente" to MaterialTheme.colorScheme.primary
+                    1 -> "Enviado" to MaterialTheme.colorScheme.tertiary
+                    2 -> "Fallido" to MaterialTheme.colorScheme.error
+                    else -> "Cancelado" to MaterialTheme.colorScheme.onSurfaceVariant
+                }
+                val recipients = remember(item.recipientsJson, item.phonesJson) {
+                    runCatching {
+                        val arr = org.json.JSONArray(item.recipientsJson)
+                        if (arr.length() > 0) {
+                            (0 until arr.length()).map { i ->
+                                val o = arr.getJSONObject(i)
+                                o.optString("name").ifBlank {
+                                    o.optString("email").ifBlank { o.optString("phone") }
+                                }
+                            }
+                        } else {
+                            val p = org.json.JSONArray(item.phonesJson)
+                            (0 until p.length()).map { i -> p.optString(i) }
+                        }
+                    }.getOrDefault(emptyList())
+                }
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(Modifier.padding(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            AppIcon(
+                                Icons.Default.Schedule,
+                                contentDescription = null,
+                                tint = color,
+                                size = 18.dp
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                (if (item.channel == 1) "Correo" else "SMS") + " · " +
+                                    sdf.format(Date(item.scheduledAt)),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Surface(color = color.copy(alpha = 0.15f), shape = RoundedCornerShape(50)) {
+                                Text(
+                                    label,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = color,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        if (item.subject.isNotBlank()) {
+                            Text(
+                                "Asunto: ${item.subject}",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        Text(
+                            item.message.take(140),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            "Destinatarios (${recipients.size}): " +
+                                recipients.take(8).joinToString(", ") +
+                                if (recipients.size > 8) " y ${recipients.size - 8} más…" else "",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 3,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        if (item.result.isNotBlank()) {
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                "Resultado: ${item.result}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                            if (item.status == 0) {
+                                TextButton(onClick = { onCancel(item) }) { Text("Cancelar") }
+                            } else {
+                                TextButton(onClick = { onDelete(item) }) {
+                                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

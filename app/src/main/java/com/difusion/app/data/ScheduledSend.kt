@@ -12,6 +12,9 @@ data class ScheduledSend(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val phonesJson: String = "[]",
     val emailsJson: String = "[]",
+    // Snapshot de destinatarios: [{"name":..,"phone":..,"email":..}]. Se guarda
+    // al programar, para que reimportar contactos NO altere las tareas ya creadas.
+    val recipientsJson: String = "[]",
     val message: String = "",
     val subject: String = "",
     // 0 = SMS, 1 = Correo
