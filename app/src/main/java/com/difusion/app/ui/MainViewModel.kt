@@ -799,6 +799,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun updateContact(contact: Contact) {
+        viewModelScope.launch {
+            db.contactDao().update(contact)
+        }
+    }
+
+    fun updateContactGestion(contactId: Long, gestion: String, estado: String, medio: String, fechaGestion: String) {
+        viewModelScope.launch {
+            val c = db.contactDao().getById(contactId) ?: return@launch
+            db.contactDao().update(
+                c.copy(
+                    gestion = gestion.trim(),
+                    estado = estado.trim(),
+                    medio = medio.trim(),
+                    fechaGestion = fechaGestion.trim()
+                )
+            )
+        }
+    }
+
     fun deleteTemplate(template: MessageTemplate) {
         viewModelScope.launch {
             db.templateDao().delete(template)
