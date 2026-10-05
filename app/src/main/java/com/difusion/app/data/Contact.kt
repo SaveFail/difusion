@@ -18,5 +18,6 @@ data class Contact(
     // medio = columna MEDIO DE CONTACTO (LLAMADA, WHATSAPP…).
     val medio: String = "",
     val idCuota: String = "",
-    val monto: String = ""
+    val monto: String = "",
+    val fechaGestion: String = ""
 )

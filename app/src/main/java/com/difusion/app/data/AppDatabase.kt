@@ -143,6 +143,7 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE contacts ADD COLUMN idCuota TEXT NOT NULL DEFAULT ''")
                 db.execSQL("ALTER TABLE contacts ADD COLUMN monto TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE contacts ADD COLUMN fechaGestion TEXT NOT NULL DEFAULT ''")
             }
         }
 

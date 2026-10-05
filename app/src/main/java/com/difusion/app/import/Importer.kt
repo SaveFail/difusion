@@ -14,7 +14,8 @@ import java.io.InputStreamReader
     val estado: String = "",
     val medio: String = "",
     val idCuota: String = "",
-    val monto: String = ""
+    val monto: String = "",
+    val fechaGestion: String = ""
 )
 
 object Importer {
@@ -124,7 +125,8 @@ object Importer {
         val statusIdx: Int = -1,
         val medioIdx: Int = -1,
         val idCuotaIdx: Int = -1,
-        val montoIdx: Int = -1
+        val montoIdx: Int = -1,
+        val fechaGestionIdx: Int = -1
     )
 
     private val nameKeywords = setOf(
@@ -155,9 +157,10 @@ object Importer {
     // Estado de la cuenta (columna STATUS).
     private val statusKeywords = setOf("status", "estado", "estatus")
     // Medio/canal de contacto.
-    private val medioKeywords = setOf("medio", "canal", "via", "vía", "canal de contacto")
+    private val medioKeywords = setOf("medio", "canal", "via", "vía", "canal de contacto", "medio de contacto")
     private val idCuotaKeywords = setOf("id cuota", "idcuota", "cuota id", "nro cuota", "nro_cuota", "cuota")
     private val montoKeywords = setOf("monto", "importe", "valor", "total", "abono", "saldo")
+    private val fechaGestionKeywords = setOf("fecha de gestion", "feccha de gestion", "fecha gestion", "fechagestion", "fecha de ultima gestion", "ultima gestion", "fecha")
 
     // Normaliza un encabezado: minúsculas y sin tildes, para reconocer encabezados
     // con o sin acentos (ej. "Teléfono", "Asignación").
@@ -220,6 +223,10 @@ object Importer {
         }
         val idCuotaIdx = folded.indexOfFirst { matches(it, idCuotaKeywords) }
         val montoIdx = folded.indexOfFirst { matches(it, montoKeywords) }
+        val fechaGestionIdx = folded.indexOfFirst { h ->
+            matches(h, fechaGestionKeywords) && dateWords.any { w -> h.contains(w) } ||
+            matches(h, fechaGestionKeywords)
+        }
         if (phoneIdx >= 0) {
             // Hay encabezado (al menos se reconoce el teléfono). Si el nombre no
             // tiene encabezado claro ("Columna 1", "ID", …) se usa la primera
@@ -233,7 +240,7 @@ object Importer {
             return ColumnMap(
                 resolvedName, phoneIdx, assignIdx, true,
                 cedulaIdx, gestionIdx, statusIdx, medioIdx,
-                idCuotaIdx, montoIdx
+                idCuotaIdx, montoIdx, fechaGestionIdx
             )
         }
         // Sin encabezado reconocible: se asume primera columna = nombre,
@@ -244,6 +251,7 @@ object Importer {
             false,
             -1,
             if (header.size > 3) 3 else -1,
+            -1,
             -1,
             -1,
             -1,
@@ -272,7 +280,8 @@ object Importer {
             val medio = row.getOrNull(map.medioIdx).orEmpty().trim()
             val idCuota = row.getOrNull(map.idCuotaIdx).orEmpty().trim()
             val monto = row.getOrNull(map.montoIdx).orEmpty().trim()
-            result.add(ParsedRow(name, phone, cedula, assignment, gestion, estado, medio, idCuota, monto))
+            val fechaGestion = row.getOrNull(map.fechaGestionIdx).orEmpty().trim()
+            result.add(ParsedRow(name, phone, cedula, assignment, gestion, estado, medio, idCuota, monto, fechaGestion))
         }
         return result
     }
