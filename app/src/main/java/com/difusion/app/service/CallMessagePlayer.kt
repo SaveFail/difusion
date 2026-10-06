@@ -104,10 +104,20 @@ object CallMessagePlayer {
         val am = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
         audioManager = am
         runCatching {
+            // El micrófono debe estar ABIERTO: si está silenciado, el receptor no
+            // oiría nada. El audio del parlante lo capta el micrófono y lo transmite.
+            am.isMicrophoneMute = false
+        }
+        runCatching {
             if (!am.isSpeakerphoneOn) {
                 am.isSpeakerphoneOn = true
                 forcedSpeaker = true
             }
+        }
+        runCatching {
+            // Volumen al máximo de la voz de llamada para que se oiga del otro lado.
+            val max = am.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL)
+            am.setStreamVolume(AudioManager.STREAM_VOICE_CALL, max, 0)
         }
     }
 

@@ -75,6 +75,11 @@ class DifusionInCallService : InCallService() {
                     if (VoiceMessageStore.isEnabled(this@DifusionInCallService) &&
                         VoiceMessageStore.selected(this@DifusionInCallService) != null
                     ) {
+                        // Forzar el ALTAVOZ a nivel de llamada (Telecom) para que el
+                        // audio salga por el parlante y el micrófono lo transmita.
+                        runCatching {
+                            setAudioRoute(android.telecom.CallAudioState.ROUTE_SPEAKER)
+                        }
                         CallMessagePlayer.play(this@DifusionInCallService, msgNumber) {
                             CallMonitor.endCall()
                         }
