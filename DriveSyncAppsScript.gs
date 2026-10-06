@@ -37,6 +37,11 @@ function doPost(e) {
       return json({ ok: false, error: 'Token inválido' });
     }
 
+    // Prueba de conexión desde la app.
+    if (data.action === 'ping') {
+      return json({ ok: true, message: 'Drive Sync activo' });
+    }
+
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = ss.getSheetByName(SHEET_NAME) || ss.getSheets()[0];
     var lastRow = sheet.getLastRow();

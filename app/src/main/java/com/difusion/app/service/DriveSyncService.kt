@@ -45,6 +45,36 @@ object DriveSyncService {
     private val lastSyncAt = AtomicLong(0L)
     private const val MIN_GAP_MS = 300L
 
+    /** Prueba la conexión con el Web App de Drive. Devuelve (ok, mensaje). */
+    fun ping(config: SyncConfig): Pair<Boolean, String> {
+        if (config.url.isBlank()) return false to "Falta la URL del Web App"
+        return try {
+            val json = JSONObject().apply {
+                put("action", "ping")
+                if (config.token.isNotBlank()) put("token", config.token)
+            }
+            val body = json.toString().toRequestBody(JSON.toMediaType())
+            val request = Request.Builder()
+                .url(config.url)
+                .post(body)
+                .addHeader("Content-Type", "application/json")
+                .build()
+            client.newCall(request).execute().use { resp ->
+                val str = resp.body?.string() ?: ""
+                if (!resp.isSuccessful) return false to "HTTP ${resp.code}"
+                val obj = runCatching { JSONObject(str) }.getOrNull()
+                    ?: return false to "Respuesta inválida"
+                if (obj.optBoolean("ok", false)) {
+                    true to obj.optString("message", "Conectado")
+                } else {
+                    false to obj.optString("error", "Error del servidor")
+                }
+            }
+        } catch (e: Exception) {
+            false to (e.message ?: "Error de conexión")
+        }
+    }
+
     /** Punto de entrada simple: revisa si está activado y sincroniza. Bloquea
      *  (llamar desde un hilo/dispatcher de IO). */
     fun syncNow(context: Context, contact: Contact): Boolean {

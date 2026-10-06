@@ -91,6 +91,7 @@ fun SettingsScreen(
     onDriveSyncTokenChange: (String) -> Unit,
     driveSyncEnabled: Boolean,
     onDriveSyncEnabledChange: (Boolean) -> Unit,
+    onTestDriveSync: () -> Unit,
     // Envío masivo de correo (Apps Script).
     emailSyncUrl: String,
     onEmailSyncUrlChange: (String) -> Unit,
@@ -478,6 +479,20 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.width(6.dp))
                 Text("Activar sincronización automática a Drive")
             }
+            Spacer(modifier = Modifier.height(8.dp))
+            PrimaryActionButton(
+                text = "Probar conexión",
+                onClick = onTestDriveSync,
+                modifier = Modifier.fillMaxWidth(),
+                icon = Icons.Default.Cloud
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                "Con solo pegar la URL ya queda activa. Cada tipificación, status, " +
+                    "cambio de medio y fecha de gestión se escriben solos en la hoja.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))

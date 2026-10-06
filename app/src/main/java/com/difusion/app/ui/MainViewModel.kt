@@ -277,6 +277,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         com.difusion.app.storage.DriveSyncPrefs.setEnabled(getApplication(), enabled)
     }
 
+    /** Prueba la escritura a la hoja (Web App de Apps Script). */
+    fun testDriveConnection() {
+        viewModelScope.launch {
+            val cfg = com.difusion.app.service.DriveSyncService.config(getApplication())
+            val (ok, msg) = withContext(Dispatchers.IO) {
+                com.difusion.app.service.DriveSyncService.ping(cfg)
+            }
+            Toast.makeText(
+                getApplication(),
+                if (ok) "Drive conectado: $msg" else "Drive: $msg",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
     // --- Correo masivo ---
     private val _emailSyncUrl = MutableStateFlow(com.difusion.app.storage.EmailSyncPrefs.getUrl(getApplication()))
     val emailSyncUrl: StateFlow<String> = _emailSyncUrl.asStateFlow()

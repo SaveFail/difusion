@@ -1,5 +1,19 @@
 # Registro de cambios
 
+## [4.5] — 2026-10-05
+
+### Agregado / Mejorado
+- **Escritura de gestiones a Drive más simple:** basta con **pegar la URL** del
+  Web App (`DriveSyncAppsScript.gs`) y queda **activada sola**; nuevo botón
+  **"Probar conexión"**. Cada **tipificación (SEGUIMIENTO)**, **STATUS**,
+  **MEDIO DE CONTACTO** y **FECHA DE GESTION** se escriben automáticamente en la
+  hoja al gestionar, llamar o enviar SMS.
+- Sincronización de importación de Drive en **1 toque** (enlace + última hoja,
+  opción sin revisión).
+
+### Cambiado
+- La versión sube a **4.5 (`versionCode 28`)**.
+
 ## [4.4] — 2026-10-05
 
 ### Agregado

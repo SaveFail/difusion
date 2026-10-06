@@ -26,7 +26,11 @@ object DriveSyncPrefs {
     }
 
     fun setEnabled(context: Context, enabled: Boolean) = prefs(context).edit().putBoolean(KEY_ENABLED, enabled).apply()
-    fun isEnabled(context: Context): Boolean =
-        prefs(context).getBoolean(KEY_ENABLED, false) ||
-            com.difusion.app.BuildConfig.DRIVE_BRIDGE_URL.isNotBlank()
+    fun isEnabled(context: Context): Boolean {
+        val p = prefs(context)
+        if (p.getBoolean(KEY_ENABLED, false)) return true
+        // Basta con que haya una URL (pegada o incrustada) para sincronizar.
+        val url = p.getString(KEY_URL, "") ?: ""
+        return url.isNotBlank() || com.difusion.app.BuildConfig.DRIVE_BRIDGE_URL.isNotBlank()
+    }
 }

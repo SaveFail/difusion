@@ -1185,6 +1185,7 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                         onDriveSyncTokenChange = { viewModel.setDriveSyncToken(it) },
                         driveSyncEnabled = viewModel.driveSyncEnabled.collectAsStateWithLifecycle().value,
                         onDriveSyncEnabledChange = { viewModel.setDriveSyncEnabled(it) },
+                        onTestDriveSync = { viewModel.testDriveConnection() },
                         emailSyncUrl = viewModel.emailSyncUrl.collectAsStateWithLifecycle().value,
                         onEmailSyncUrlChange = { viewModel.setEmailSyncUrl(it) },
                         emailSyncToken = viewModel.emailSyncToken.collectAsStateWithLifecycle().value,
