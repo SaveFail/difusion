@@ -2,30 +2,50 @@ package com.difusion.app.service
 
 import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioManager
 import android.media.MediaPlayer
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
-// Reproduce el mensaje pregrabado cuando una llamada se conecta. Usa
-// USAGE_VOICE_COMMUNICATION para salir SIEMPRE por la ruta real de la llamada
-// (auricular, audífonos con cable/USB, Bluetooth, o altavoz solo si el usuario
-// lo activó con el botón). Se reproduce una sola vez y se detiene al terminar.
+/**
+ * Reproduce el mensaje de voz seleccionado durante una llamada:
+ *  - Se dispara al CONTESTAR (estado activo).
+ *  - Al TERMINAR el audio, avisa con [onFinished] para COLGAR la llamada.
+ *
+ * Detalles:
+ *  - Se reproduce una sola vez por llamada (se identifica la llamada por el
+ *    teléfono normalizado), así da igual si lo dispara el teléfono (Telecom) o
+ *    la secuencia de llamadas: no se duplica.
+ *  - Fuerza el altavoz para que el mensaje salga hacia la llamada; se puede
+ *    oír al interlocutor (en muchos equipos el micrófono capta el altavoz).
+ *  - Usa USAGE_VOICE_COMMUNICATION para enrutar por el audio de la llamada.
+ */
 object CallMessagePlayer {
-
     private var player: MediaPlayer? = null
+    private var currentKey: String? = null
+    private var audioManager: AudioManager? = null
+    private var forcedSpeaker = false
 
-    @Volatile
-    private var generation = 0L
+    private val _playing = MutableStateFlow(false)
+    val playing: StateFlow<Boolean> = _playing.asStateFlow()
 
-    fun play(context: Context, onFinished: (() -> Unit)? = null) {
-        try {
-            if (!VoiceMessageStore.isEnabled(context)) return
-            val f = VoiceMessageStore.file(context)
-            if (!f.exists() || f.length() <= 0) return
-            stop()
-            android.util.Log.i(
-                "CallMessagePlayer",
-                "Reproduciendo mensaje por la ruta actual (USAGE_VOICE_COMMUNICATION)"
-            )
-            val gen = ++generation
+    private fun normalize(s: String): String = s.filter { it.isDigit() }.takeLast(10)
+
+    /**
+     * Devuelve true si empezó a reproducir. [onFinished] se llama al terminar
+     * el audio (o si falla la reproducción).
+     */
+    fun play(context: Context, key: String, onFinished: () -> Unit): Boolean {
+        if (!VoiceMessageStore.isEnabled(context)) return false
+        val file = VoiceMessageStore.selected(context) ?: return false
+        val k = normalize(key).ifBlank { "call_${System.currentTimeMillis()}" }
+        if (k == currentKey) return false
+        stopInternal()
+        currentKey = k
+        forceSpeaker(context)
+        android.util.Log.i("CallMessagePlayer", "Reproduciendo ${file.name} (llamada $k)")
+        return try {
             val mp = MediaPlayer().apply {
                 setAudioAttributes(
                     AudioAttributes.Builder()
@@ -33,37 +53,69 @@ object CallMessagePlayer {
                         .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                         .build()
                 )
-                setDataSource(f.absolutePath)
+                setDataSource(file.absolutePath)
                 setVolume(1.0f, 1.0f)
-                setOnPreparedListener { p ->
-                    if (generation != gen) {
-                        runCatching { p.release() }
-                    } else {
-                        runCatching { p.start() }
-                    }
+                setOnPreparedListener { runCatching { it.start() } }
+                setOnCompletionListener { m ->
+                    runCatching { m.release() }
+                    if (player === m) player = null
+                    _playing.value = false
+                    restoreSpeaker()
+                    android.util.Log.i("CallMessagePlayer", "Mensaje terminado -> colgar")
+                    onFinished()
                 }
-                setOnCompletionListener { mp ->
-                    if (generation == gen) {
-                        player = null
-                        runCatching { mp.release() }
-                        android.util.Log.i("CallMessagePlayer", "Mensaje terminado")
-                        onFinished?.invoke()
-                    }
+                setOnErrorListener { m, _, _ ->
+                    runCatching { m.release() }
+                    if (player === m) player = null
+                    _playing.value = false
+                    restoreSpeaker()
+                    onFinished()
+                    true
                 }
             }
             player = mp
-            // prepare() bloqueaba el hilo principal justo al conectar la llamada.
+            _playing.value = true
             mp.prepareAsync()
-        } catch (_: Exception) {
-            stop()
+            true
+        } catch (e: Exception) {
+            android.util.Log.e("CallMessagePlayer", "Error: ${e.message}")
+            _playing.value = false
+            restoreSpeaker()
+            false
         }
     }
 
+    /** Detiene y olvida la llamada actual (para que la siguiente vuelva a sonar). */
     fun stop() {
+        stopInternal()
+        currentKey = null
+    }
+
+    private fun stopInternal() {
         val p = player
         player = null
-        generation++
+        _playing.value = false
         runCatching { p?.stop() }
         runCatching { p?.release() }
+        restoreSpeaker()
+    }
+
+    private fun forceSpeaker(context: Context) {
+        val am = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return
+        audioManager = am
+        runCatching {
+            if (!am.isSpeakerphoneOn) {
+                am.isSpeakerphoneOn = true
+                forcedSpeaker = true
+            }
+        }
+    }
+
+    private fun restoreSpeaker() {
+        val am = audioManager ?: return
+        if (forcedSpeaker) {
+            runCatching { am.isSpeakerphoneOn = false }
+            forcedSpeaker = false
+        }
     }
 }

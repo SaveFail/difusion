@@ -66,21 +66,16 @@ class DifusionInCallService : InCallService() {
                 }
                 if (state == Call.STATE_ACTIVE) {
                     applyBluetoothRoute()
-                    // Mensaje pregrabado automático. NO forzamos la ruta ni el
-                    // altavoz: el mensaje sale por donde esté la llamada
-                    // (auricular, audífonos con cable/USB, Bluetooth) y el
-                    // altavoz SOLO se activa si el usuario pulsa su botón.
-                    // Al terminar el audio, se corta la llamada.
+                    // Mensaje pregrabado automático: al CONTESTAR se reproduce y al
+                    // TERMINAR el audio se cuelga la llamada.
+                    val msgNumber = runCatching { call.details?.handle?.schemeSpecificPart }
+                        .getOrNull()?.takeIf { it.isNotBlank() }
+                        ?: CallMonitor.info.value?.number
+                        ?: ""
                     if (VoiceMessageStore.isEnabled(this@DifusionInCallService) &&
-                        VoiceMessageStore.exists(this@DifusionInCallService)
+                        VoiceMessageStore.selected(this@DifusionInCallService) != null
                     ) {
-                        android.util.Log.i(
-                            "DIFUSION-Call",
-                            "Mensaje: ruta respetada (wired=${CallMonitor.hasWiredHeadset()}, " +
-                                "bt=${CallMonitor.bluetoothSupported()}, " +
-                                "altavoz=${CallMonitor.speaker.value})"
-                        )
-                        CallMessagePlayer.play(this@DifusionInCallService) {
+                        CallMessagePlayer.play(this@DifusionInCallService, msgNumber) {
                             CallMonitor.endCall()
                         }
                     }

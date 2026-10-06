@@ -427,8 +427,6 @@ class CallSequencer private constructor(private val context: Context) {
     private fun onConnected(token: Long) {
         if (token != callToken) return
         connectedAtMs = System.currentTimeMillis()
-        // El mensaje pregrabado y el silenciado del micrófono los maneja
-        // DifusionInCallService (cubre tanto la secuencia como llamadas sueltas).
         transitionJob?.cancel()
         transitionJob = null
         _callState.value = "En llamada"
@@ -437,6 +435,21 @@ class CallSequencer private constructor(private val context: Context) {
         } ?: run { _status.value = "En llamada" }
         syncNotification()
         armMaxCallTimer(token)
+        // Mensaje pregrabado: se reproduce al contestar y, al terminar el audio,
+        // se cuelga esta llamada y la secuencia continúa con el siguiente.
+        try {
+            if (VoiceMessageStore.isEnabled(context) && VoiceMessageStore.selected(context) != null) {
+                val contact = _currentContact.value
+                val phone = contact?.let { contractPhone(it) } ?: ""
+                CallMessagePlayer.play(context, phone) {
+                    forceEndCall()
+                    callActive = false
+                    callConnected = false
+                    onCallFinished(contact, true)
+                }
+            }
+        } catch (_: Exception) {
+        }
     }
 
     // Tope de duración de una llamada contestada: si se excede, cuelga y pasa al

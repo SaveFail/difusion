@@ -1,6 +1,7 @@
 package com.difusion.app.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -1387,7 +1388,6 @@ private fun AboutDialog(appVersion: String, repoVersion: String, onDismiss: () -
         }
     )
 }
-
 @Composable
 private fun CallVoiceMessageCard(
     voiceEnabled: Boolean,
@@ -1397,10 +1397,12 @@ private fun CallVoiceMessageCard(
 ) {
     val context = LocalContext.current
     val rec by VoiceMessageStore.recording.collectAsState()
-    val playing by VoiceMessageStore.playing.collectAsState()
-    val hasMsg by VoiceMessageStore.hasMessage.collectAsState()
+    val previewing by VoiceMessageStore.previewing.collectAsState()
+    val revision by VoiceMessageStore.revision.collectAsState()
+    val messages = remember(revision) { VoiceMessageStore.list(context) }
+    val selected = remember(revision) { VoiceMessageStore.selected(context) }
+    val hasMsg = messages.isNotEmpty()
 
-    LaunchedEffect(Unit) { VoiceMessageStore.init(context) }
     DisposableEffect(Unit) {
         onDispose { VoiceMessageStore.stop() }
     }
@@ -1409,10 +1411,10 @@ private fun CallVoiceMessageCard(
         ActivityResultContracts.GetContent()
     ) { uri ->
         if (uri != null) {
-            val ok = VoiceMessageStore.importAudio(context, uri)
+            val f = VoiceMessageStore.importAudio(context, uri)
             Toast.makeText(
                 context,
-                if (ok) "Mensaje de audio importado" else "No se pudo leer el archivo",
+                if (f != null) "Audio agregado a la lista" else "No se pudo leer el archivo",
                 Toast.LENGTH_SHORT
             ).show()
         }
@@ -1426,7 +1428,10 @@ private fun CallVoiceMessageCard(
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            "Graba o elige un audio que se reproducirá a los clientes automáticamente cuando respondan la llamada (una sola vez por llamada). Mientras el mensaje está activo, tu micrófono se silencia toda la llamada para que el cliente solo escuche el audio y nada del ambiente.",
+            "Graba o importa uno o varios audios. El SELECCIONADO se reproduce " +
+                "automáticamente cuando el cliente contesta la llamada y, al terminar " +
+                "el audio, la llamada se cuelga sola. Mientras suena, la app activa el " +
+                "altavoz para que el interlocutor lo escuche.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -1450,7 +1455,7 @@ private fun CallVoiceMessageCard(
                 )
                 if (!hasMsg) {
                     Text(
-                        "Graba o elige un audio primero",
+                        "Graba o importa un audio primero",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1470,12 +1475,12 @@ private fun CallVoiceMessageCard(
                 shape = RoundedCornerShape(14.dp)
             ) {
                 AppIcon(Icons.Default.Mic, contentDescription = null)
-                Spacer(Modifier.width(6.dp))
-                Text("Grabar mensaje")
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Grabar nuevo mensaje")
             }
         } else {
             Button(
-                onClick = { VoiceMessageStore.stopRecording() },
+                onClick = { VoiceMessageStore.stopRecording(context) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(
@@ -1483,60 +1488,97 @@ private fun CallVoiceMessageCard(
                 )
             ) {
                 AppIcon(Icons.Default.Stop, contentDescription = null)
-                Spacer(Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(6.dp))
                 Text("Detener grabación")
             }
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                "Habla ahora. El audio quedará listo al detener.",
+                "Habla ahora. El audio se guardará y quedará seleccionado.",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
         Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
+        OutlinedButton(
+            onClick = { audioPicker.launch("audio/*") },
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            shape = RoundedCornerShape(14.dp)
         ) {
-            OutlinedButton(
-                onClick = { audioPicker.launch("audio/*") },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(14.dp)
-            ) {
-                AppIcon(Icons.Default.AudioFile, contentDescription = null, size = 18.dp)
-                Spacer(Modifier.width(4.dp))
-                Text("Elegir audio")
-            }
-            OutlinedButton(
-                onClick = {
-                    if (playing) VoiceMessageStore.stopPreview()
-                    else VoiceMessageStore.playPreview(context)
-                },
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(14.dp),
-                enabled = hasMsg && !rec
-            ) {
-                AppIcon(
-                    if (playing) Icons.Default.Pause else Icons.Default.PlayArrow,
-                    contentDescription = null,
-                    size = 18.dp
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(if (playing) "Detener" else "Reproducir")
-            }
+            AppIcon(Icons.Default.AudioFile, contentDescription = null, size = 18.dp)
+            Spacer(modifier = Modifier.width(4.dp))
+            Text("Importar audio")
         }
 
-        if (hasMsg) {
+        Spacer(modifier = Modifier.height(12.dp))
+
+        if (messages.isEmpty()) {
+            Text(
+                "Aún no hay mensajes. Graba o importa uno.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            Text(
+                "Mensajes (toca para elegir el que se usará):",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             Spacer(modifier = Modifier.height(6.dp))
-            TextButton(
-                onClick = { VoiceMessageStore.delete(context) },
-                modifier = Modifier.align(Alignment.Start)
-            ) {
-                AppIcon(Icons.Default.Delete, contentDescription = null, size = 16.dp)
-                Spacer(Modifier.width(4.dp))
-                Text("Borrar mensaje")
+            messages.forEach { f ->
+                val isSel = selected?.absolutePath == f.absolutePath
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (isSel) MaterialTheme.colorScheme.primaryContainer
+                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { VoiceMessageStore.setSelected(context, f) }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = isSel,
+                            onClick = { VoiceMessageStore.setSelected(context, f) }
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                f.nameWithoutExtension,
+                                style = MaterialTheme.typography.bodyMedium,
+                                maxLines = 1
+                            )
+                            Text(
+                                "${f.length() / 1024} KB",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        IconButton(
+                            onClick = {
+                                if (previewing == f.name) VoiceMessageStore.stopPreview()
+                                else VoiceMessageStore.playPreview(context, f)
+                            }
+                        ) {
+                            Icon(
+                                if (previewing == f.name) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                contentDescription = "Reproducir"
+                            )
+                        }
+                        IconButton(onClick = {
+                            if (previewing == f.name) VoiceMessageStore.stopPreview()
+                            VoiceMessageStore.delete(context, f)
+                        }) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "Borrar",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
             }
         }
     }

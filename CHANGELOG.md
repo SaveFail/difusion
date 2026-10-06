@@ -1,5 +1,22 @@
 # Registro de cambios
 
+## [4.3] — 2026-10-05
+
+### Agregado / Reescrito
+- **Mensajes de voz pregrabados (reescritos por completo).** Ahora hay una
+  **biblioteca de audios**: puedes **grabar varios**, **importarlos** y elegir
+  con un toque cuál usar. El **seleccionado** cumple la lógica pedida:
+  **al contestar la llamada se reproduce el audio y, al terminar, la llamada
+  se cuelga automáticamente**.
+  - Funciona en la **secuencia de llamadas** (marcado masivo) y en la
+    **pantalla de llamada (Telecom)**, sin duplicarse.
+  - Durante el mensaje se **activa el altavoz** para que el interlocutor lo
+    escuche, y se limpia al terminar.
+  - La clave de llamada se reinicia al colgar, así cada llamada vuelve a sonar.
+
+### Cambiado
+- La versión sube a **4.3 (`versionCode 26`)**.
+
 ## [4.2] — 2026-10-05
 
 ### Agregado
