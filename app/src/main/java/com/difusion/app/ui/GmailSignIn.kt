@@ -149,6 +149,26 @@ fun GmailSignInSection(onSignedIn: () -> Unit = {}) {
                     }) { Text("Salir") }
                 }
             }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = {
+                    openWeb(context, "https://console.cloud.google.com/apis/credentials")
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Email, contentDescription = null)
+                Spacer(Modifier.width(6.dp))
+                Text("Abrir Google Cloud (crear Client ID)")
+            }
         }
+    }
+}
+
+private fun openWeb(context: Context, url: String) {
+    runCatching {
+        context.startActivity(
+            android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
     }
 }

@@ -1415,6 +1415,18 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = {
+                            openExternalUrl(context, "https://script.google.com/home/projects/create")
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        AppIcon(Icons.Default.OpenInNew, contentDescription = null, size = 18.dp)
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Abrir Apps Script (pegar EmailSyncAppsScript.gs)")
+                    }
                 }
                 Spacer(modifier = Modifier.height(24.dp))
             } // fin Correo

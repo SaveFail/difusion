@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -515,6 +516,7 @@ private fun BridgeConfigCard(
     onSave: () -> Unit,
     onTest: () -> Unit
 ) {
+    val context = LocalContext.current
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
@@ -558,6 +560,15 @@ private fun BridgeConfigCard(
                 OutlinedButton(onClick = onTest, enabled = url.isNotBlank(), modifier = Modifier.weight(1f)) {
                     Text("Probar")
                 }
+            }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = { openUrl(context, "https://script.google.com/home/projects/create") },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.OpenInNew, contentDescription = null)
+                Spacer(Modifier.width(6.dp))
+                Text("Abrir Apps Script (crear proyecto)")
             }
         }
     }
