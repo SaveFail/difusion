@@ -20,6 +20,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -450,6 +452,50 @@ fun SettingsScreen(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "Pasos (una sola vez):\n" +
+                    "1. Abre Apps Script y pega el archivo DriveSyncAppsScript.gs.\n" +
+                    "2. Implementar ▸ Aplicación web (Ejecutar como: Yo · Acceso: " +
+                    "Cualquier persona).\n" +
+                    "3. Copia la URL .../exec y pégala aquí abajo.\n" +
+                    "4. Toca \"Probar conexión\".",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = { openExternalUrl(context, "https://script.google.com/home/projects/create") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                AppIcon(Icons.Default.OpenInNew, contentDescription = null, size = 18.dp)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Paso 1: Abrir Apps Script (crear proyecto)")
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            OutlinedButton(
+                onClick = {
+                    if (driveUrl.isNotBlank()) openExternalUrl(context, driveUrl)
+                    else Toast.makeText(context, "Pega primero el enlace de tu hoja en \"Contactos a llamar desde Google Drive\".", Toast.LENGTH_LONG).show()
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                AppIcon(Icons.Default.OpenInNew, contentDescription = null, size = 18.dp)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Abrir mi hoja de cálculo")
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            OutlinedButton(
+                onClick = { openExternalUrl(context, "https://docs.google.com/spreadsheets") },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                AppIcon(Icons.Default.OpenInNew, contentDescription = null, size = 18.dp)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Abrir Google Sheets")
+            }
             Spacer(modifier = Modifier.height(10.dp))
             OutlinedTextField(
                 value = driveSyncUrl,
@@ -1637,5 +1683,13 @@ private fun CallVoiceMessageCard(
                 Spacer(modifier = Modifier.height(4.dp))
             }
         }
+    }
+}
+
+private fun openExternalUrl(context: android.content.Context, url: String) {
+    runCatching {
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
     }
 }
