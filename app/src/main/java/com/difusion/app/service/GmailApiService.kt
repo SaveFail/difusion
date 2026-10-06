@@ -62,34 +62,74 @@ object GmailApiService {
         val list = getJson(token, url)
             ?: return EmailSyncService.InboxResult(false, error = "No se pudo leer la carpeta")
         val arr = list.optJSONArray("threads") ?: JSONArray()
+        val ids = (0 until arr.length()).map { arr.getJSONObject(it).optString("id") }
+        val snippets = (0 until arr.length()).map { arr.getJSONObject(it).optString("snippet") }
+        // En vez de 1 petición por hilo, se piden TODOS los encabezados en UNA
+        // sola petición por lotes (batch).
+        val metas = batchGetThreads(token, ids)
         val out = ArrayList<EmailSyncService.MailSummary>()
-        for (i in 0 until arr.length()) {
-            val id = arr.getJSONObject(i).optString("id")
-            val snippet = arr.getJSONObject(i).optString("snippet")
-            val t = getJson(
-                token,
-                "$BASE/threads/$id?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date"
-            ) ?: continue
-            val msgs = t.optJSONArray("messages") ?: continue
-            if (msgs.length() == 0) continue
-            val first = msgs.getJSONObject(0)
+        for (i in ids.indices) {
+            val first = metas.getOrNull(i)?.optJSONArray("messages")?.optJSONObject(0)
+            if (first == null) {
+                out.add(
+                    EmailSyncService.MailSummary(
+                        threadId = ids[i], from = "", subject = "",
+                        snippet = snippets.getOrElse(i) { "" }, date = "", unread = false, messageCount = 1
+                    )
+                )
+                continue
+            }
             val headers = first.optJSONObject("payload")?.optJSONArray("headers")
-            val from = header(headers, "From")
-            val subject = header(headers, "Subject")
             val unread = (first.optJSONArray("labelIds")?.toString() ?: "").contains("UNREAD")
             out.add(
                 EmailSyncService.MailSummary(
-                    threadId = id,
-                    from = from,
-                    subject = subject,
-                    snippet = snippet,
+                    threadId = ids[i],
+                    from = header(headers, "From"),
+                    subject = header(headers, "Subject"),
+                    snippet = snippets.getOrElse(i) { "" },
                     date = header(headers, "Date"),
                     unread = unread,
-                    messageCount = msgs.length()
+                    messageCount = metas.getOrNull(i)?.optJSONArray("messages")?.length() ?: 1
                 )
             )
         }
         return EmailSyncService.InboxResult(true, out)
+    }
+
+    /** Trae los metadatos de varios hilos en UNA sola petición (batch). */
+    private fun batchGetThreads(token: String, ids: List<String>): List<JSONObject?> {
+        if (ids.isEmpty()) return emptyList()
+        val boundary = "difusion_batch"
+        val sb = StringBuilder()
+        ids.forEachIndexed { i, id ->
+            sb.append("--").append(boundary).append("\r\n")
+            sb.append("Content-Type: application/http\r\n")
+            sb.append("Content-ID: <item").append(i).append(">\r\n\r\n")
+            sb.append("GET /gmail/v1/users/me/threads/").append(id)
+                .append("?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date\r\n\r\n")
+        }
+        sb.append("--").append(boundary).append("--\r\n")
+        val respText = try {
+            val body = sb.toString().toRequestBody("multipart/mixed; boundary=$boundary".toMediaType())
+            val req = Request.Builder()
+                .url("https://gmail.googleapis.com/batch/gmail/v1")
+                .addHeader("Authorization", "Bearer $token")
+                .post(body)
+                .build()
+            http.newCall(req).execute().use { it.body?.string() ?: "" }
+        } catch (_: Exception) {
+            return ids.map { null }
+        }
+        val result = arrayOfNulls<JSONObject>(ids.size)
+        for (part in respText.split("--$boundary")) {
+            val idx = Regex("item(\\d+)").find(part)?.groupValues?.getOrNull(1)?.toIntOrNull() ?: continue
+            val start = part.indexOf('{')
+            val end = part.lastIndexOf('}')
+            if (start in 0 until end) {
+                result[idx] = runCatching { JSONObject(part.substring(start, end + 1)) }.getOrNull()
+            }
+        }
+        return result.toList()
     }
 
     private fun header(headers: JSONArray?, name: String): String {

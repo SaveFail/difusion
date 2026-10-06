@@ -96,6 +96,9 @@ private fun CorreoBandejaScreen() {
 
     var loading by remember { mutableStateOf(false) }
     var errorMsg by remember { mutableStateOf("") }
+    var loadedMax by remember { mutableStateOf(15) }
+    // Caché en memoria por carpeta: muestra al instante y refresca por detrás.
+    val cache = remember { mutableStateMapOf<String, List<EmailSyncService.MailSummary>>() }
     var inbox by remember { mutableStateOf<List<EmailSyncService.MailSummary>>(emptyList()) }
     var unread by remember { mutableStateOf(0) }
     var openThread by remember { mutableStateOf<EmailSyncService.MailThread?>(null) }
@@ -109,10 +112,14 @@ private fun CorreoBandejaScreen() {
 
     fun loadInbox() {
         if (!canUseMailbox()) return
+        val currentFolder = folder
+        val limit = loadedMax
+        // Muestra lo cacheado al instante (si lo hay) y refresca por detrás.
+        cache[currentFolder]?.let { if (it.isNotEmpty()) inbox = it }
         loading = true
         val nt = nativeToken()
         val useSmtp = nt == null && smtpConfigured
-        val label = when (folder) {
+        val label = when (currentFolder) {
             "sent" -> "SENT"
             "spam" -> "SPAM"
             "trash" -> "TRASH"
@@ -122,19 +129,20 @@ private fun CorreoBandejaScreen() {
         scope.launch {
             val res = withContext(Dispatchers.IO) {
                 when {
-                    nt != null -> GmailApiService.listFolder(nt, label, 15)
-                    useSmtp -> MailClient.listFolder(context, folder, 15)
-                    else -> EmailSyncService.listInbox(context, bridge, 25)
+                    nt != null -> GmailApiService.listFolder(nt, label, limit)
+                    useSmtp -> MailClient.listFolder(context, currentFolder, limit)
+                    else -> EmailSyncService.listInbox(context, bridge, limit)
                 }
             }
+            if (currentFolder != folder) return@launch // cambió de carpeta mientras cargaba
             loading = false
             if (res.success) {
                 inbox = res.messages
                 unread = res.unread
                 errorMsg = ""
+                cache[currentFolder] = res.messages
             } else {
                 errorMsg = res.error
-                Toast.makeText(context, res.error, Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -199,6 +207,7 @@ private fun CorreoBandejaScreen() {
                         selected = folder == key,
                         onClick = {
                             folder = key
+                            loadedMax = 15
                             loadInbox()
                         },
                         text = { Text(label) }
@@ -425,6 +434,11 @@ private fun CorreoBandejaScreen() {
             }
         }
 
+        // Indicador pequeño de carga: refresca sin tapar la lista.
+        if (loading && inbox.isNotEmpty()) {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        }
+
         if (loading && inbox.isEmpty()) {
             Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
@@ -462,14 +476,27 @@ private fun CorreoBandejaScreen() {
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            Text(
-                                m.snippet,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
+                            if (m.snippet.isNotBlank()) {
+                                Text(
+                                    m.snippet,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
                         }
+                    }
+                }
+                if (inbox.size >= loadedMax) {
+                    item {
+                        TextButton(
+                            onClick = {
+                                loadedMax += 15
+                                loadInbox()
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) { Text("Cargar más") }
                     }
                 }
             }

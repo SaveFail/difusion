@@ -6,6 +6,7 @@ import com.difusion.app.storage.SmtpPrefs
 import java.util.Date
 import java.util.Properties
 import javax.mail.Authenticator
+import javax.mail.FetchProfile
 import javax.mail.Flags
 import javax.mail.Folder
 import javax.mail.Message
@@ -222,26 +223,35 @@ object MailClient {
             }
             folder.open(Folder.READ_ONLY)
             val count = folder.messageCount
-            val uidFolder = folder as? UIDFolder
             val out = ArrayList<EmailSyncService.MailSummary>()
-            var taken = 0
-            var i = count
-            while (i >= 1 && taken < max) {
-                val m = folder.getMessage(i)
-                val uid = uidFolder?.getUID(m) ?: i.toLong()
-                out.add(
-                    EmailSyncService.MailSummary(
-                        threadId = uid.toString(),
-                        from = firstAddress(m.from),
-                        subject = m.subject ?: "",
-                        snippet = textFrom(m).replace(Regex("\\s+"), " ").take(140),
-                        date = (m.receivedDate ?: m.sentDate)?.toString() ?: "",
-                        unread = !m.isSet(Flags.Flag.SEEN),
-                        messageCount = 1
+            if (count > 0) {
+                val start = maxOf(1, count - max + 1)
+                val msgs = folder.getMessages(start, count)
+                // Trae SOLO lo necesario (sobre, banderas y tamaño). NO descarga
+                // los cuerpos: por eso la bandeja carga rápido.
+                val fp = FetchProfile().apply {
+                    add(FetchProfile.Item.ENVELOPE)
+                    add(FetchProfile.Item.FLAGS)
+                    add(FetchProfile.Item.CONTENT_INFO)
+                }
+                runCatching { folder.fetch(msgs, fp) }
+                val uidFolder = folder as? UIDFolder
+                for (idx in msgs.indices.reversed()) {
+                    val m = msgs[idx]
+                    val uid = runCatching { uidFolder?.getUID(m) }.getOrNull() ?: (start + idx).toLong()
+                    out.add(
+                        EmailSyncService.MailSummary(
+                            threadId = uid.toString(),
+                            from = runCatching { firstAddress(m.from) }.getOrDefault(""),
+                            subject = runCatching { m.subject ?: "" }.getOrDefault(""),
+                            snippet = "",
+                            date = runCatching { (m.receivedDate ?: m.sentDate)?.toString() ?: "" }
+                                .getOrDefault(""),
+                            unread = runCatching { !m.isSet(Flags.Flag.SEEN) }.getOrDefault(false),
+                            messageCount = 1
+                        )
                     )
-                )
-                taken++
-                i--
+                }
             }
             folder.close(false)
             store.close()

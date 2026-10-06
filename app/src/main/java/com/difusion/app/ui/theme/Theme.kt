@@ -31,9 +31,9 @@ import java.io.FileOutputStream
 
 @Immutable
 data class ThemeConfig(
-    val accent: Long = 0xFF0000FF,
-    val text: Long = 0xFF050A2E,
-    val background: Long = 0xFFF3FCFB,
+    val accent: Long = 0xFF2340C9,
+    val text: Long = 0xFF0F172A,
+    val background: Long = 0xFFF7F9FC,
     val font: String = "difusion",
     val textScale: Float = 1f,
     val iconScale: Float = 1f,
@@ -92,7 +92,7 @@ object ThemePrefs {
     private const val KEY_SHOW_TIME = "theme_show_time"
     private const val KEY_SHOW_SMS_COUNTER = "theme_show_sms_counter"
     private const val KEY_VERSION = "theme_version"
-    private const val VERSION = 2
+    private const val VERSION = 3
 
     fun read(context: Context): ThemeConfig {
         val prefs = prefs(context)
@@ -276,7 +276,7 @@ data class ThemePreset(
 )
 
 val THEME_PRESETS: List<ThemePreset> = listOf(
-    ThemePreset("difusion", "Difusión", 0xFF0000FF, 0xFF050A2E, 0xFFF3FCFB),
+    ThemePreset("difusion", "Difusión", 0xFF2340C9, 0xFF0F172A, 0xFFF7F9FC),
     ThemePreset("violeta", "Violeta", 0xFF7C3AED, 0xFF1B1023, 0xFFF7F4FF),
     ThemePreset("oceano", "Océano", 0xFF0E7C86, 0xFF06262B, 0xFFEAF7F6),
     ThemePreset("cielo", "Cielo", 0xFF2F6FED, 0xFF0B1E4B, 0xFFEEF4FF, cornerStyle = "pill"),
@@ -339,9 +339,9 @@ fun configFromJson(json: String): ThemeConfig? {
     return try {
         val o = JSONObject(json)
         ThemeConfig(
-            accent = o.optLong("accent", 0xFF0000FF),
-            text = o.optLong("text", 0xFF050A2E),
-            background = o.optLong("background", 0xFFF3FCFB),
+            accent = o.optLong("accent", 0xFF2340C9),
+            text = o.optLong("text", 0xFF0F172A),
+            background = o.optLong("background", 0xFFF7F9FC),
             font = o.optString("font", "difusion"),
             textScale = o.optDouble("textScale", 1.0).toFloat(),
             iconScale = o.optDouble("iconScale", 1.0).toFloat(),

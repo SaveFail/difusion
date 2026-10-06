@@ -18,7 +18,10 @@ import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.UploadFile
@@ -92,6 +95,9 @@ fun ContactsScreen(
     var tipifFilter by remember { mutableStateOf(FILTER_ALL) }
     var estadoFilter by remember { mutableStateOf(FILTER_ALL) }
     var medioFilter by remember { mutableStateOf(FILTER_ALL) }
+    // Filtros colapsables: por defecto ocultos para que la lista de contactos
+    // tenga casi toda la pantalla.
+    var showFilters by remember { mutableStateOf(false) }
 
     // Si la categoría activa desaparece (p. ej. tras re-sincronizar) volvemos a Todos.
     LaunchedEffect(tipificaciones) {
@@ -249,110 +255,136 @@ fun ContactsScreen(
                     )
                 }
             } else {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     PrimaryActionButton(
                         text = "Importar",
                         onClick = onImport,
-                        modifier = Modifier.weight(1f),
                         icon = Icons.Default.UploadFile,
                         compact = true
                     )
                     PrimaryActionButton(
                         text = "Nuevo",
                         onClick = onAddManual,
-                        modifier = Modifier.weight(1f),
                         icon = Icons.Default.PersonAdd,
                         compact = true
                     )
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                SecondaryActionButton(
-                    text = "Descargar plantilla Excel",
-                    onClick = onExportTemplate,
-                    modifier = Modifier.fillMaxWidth(),
-                    icon = Icons.Default.Download,
-                    compact = true
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                SecondaryActionButton(
-                    text = "Gestionar usuarios",
-                    onClick = onManageUsers,
-                    modifier = Modifier.fillMaxWidth(),
-                    icon = Icons.Default.Group,
-                    compact = true
-                )
-                if (hasAssignment) {
-                    Spacer(modifier = Modifier.height(6.dp))
                     SecondaryActionButton(
-                        text = "Exportar por asignación",
-                        onClick = onExportByAssignment,
-                        modifier = Modifier.fillMaxWidth(),
+                        text = "Plantilla",
+                        onClick = onExportTemplate,
+                        icon = Icons.Default.Download,
+                        compact = true
+                    )
+                    SecondaryActionButton(
+                        text = "Usuarios",
+                        onClick = onManageUsers,
                         icon = Icons.Default.Group,
                         compact = true
                     )
+                    if (hasAssignment) {
+                        SecondaryActionButton(
+                            text = "Por asignación",
+                            onClick = onExportByAssignment,
+                            icon = Icons.Default.Group,
+                            compact = true
+                        )
+                    }
                 }
             }
         }
 
-        // Los filtros se ocultan mientras hay contactos seleccionados: dejan
-        // espacio visual y evitan cambiar de categoría con la selección activa.
+        // Los filtros se ocultan mientras hay contactos seleccionados. Además
+        // son COLAPSABLES (por defecto cerrados) para que la lista de contactos
+        // tenga casi toda la pantalla.
         if (contacts.isNotEmpty() && selected.isEmpty()) {
-            CategoryFilterRow(
-                label = "Tipificación",
-                categories = tipificaciones,
-                hasBlank = hasBlankTipif,
-                blankLabel = LABEL_SIN_TIPIF,
-                selected = tipifFilter,
-                countFor = { value ->
-                    when (value) {
-                        FILTER_ALL -> contacts.size
-                        FILTER_UNMANAGED -> tipifCounts[""] ?: 0
-                        else -> tipifCounts[value] ?: 0
-                    }
-                },
-                onSelect = { selectTipif(it) }
-            )
-            CategoryFilterRow(
-                label = "Estado",
-                categories = estados,
-                hasBlank = hasBlankEstado,
-                blankLabel = LABEL_SIN_ESTADO,
-                selected = estadoFilter,
-                countFor = { value ->
-                    when (value) {
-                        FILTER_ALL -> contacts.size
-                        FILTER_UNMANAGED -> estadoCounts[""] ?: 0
-                        else -> estadoCounts[value] ?: 0
-                    }
-                },
-                onSelect = { selectEstado(it) }
-            )
-            CategoryFilterRow(
-                label = "Medio de contacto",
-                categories = medios,
-                hasBlank = hasBlankMedio,
-                blankLabel = LABEL_SIN_MEDIO,
-                selected = medioFilter,
-                countFor = { value ->
-                    when (value) {
-                        FILTER_ALL -> contacts.size
-                        FILTER_UNMANAGED -> medioCounts[""] ?: 0
-                        else -> medioCounts[value] ?: 0
-                    }
-                },
-                onSelect = { selectMedio(it) }
-            )
-            if (anyFilterActive) {
-                Spacer(modifier = Modifier.height(6.dp))
-                SecondaryActionButton(
-                    text = "Exportar filtrados (${visibleContacts.size})",
-                    onClick = { onExportVisible(visibleContacts) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    icon = Icons.Default.Download,
-                    compact = true
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = { showFilters = !showFilters }) {
+                    AppIcon(
+                        if (showFilters) Icons.Default.ExpandLess else Icons.Default.Tune,
+                        contentDescription = null,
+                        size = 18.dp
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        if (showFilters) "Ocultar filtros"
+                        else "Filtros" + (if (anyFilterActive) " · activos" else "")
+                    )
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                if (anyFilterActive) {
+                    TextButton(onClick = {
+                        tipifFilter = FILTER_ALL
+                        estadoFilter = FILTER_ALL
+                        medioFilter = FILTER_ALL
+                    }) { Text("Limpiar") }
+                }
+            }
+            if (showFilters) {
+                CategoryFilterRow(
+                    label = "Tipificación",
+                    categories = tipificaciones,
+                    hasBlank = hasBlankTipif,
+                    blankLabel = LABEL_SIN_TIPIF,
+                    selected = tipifFilter,
+                    countFor = { value ->
+                        when (value) {
+                            FILTER_ALL -> contacts.size
+                            FILTER_UNMANAGED -> tipifCounts[""] ?: 0
+                            else -> tipifCounts[value] ?: 0
+                        }
+                    },
+                    onSelect = { selectTipif(it) }
                 )
+                CategoryFilterRow(
+                    label = "Estado",
+                    categories = estados,
+                    hasBlank = hasBlankEstado,
+                    blankLabel = LABEL_SIN_ESTADO,
+                    selected = estadoFilter,
+                    countFor = { value ->
+                        when (value) {
+                            FILTER_ALL -> contacts.size
+                            FILTER_UNMANAGED -> estadoCounts[""] ?: 0
+                            else -> estadoCounts[value] ?: 0
+                        }
+                    },
+                    onSelect = { selectEstado(it) }
+                )
+                CategoryFilterRow(
+                    label = "Medio de contacto",
+                    categories = medios,
+                    hasBlank = hasBlankMedio,
+                    blankLabel = LABEL_SIN_MEDIO,
+                    selected = medioFilter,
+                    countFor = { value ->
+                        when (value) {
+                            FILTER_ALL -> contacts.size
+                            FILTER_UNMANAGED -> medioCounts[""] ?: 0
+                            else -> medioCounts[value] ?: 0
+                        }
+                    },
+                    onSelect = { selectMedio(it) }
+                )
+                if (anyFilterActive) {
+                    SecondaryActionButton(
+                        text = "Exportar filtrados (${visibleContacts.size})",
+                        onClick = { onExportVisible(visibleContacts) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        icon = Icons.Default.Download,
+                        compact = true
+                    )
+                }
             }
         }
 
@@ -363,17 +395,24 @@ fun ContactsScreen(
                 icon = Icons.Default.Contacts,
                 title = "No hay contactos",
                 description = "Importa un archivo Excel o agrega un contacto manualmente para empezar a enviar SMS.",
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
             )
         } else if (visibleContacts.isEmpty()) {
             EmptyState(
                 icon = Icons.Default.Contacts,
                 title = "Sin contactos con estos filtros",
                 description = "Cambia las categorías en los filtros de arriba o sincroniza de nuevo desde Drive.",
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
             )
         } else {
             LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {

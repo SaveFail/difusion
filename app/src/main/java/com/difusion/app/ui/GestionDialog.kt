@@ -1,5 +1,6 @@
 package com.difusion.app.ui
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -126,21 +127,39 @@ fun GestionDialog(
                     singleLine = true
                 )
                 Spacer(modifier = Modifier.height(6.dp))
+                // Atajos rápidos de fecha.
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    OutlinedButton(
-                        onClick = {
-                            fechaGestion = dateFmt.format(Date())
-                        },
-                        modifier = Modifier.weight(1f)
-                    ) { Text("Fecha actual") }
-                    OutlinedButton(
-                        onClick = { showDate = true },
-                        modifier = Modifier.weight(1f)
-                    ) { Text("Fecha futura") }
+                    AssistChip(
+                        onClick = { fechaGestion = dateFmt.format(Date()) },
+                        label = { Text("Ahora") }
+                    )
+                    AssistChip(
+                        onClick = { fechaGestion = stampPlusDays(1) },
+                        label = { Text("Mañana") }
+                    )
+                    AssistChip(
+                        onClick = { fechaGestion = stampPlusDays(3) },
+                        label = { Text("3 días") }
+                    )
+                    AssistChip(
+                        onClick = { fechaGestion = stampPlusDays(7) },
+                        label = { Text("1 semana") }
+                    )
+                    AssistChip(
+                        onClick = { fechaGestion = stampDiaPago() },
+                        label = { Text("Día de pago") }
+                    )
                 }
+                Spacer(modifier = Modifier.height(6.dp))
+                OutlinedButton(
+                    onClick = { showDate = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Elegir fecha y hora…") }
 
                 Spacer(modifier = Modifier.height(18.dp))
                 Row(
@@ -243,4 +262,24 @@ private fun GestiónDropdown(
             }
         }
     }
+}
+
+private fun stampPlusDays(days: Int): String {
+    val cal = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, days) }
+    return SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(cal.timeInMillis))
+}
+
+// "Dia de pago": si hoy es <= 15 -> dia 15; si es >= 16 -> ultimo dia del mes.
+private fun stampDiaPago(): String {
+    val cal = Calendar.getInstance()
+    if (cal.get(Calendar.DAY_OF_MONTH) <= 15) {
+        cal.set(Calendar.DAY_OF_MONTH, 15)
+    } else {
+        cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH))
+    }
+    cal.set(Calendar.HOUR_OF_DAY, 9)
+    cal.set(Calendar.MINUTE, 0)
+    cal.set(Calendar.SECOND, 0)
+    cal.set(Calendar.MILLISECOND, 0)
+    return SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(cal.timeInMillis))
 }

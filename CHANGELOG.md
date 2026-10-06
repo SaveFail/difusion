@@ -1,5 +1,26 @@
 # Registro de cambios
 
+## [4.7] — 2026-10-06
+
+### Mejorado
+- **Contactos: se ven todos.** Los filtros ahora son **colapsables** (por
+  defecto ocultos) y la lista de contactos ocupa el resto de la pantalla; las
+  acciones se compactaron en una sola fila.
+- **Bandeja de correo mucho más rápida.**
+  - IMAP: se piden solo **sobre/banderas** con `FetchProfile` (ya **no descarga
+    los cuerpos** al listar).
+  - Gmail API: los encabezados se piden en **una sola petición por lotes**.
+  - **Caché** por carpeta (muestra al instante y refresca por detrás),
+    indicador de carga pequeño (sin bloquear) y botón **"Cargar más"**.
+- **Atajos de fecha en la gestión:** *Ahora · Mañana · 3 días · 1 semana ·
+  Día de pago* (si el día es ≤15 → día 15; si es ≥16 → último del mes) y
+  *Elegir fecha y hora…*.
+- **Visual más limpio y vivo:** paleta base refinada (azul más sereno, fondo
+  claro sin tinte), tarjetas con **sombra suave** y espaciados consistentes.
+
+### Cambiado
+- La versión sube a **4.7 (`versionCode 30`)**.
+
 ## [4.6] — 2026-10-06
 
 ### Agregado
