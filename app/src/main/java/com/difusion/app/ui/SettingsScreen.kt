@@ -1402,6 +1402,8 @@ private fun CallVoiceMessageCard(
     val messages = remember(revision) { VoiceMessageStore.list(context) }
     val selected = remember(revision) { VoiceMessageStore.selected(context) }
     val hasMsg = messages.isNotEmpty()
+    // Estado local para que el interruptor responda al instante.
+    var enabled by remember { mutableStateOf(voiceEnabled) }
 
     DisposableEffect(Unit) {
         onDispose { VoiceMessageStore.stop() }
@@ -1442,9 +1444,12 @@ private fun CallVoiceMessageCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Switch(
-                checked = voiceEnabled,
-                onCheckedChange = onVoiceEnabledChange,
-                enabled = hasMsg
+                checked = enabled,
+                onCheckedChange = {
+                    enabled = it
+                    onVoiceEnabledChange(it)
+                    VoiceMessageStore.setEnabled(context, it)
+                }
             )
             Spacer(modifier = Modifier.width(10.dp))
             Column {
@@ -1453,13 +1458,13 @@ private fun CallVoiceMessageCard(
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
                 )
-                if (!hasMsg) {
-                    Text(
-                        "Graba o importa un audio primero",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Text(
+                    if (hasMsg) "Activado: al contestar suena y luego cuelga."
+                    else "Aviso: aún no hay audio. Graba o importa uno abajo.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (hasMsg) MaterialTheme.colorScheme.onSurfaceVariant
+                    else MaterialTheme.colorScheme.error
+                )
             }
         }
 
@@ -1468,8 +1473,18 @@ private fun CallVoiceMessageCard(
         if (!rec) {
             Button(
                 onClick = {
-                    if (micGranted) VoiceMessageStore.startRecording(context)
-                    else onRequestMic()
+                    if (!micGranted) {
+                        onRequestMic()
+                    } else {
+                        VoiceMessageStore.startRecording(context)
+                        if (!VoiceMessageStore.recording.value) {
+                            Toast.makeText(
+                                context,
+                                "No se pudo iniciar la grabación. Revisa el permiso de micrófono.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp)
