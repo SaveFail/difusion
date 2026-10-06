@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,12 +28,16 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.difusion.app.data.Contact
+import com.difusion.app.data.MessageTemplate
 import com.difusion.app.service.EmailSyncService
 import com.difusion.app.service.GmailApiService
 import com.difusion.app.service.GmailAuth
 import com.difusion.app.service.MailClient
 import com.difusion.app.storage.EmailSyncPrefs
+import com.difusion.app.storage.RecipientsPrefs
 import com.difusion.app.storage.SmtpPrefs
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -44,7 +49,38 @@ import kotlinx.coroutines.withContext
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CorreoInboxScreen() {
+fun CorreoInboxScreen(
+    contacts: List<Contact> = emptyList(),
+    selectedIds: Set<Long> = emptySet(),
+    viewModel: MainViewModel? = null
+) {
+    var tab by rememberSaveable { mutableStateOf(0) }
+    Column(Modifier.fillMaxSize()) {
+        TabRow(selectedTabIndex = tab, containerColor = MaterialTheme.colorScheme.surface) {
+            Tab(
+                selected = tab == 0,
+                onClick = { tab = 0 },
+                text = { Text("Masivo") }
+            )
+            Tab(
+                selected = tab == 1,
+                onClick = { tab = 1 },
+                text = { Text("Bandeja") }
+            )
+        }
+        Box(Modifier.weight(1f)) {
+            if (tab == 0 && viewModel != null) {
+                CorreoMasivoTab(contacts = contacts, selectedIds = selectedIds, viewModel = viewModel)
+            } else {
+                CorreoBandejaScreen()
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CorreoBandejaScreen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -724,5 +760,215 @@ private fun smtpHint(msg: String): String {
             "No se pudo conectar.\n\nActiva IMAP en Gmail ▸ Configuración ▸ " +
                 "Reenvío y POP/IMAP.\n\nDetalle: $msg"
         else -> "No se pudo conectar: $msg"
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CorreoMasivoTab(
+    contacts: List<Contact>,
+    selectedIds: Set<Long>,
+    viewModel: MainViewModel
+) {
+    val context = LocalContext.current
+    val templates by viewModel.templates.collectAsStateWithLifecycle()
+    val emailProgress by viewModel.emailProgress.collectAsStateWithLifecycle()
+
+    var mode by rememberSaveable { mutableStateOf(0) } // 0 sel, 1 lista, 2 individual
+    var emailList by rememberSaveable { mutableStateOf(RecipientsPrefs.get(context)) }
+    var singleEmail by rememberSaveable { mutableStateOf("") }
+    var subject by rememberSaveable { mutableStateOf("") }
+    var body by rememberSaveable { mutableStateOf("") }
+    var scheduledAt by remember { mutableStateOf<Long?>(null) }
+
+    val selectedContacts = remember(contacts, selectedIds) {
+        contacts.filter { it.id in selectedIds }
+    }
+    val selectedEmails = remember(selectedContacts) {
+        selectedContacts.mapNotNull { it.email.trim().takeIf { e -> e.isNotBlank() } }
+    }
+
+    fun recipients(): List<String> = when (mode) {
+        0 -> selectedEmails
+        1 -> RecipientsPrefs.parse(emailList)
+        else -> listOf(singleEmail.trim()).filter { it.isNotBlank() }
+    }
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp)
+    ) {
+        Text(
+            "Envío masivo de correo",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.SemiBold
+        )
+        Text(
+            "Igual que el envío de mensajes, pero por correo. Se envía uno por uno " +
+                "(sin CC ni CCO) y corre en segundo plano.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(12.dp))
+
+        if (templates.isNotEmpty()) {
+            Text(
+                "Plantillas",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(6.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(templates) { t: MessageTemplate ->
+                    InputChip(
+                        selected = false,
+                        onClick = {
+                            body = t.body
+                            if (t.subject.isNotBlank()) subject = t.subject
+                        },
+                        label = { Text(t.name) }
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+        }
+
+        Text(
+            "Destinatarios",
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(6.dp))
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            SegmentedButton(
+                selected = mode == 0,
+                onClick = { mode = 0 },
+                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 3),
+                label = { Text("Seleccionados") }
+            )
+            SegmentedButton(
+                selected = mode == 1,
+                onClick = { mode = 1 },
+                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 3),
+                label = { Text("Lista") }
+            )
+            SegmentedButton(
+                selected = mode == 2,
+                onClick = { mode = 2 },
+                shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
+                label = { Text("Individual") }
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        when (mode) {
+            0 -> Text(
+                "${selectedEmails.size} contactos seleccionados con correo (marca contactos en la pestaña Contactos).",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            1 -> {
+                OutlinedTextField(
+                    value = emailList,
+                    onValueChange = {
+                        emailList = it
+                        RecipientsPrefs.set(context, it)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 90.dp),
+                    label = { Text("Correos precargados (coma o línea)") },
+                    placeholder = { Text("cliente1@correo.com, cliente2@correo.com") },
+                    shape = RoundedCornerShape(14.dp)
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "${RecipientsPrefs.parse(emailList).size} correos válidos",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            else -> OutlinedTextField(
+                value = singleEmail,
+                onValueChange = { singleEmail = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Correo") },
+                placeholder = { Text("persona@correo.com") },
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp)
+            )
+        }
+        Spacer(Modifier.height(12.dp))
+
+        OutlinedTextField(
+            value = subject,
+            onValueChange = { subject = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Asunto") },
+            placeholder = { Text("Ej: Aviso de pago") },
+            singleLine = true,
+            shape = RoundedCornerShape(14.dp)
+        )
+        Spacer(Modifier.height(8.dp))
+        OutlinedTextField(
+            value = body,
+            onValueChange = { body = it },
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 160.dp, max = 320.dp),
+            label = { Text("Mensaje") },
+            placeholder = { Text("Hola {nombre}, le informamos...") },
+            shape = RoundedCornerShape(14.dp)
+        )
+        Spacer(Modifier.height(12.dp))
+
+        ScheduleControls(onAtMillis = { scheduledAt = it })
+        Spacer(Modifier.height(12.dp))
+
+        emailProgress?.let { p ->
+            Text(
+                "Enviando ${p.first} de ${p.second}…",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.height(8.dp))
+        }
+
+        val r = recipients()
+        Button(
+            enabled = subject.isNotBlank() && body.isNotBlank() && r.isNotEmpty(),
+            modifier = Modifier.fillMaxWidth(),
+            onClick = {
+                if (scheduledAt != null) {
+                    if (scheduledAt!! <= System.currentTimeMillis()) {
+                        Toast.makeText(context, "Elige una fecha y hora futuras", Toast.LENGTH_LONG).show()
+                    } else {
+                        viewModel.scheduleSend(
+                            if (mode == 0) selectedContacts else emptyList(),
+                            body, subject, 1, scheduledAt!!,
+                            if (mode != 0) r else emptyList()
+                        )
+                        Toast.makeText(context, "Envío de correo programado", Toast.LENGTH_LONG).show()
+                    }
+                } else {
+                    viewModel.sendBulkEmailBackground(r, subject, body)
+                }
+            }
+        ) {
+            Icon(Icons.Default.Email, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text(if (scheduledAt != null) "Programar envío (${r.size})" else "Enviar a ${r.size}")
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "Puedes dejar la app en segundo plano; el envío continúa y verás el avance.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(16.dp))
     }
 }

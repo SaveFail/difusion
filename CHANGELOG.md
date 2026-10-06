@@ -1,5 +1,21 @@
 # Registro de cambios
 
+## [4.2] — 2026-10-05
+
+### Agregado
+- **Sección Correo con pestaña "Masivo" como opción principal.** Dentro de
+  **Mensaje ▸ Correo** ahora hay dos pestañas: **Masivo** (por defecto) y
+  **Bandeja**. La pestaña **Masivo** replica el flujo del envío masivo de SMS:
+  **Destinatarios** (Seleccionados / Lista de correos precargados / Individual),
+  **Plantillas** (con Asunto), **Asunto**, **Mensaje**, **Programar** fecha y
+  hora, y botón de envío con **contador de progreso en segundo plano**.
+- **Programar correos** desde el botón **"Correo individual a N"** de Contactos.
+- Los servicios de **envío de correos**, **envío de SMS** y **llamadas**
+  funcionan de forma **independiente y simultánea** en segundo plano.
+
+### Cambiado
+- La versión sube a **4.2 (`versionCode 25`)**.
+
 ## [4.1] — 2026-10-05
 
 ### Agregado

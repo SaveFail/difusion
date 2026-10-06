@@ -1020,7 +1020,11 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                         }
                     )
                     } else {
-                        CorreoInboxScreen()
+                        CorreoInboxScreen(
+                            contacts = contacts,
+                            selectedIds = selected,
+                            viewModel = viewModel
+                        )
                     }
                     }
                   }

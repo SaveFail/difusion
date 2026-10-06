@@ -34,6 +34,13 @@ y sin publicar en Play Store**. Usa la cuenta de Gmail del usuario por
 
 ## Cómo enviar
 
+### Pestaña "Masivo" (opción principal dentro de Correo)
+**Mensaje ▸ Correo ▸ Masivo** replica el envío masivo de SMS:
+- **Destinatarios:** Seleccionados / Lista (correos precargados) / Individual.
+- **Plantillas** (con Asunto), **Asunto** y **Mensaje**.
+- **Programar** fecha y hora.
+- **Enviar** con **contador de progreso en segundo plano**.
+
 ### Correo individual a los seleccionados
 1. **Contactos** → marca personas (deben tener correo; se importa de la columna
    `CORREO` o `EMAIL`).
