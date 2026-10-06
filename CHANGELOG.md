@@ -1,5 +1,16 @@
 # Registro de cambios
 
+## [4.6] — 2026-10-06
+
+### Agregado
+- **Botones de fecha en la gestión.** En el diálogo de gestión ahora hay
+  **"Fecha actual"** (pone la fecha de hoy) y **"Fecha futura"** (abre el
+  selector para elegir fecha y hora futuras). El campo de fecha sigue siendo
+  editable a mano.
+
+### Cambiado
+- La versión sube a **4.6 (`versionCode 29`)**.
+
 ## [4.5] — 2026-10-05
 
 ### Agregado / Mejorado

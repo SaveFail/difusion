@@ -14,6 +14,7 @@ import androidx.compose.ui.window.Dialog
 import com.difusion.app.data.Contact
 import com.difusion.app.data.GestionPresets
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -48,6 +49,17 @@ fun GestionDialog(
     var gestionExpanded by remember { mutableStateOf(false) }
     var estadoExpanded by remember { mutableStateOf(false) }
     var medioExpanded by remember { mutableStateOf(false) }
+
+    // Selector de fecha para poner la actual o una futura.
+    var showDate by remember { mutableStateOf(false) }
+    var showTime by remember { mutableStateOf(false) }
+    val nowCal = remember { Calendar.getInstance() }
+    val dateState = rememberDatePickerState(initialSelectedDateMillis = nowCal.timeInMillis)
+    val timeState = rememberTimePickerState(
+        initialHour = nowCal.get(Calendar.HOUR_OF_DAY),
+        initialMinute = nowCal.get(Calendar.MINUTE),
+        is24Hour = true
+    )
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -113,6 +125,22 @@ fun GestionDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            fechaGestion = dateFmt.format(Date())
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Fecha actual") }
+                    OutlinedButton(
+                        onClick = { showDate = true },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Fecha futura") }
+                }
 
                 Spacer(modifier = Modifier.height(18.dp))
                 Row(
@@ -127,6 +155,46 @@ fun GestionDialog(
                 }
             }
         }
+    }
+
+    if (showDate) {
+        DatePickerDialog(
+            onDismissRequest = { showDate = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDate = false
+                    showTime = true
+                }) { Text("Siguiente") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDate = false }) { Text("Cancelar") }
+            }
+        ) {
+            DatePicker(state = dateState)
+        }
+    }
+
+    if (showTime) {
+        AlertDialog(
+            onDismissRequest = { showTime = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    showTime = false
+                    val cal = Calendar.getInstance().apply {
+                        timeInMillis = dateState.selectedDateMillis ?: System.currentTimeMillis()
+                        set(Calendar.HOUR_OF_DAY, timeState.hour)
+                        set(Calendar.MINUTE, timeState.minute)
+                        set(Calendar.SECOND, 0)
+                        set(Calendar.MILLISECOND, 0)
+                    }
+                    fechaGestion = dateFmt.format(Date(cal.timeInMillis))
+                }) { Text("Aceptar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTime = false }) { Text("Cancelar") }
+            },
+            text = { TimePicker(state = timeState) }
+        )
     }
 }
 
