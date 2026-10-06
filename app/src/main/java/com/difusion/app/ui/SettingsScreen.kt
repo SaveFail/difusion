@@ -81,6 +81,9 @@ fun SettingsScreen(
     driveSelectedSheetIndex: Int,
     onDriveSheetSelect: (Int) -> Unit,
     onFinalizeSyncFromDrive: () -> Unit,
+    driveQuick: Boolean,
+    onDriveQuickChange: (Boolean) -> Unit,
+    onQuickSyncFromDrive: () -> Unit,
     // Sincronización de gestiones DE VUELTA a la hoja (escritura vía Apps Script).
     driveSyncUrl: String,
     onDriveSyncUrlChange: (String) -> Unit,
@@ -346,8 +349,31 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(12.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(
+                    checked = driveQuick,
+                    onCheckedChange = onDriveQuickChange
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Sincronización rápida (1 toque, sin ventana de revisión)")
+            }
+            Spacer(modifier = Modifier.height(6.dp))
             PrimaryActionButton(
-                text = "Sincronizar desde Drive",
+                text = "Sincronizar rápido (1 toque)",
+                onClick = onQuickSyncFromDrive,
+                modifier = Modifier.fillMaxWidth(),
+                icon = Icons.Default.Cloud
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                "Usa el enlace guardado y la última hoja. Ideal cuando siempre importas la misma hoja.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            PrimaryActionButton(
+                text = "Sincronizar desde Drive (elegir hoja)",
                 onClick = onSyncFromDrive,
                 modifier = Modifier.fillMaxWidth(),
                 icon = Icons.Default.Cloud

@@ -1,5 +1,20 @@
 # Registro de cambios
 
+## [4.4] — 2026-10-05
+
+### Agregado
+- **Sincronización de Drive en 1 toque.** Nuevo botón **"Sincronizar rápido
+  (1 toque)"** en **Ajustes ▸ Drive**: usa el enlace guardado y la **última
+  hoja** que importaste, sin tener que elegir hoja cada vez. Con la casilla
+  **"Sincronización rápida"** puedes además **importar sin la ventana de
+  revisión**. Se recuerda la última hoja usada automáticamente.
+- **Mensajes de voz:** forzar el altavoz a nivel de llamada (Telecom), subir el
+  volumen al máximo y desilenciar el micrófono para que el interlocutor oiga el
+  audio.
+
+### Cambiado
+- La versión sube a **4.4 (`versionCode 27`)**.
+
 ## [4.3] — 2026-10-05
 
 ### Agregado / Reescrito

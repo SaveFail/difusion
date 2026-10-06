@@ -149,8 +149,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val KEY_USERS = "assigned_users"
     private val KEY_DRIVE_URL = "drive_url"
+    private val KEY_DRIVE_LAST_SHEET = "drive_last_sheet"
+    private val KEY_DRIVE_QUICK = "drive_quick"
     private val _users = MutableStateFlow(loadUsers())
     val users: StateFlow<List<String>> = _users.asStateFlow()
+
+    // Sincronización rápida: usar la última hoja y (opcional) importar sin revisar.
+    private val _driveQuick = MutableStateFlow(usersPrefs().getBoolean(KEY_DRIVE_QUICK, true))
+    val driveQuick: StateFlow<Boolean> = _driveQuick.asStateFlow()
+    private var pendingQuickImport = false
 
     private fun usersPrefs(): SharedPreferences =
         appContext.getSharedPreferences("difusion_prefs", Context.MODE_PRIVATE)
@@ -520,6 +527,45 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun setDriveQuick(enabled: Boolean) {
+        _driveQuick.value = enabled
+        usersPrefs().edit().putBoolean(KEY_DRIVE_QUICK, enabled).apply()
+    }
+
+    /**
+     * Sincronización de 1 toque: usa el enlace guardado y la ÚLTIMA hoja usada.
+     * Si "rápido" está activo, importa directo sin abrir la ventana de revisión.
+     */
+    fun quickSyncFromDrive() {
+        val url = _driveUrl.value.trim()
+        if (url.isEmpty()) {
+            _driveSyncStatus.value = "Pega primero el enlace de tu hoja."
+            Toast.makeText(getApplication(), "Pega el enlace de Google Drive primero.", Toast.LENGTH_LONG).show()
+            return
+        }
+        viewModelScope.launch {
+            try {
+                _driveSyncStatus.value = "Sincronizando (rápido)…"
+                val sheetNames = withContext(Dispatchers.IO) {
+                    com.difusion.app.import.Importer.listVisibleSheets(url)
+                }
+                if (sheetNames.isEmpty()) {
+                    _driveSyncStatus.value = "El libro no tiene hojas visibles."
+                    return@launch
+                }
+                val last = usersPrefs().getString(KEY_DRIVE_LAST_SHEET, "").orEmpty()
+                val idx = sheetNames.indexOfFirst { it.equals(last, ignoreCase = true) }
+                    .takeIf { it >= 0 } ?: 0
+                _driveSheets.value = sheetNames
+                _driveSelectedSheetIndex.value = idx
+                pendingQuickImport = _driveQuick.value
+                finalizeSyncFromDrive()
+            } catch (e: Exception) {
+                _driveSyncStatus.value = "Error sincronizando: ${e.message ?: e.javaClass.simpleName}"
+            }
+        }
+    }
+
     // Filas listas para importar que se muestran en la ventana flotante de
     // revisión (ImportPreviewOverlay). Vacía = no hay revisión pendiente.
     private var _drivePreviewRows = MutableStateFlow<List<ParsedRow>>(emptyList())
@@ -594,21 +640,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 pendingSheetName = sheetName
                 pendingSheetTotal = total
                 pendingDuplicates = repetidas
-                _drivePreviewRows.value = unicas
-                fun distintos(selector: (ParsedRow) -> String): Int =
-                    rows.map { selector(it).trim() }.filter { it.isNotEmpty() }.distinct().size
-                val nTipif = distintos { it.gestion }
-                val nEstados = distintos { it.estado }
-                val nMedios = distintos { it.medio }
-                val resumenCat = buildString {
-                    append("tipificaciones: $nTipif")
-                    if (nEstados > 0) append(" · estados: $nEstados")
-                    if (nMedios > 0) append(" · medios: $nMedios")
+                // Recuerda esta hoja para la próxima "Sincronización rápida".
+                usersPrefs().edit().putString(KEY_DRIVE_LAST_SHEET, sheetName).apply()
+                if (pendingQuickImport) {
+                    // Modo rápido: importa de una vez, sin ventana de revisión.
+                    pendingQuickImport = false
+                    commitDriveImport(unicas)
+                } else {
+                    _drivePreviewRows.value = unicas
+                    fun distintos(selector: (ParsedRow) -> String): Int =
+                        rows.map { selector(it).trim() }.filter { it.isNotEmpty() }.distinct().size
+                    val nTipif = distintos { it.gestion }
+                    val nEstados = distintos { it.estado }
+                    val nMedios = distintos { it.medio }
+                    val resumenCat = buildString {
+                        append("tipificaciones: $nTipif")
+                        if (nEstados > 0) append(" · estados: $nEstados")
+                        if (nMedios > 0) append(" · medios: $nMedios")
+                    }
+                    _driveSyncStatus.value =
+                        "Revisa la ventana flotante: ${unicas.size} contactos listos " +
+                            "(de $total filas · $repetidas duplicados por cédula · $resumenCat)."
+                    Log.d("DIFUSION-Sync", "finalize: preview ${unicas.size} filas")
                 }
-                _driveSyncStatus.value =
-                    "Revisa la ventana flotante: ${unicas.size} contactos listos " +
-                        "(de $total filas · $repetidas duplicados por cédula · $resumenCat)."
-                Log.d("DIFUSION-Sync", "finalize: preview ${unicas.size} filas")
             } catch (e: Throwable) {
                 val msg = "Error al importar \"$sheetName\": ${e.message ?: e.javaClass.simpleName}"
                 _driveSyncStatus.value = msg
