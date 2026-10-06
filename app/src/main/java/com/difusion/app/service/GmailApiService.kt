@@ -7,6 +7,8 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.text.SimpleDateFormat
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 /**
@@ -53,11 +55,13 @@ object GmailApiService {
         listFolder(token, "INBOX", max)
 
     /** label: INBOX, SENT, SPAM, TRASH, ALL (todos los correos) */
-    fun listFolder(token: String, label: String, max: Int = 15): EmailSyncService.InboxResult {
-        val url = if (label == "ALL") {
-            "$BASE/threads?maxResults=$max"
-        } else {
-            "$BASE/threads?maxResults=$max&labelIds=$label"
+    fun listFolder(token: String, label: String, max: Int = 15, query: String? = null): EmailSyncService.InboxResult {
+        val enc = if (query.isNullOrBlank()) null
+        else runCatching { java.net.URLEncoder.encode(query, "UTF-8") }.getOrNull()
+        val url = when {
+            enc != null -> "$BASE/threads?maxResults=$max&q=$enc"
+            label == "ALL" -> "$BASE/threads?maxResults=$max"
+            else -> "$BASE/threads?maxResults=$max&labelIds=$label"
         }
         val list = getJson(token, url)
             ?: return EmailSyncService.InboxResult(false, error = "No se pudo leer la carpeta")
@@ -87,7 +91,7 @@ object GmailApiService {
                     from = header(headers, "From"),
                     subject = header(headers, "Subject"),
                     snippet = snippets.getOrElse(i) { "" },
-                    date = header(headers, "Date"),
+                    date = fmtGmailDate(header(headers, "Date")),
                     unread = unread,
                     messageCount = metas.getOrNull(i)?.optJSONArray("messages")?.length() ?: 1
                 )
@@ -130,6 +134,28 @@ object GmailApiService {
             }
         }
         return result.toList()
+    }
+
+    /** Búsqueda en Gmail (q=). */
+    fun search(token: String, query: String, max: Int = 30): EmailSyncService.InboxResult {
+        val q = query.trim()
+        if (q.isBlank()) return listFolder(token, "ALL", max)
+        return listFolder(token, "ALL", max, q)
+    }
+
+    private fun fmtGmailDate(rfc: String): String {
+        if (rfc.isBlank()) return ""
+        val out = SimpleDateFormat("dd/MM HH:mm", Locale.getDefault())
+        val patterns = listOf(
+            "EEE, dd MMM yyyy HH:mm:ss Z",
+            "dd MMM yyyy HH:mm:ss Z",
+            "EEE, dd MMM yyyy HH:mm:ss zzz"
+        )
+        for (p in patterns) {
+            val d = runCatching { SimpleDateFormat(p, Locale.US).parse(rfc) }.getOrNull()
+            if (d != null) return runCatching { out.format(d) }.getOrDefault("")
+        }
+        return ""
     }
 
     private fun header(headers: JSONArray?, name: String): String {

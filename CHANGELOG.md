@@ -1,5 +1,22 @@
 # Registro de cambios
 
+## [4.8] — 2026-10-06
+
+### Agregado
+- **Buscador en Correo.** Nuevo botón de lupa en la Bandeja: busca por
+  **remitente o asunto** con **búsqueda en el servidor** (IMAP `SEARCH` y
+  Gmail API `q=`), con retardo para no buscar en cada tecla. En el puente de
+  Apps Script se filtra localmente.
+
+### Mejorado
+- **Estética de la bandeja más limpia y ordenada:** cada correo con **avatar
+  de iniciales**, remitente y **fecha corta** en la esquina, asunto y vista
+  previa; los **no leídos** en negrita y con tarjeta resaltada. Indicador de
+  carga fino que no tapa la lista.
+
+### Cambiado
+- La versión sube a **4.8 (`versionCode 31`)**.
+
 ## [4.7] — 2026-10-06
 
 ### Mejorado

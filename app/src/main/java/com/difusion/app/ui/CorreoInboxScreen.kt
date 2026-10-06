@@ -3,26 +3,31 @@ package com.difusion.app.ui
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -40,6 +45,7 @@ import com.difusion.app.storage.RecipientsPrefs
 import com.difusion.app.storage.SmtpPrefs
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -91,6 +97,8 @@ private fun CorreoBandejaScreen() {
     var token by rememberSaveable { mutableStateOf(EmailSyncPrefs.getToken(context)) }
     var showBridge by rememberSaveable { mutableStateOf(false) }
     var showConfig by rememberSaveable { mutableStateOf(false) }
+    var showSearch by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
     // Carpeta: inbox, sent, spam, trash.
     var folder by rememberSaveable { mutableStateOf("inbox") }
 
@@ -114,8 +122,9 @@ private fun CorreoBandejaScreen() {
         if (!canUseMailbox()) return
         val currentFolder = folder
         val limit = loadedMax
+        val q = query.trim()
         // Muestra lo cacheado al instante (si lo hay) y refresca por detrás.
-        cache[currentFolder]?.let { if (it.isNotEmpty()) inbox = it }
+        if (q.isEmpty()) cache[currentFolder]?.let { if (it.isNotEmpty()) inbox = it }
         loading = true
         val nt = nativeToken()
         val useSmtp = nt == null && smtpConfigured
@@ -129,6 +138,8 @@ private fun CorreoBandejaScreen() {
         scope.launch {
             val res = withContext(Dispatchers.IO) {
                 when {
+                    q.isNotBlank() && nt != null -> GmailApiService.search(nt, q, limit)
+                    q.isNotBlank() && useSmtp -> MailClient.search(context, currentFolder, q, limit)
                     nt != null -> GmailApiService.listFolder(nt, label, limit)
                     useSmtp -> MailClient.listFolder(context, currentFolder, limit)
                     else -> EmailSyncService.listInbox(context, bridge, limit)
@@ -137,10 +148,18 @@ private fun CorreoBandejaScreen() {
             if (currentFolder != folder) return@launch // cambió de carpeta mientras cargaba
             loading = false
             if (res.success) {
-                inbox = res.messages
+                var msgs = res.messages
+                // El puente (Apps Script) no tiene búsqueda: se filtra local.
+                if (q.isNotBlank() && nt == null && !useSmtp) {
+                    msgs = msgs.filter {
+                        it.from.contains(q, true) || it.subject.contains(q, true) ||
+                            it.snippet.contains(q, true)
+                    }
+                }
+                inbox = msgs
                 unread = res.unread
                 errorMsg = ""
-                cache[currentFolder] = res.messages
+                if (q.isEmpty()) cache[currentFolder] = msgs
             } else {
                 errorMsg = res.error
             }
@@ -181,6 +200,13 @@ private fun CorreoBandejaScreen() {
     LaunchedEffect(signedIn, url, smtpConfigured, folder) {
         if (canUseMailbox()) loadInbox()
     }
+    // Búsqueda con retardo (no busca en cada tecla).
+    LaunchedEffect(query) {
+        if (canUseMailbox()) {
+            delay(400)
+            loadInbox()
+        }
+    }
     val folders = listOf(
         "inbox" to "Recibidos",
         "all" to "Todos",
@@ -214,6 +240,27 @@ private fun CorreoBandejaScreen() {
                     )
                 }
             }
+        }
+
+        if (canUseMailbox() && openThread == null && showSearch) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (query.isNotBlank()) {
+                        IconButton(onClick = { query = "" }) {
+                            Icon(Icons.Default.Close, contentDescription = "Limpiar")
+                        }
+                    }
+                },
+                placeholder = { Text("Buscar remitente o asunto…") },
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
+            )
         }
 
         if (!canUseMailbox()) {
@@ -363,6 +410,15 @@ private fun CorreoBandejaScreen() {
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f)
             )
+            IconButton(onClick = {
+                showSearch = !showSearch
+                if (!showSearch) query = ""
+            }) {
+                Icon(
+                    if (showSearch) Icons.Default.Close else Icons.Default.Search,
+                    contentDescription = "Buscar"
+                )
+            }
             IconButton(onClick = { loadInbox() }) {
                 Icon(Icons.Default.Refresh, contentDescription = "Actualizar")
             }
@@ -455,35 +511,68 @@ private fun CorreoBandejaScreen() {
             ) {
                 items(inbox, key = { it.threadId }) { m ->
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (m.unread) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                        shape = RoundedCornerShape(14.dp),
+                        color = if (m.unread) MaterialTheme.colorScheme.surface
+                        else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                        shadowElevation = if (m.unread) 1.dp else 0.dp,
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { openThreadById(m.threadId) }
                     ) {
-                        Column(Modifier.padding(10.dp)) {
-                            Text(
-                                m.from,
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = if (m.unread) FontWeight.Bold else FontWeight.SemiBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                m.subject.ifBlank { "(sin asunto)" },
-                                style = MaterialTheme.typography.bodyMedium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            if (m.snippet.isNotBlank()) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Text(
-                                    m.snippet,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 2,
+                                    initialsFor(m.from.ifBlank { m.subject }).ifBlank { "?" },
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold,
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                            }
+                            Spacer(Modifier.width(10.dp))
+                            Column(Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        m.from.ifBlank { "(sin remitente)" },
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = if (m.unread) FontWeight.Bold else FontWeight.Medium,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    if (m.date.isNotBlank()) {
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(
+                                            m.date,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                                Text(
+                                    m.subject.ifBlank { "(sin asunto)" },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
+                                if (m.snippet.isNotBlank()) {
+                                    Text(
+                                        m.snippet,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
                             }
                         }
                     }

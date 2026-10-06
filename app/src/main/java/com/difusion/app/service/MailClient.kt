@@ -3,8 +3,13 @@ package com.difusion.app.service
 import android.content.Context
 import android.util.Log
 import com.difusion.app.storage.SmtpPrefs
+import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
 import java.util.Properties
+import javax.mail.search.FromStringTerm
+import javax.mail.search.OrTerm
+import javax.mail.search.SubjectTerm
 import javax.mail.Authenticator
 import javax.mail.FetchProfile
 import javax.mail.Flags
@@ -208,6 +213,64 @@ object MailClient {
         return null
     }
 
+    private val shortFmt = SimpleDateFormat("dd/MM HH:mm", Locale.getDefault())
+    private fun fmtShort(d: Date?): String =
+        if (d == null) "" else runCatching { shortFmt.format(d) }.getOrDefault("")
+
+    private fun summaryOf(m: Message, uid: Long): EmailSyncService.MailSummary =
+        EmailSyncService.MailSummary(
+            threadId = uid.toString(),
+            from = runCatching { firstAddress(m.from) }.getOrDefault(""),
+            subject = runCatching { m.subject ?: "" }.getOrDefault(""),
+            snippet = "",
+            date = runCatching { fmtShort(m.receivedDate ?: m.sentDate) }.getOrDefault(""),
+            unread = runCatching { !m.isSet(Flags.Flag.SEEN) }.getOrDefault(false),
+            messageCount = 1
+        )
+
+    /** Búsqueda por remitente/asunto en la carpeta (búsqueda del servidor IMAP). */
+    fun search(context: Context, key: String, query: String, max: Int = 30): EmailSyncService.InboxResult {
+        val user = SmtpPrefs.getEmail(context)
+        val pass = SmtpPrefs.getPassword(context)
+        if (user.isBlank() || pass.isBlank()) {
+            return EmailSyncService.InboxResult(false, error = "Correo no configurado")
+        }
+        val q = query.trim()
+        if (q.isBlank()) return listFolder(context, key, max)
+        return try {
+            val store = session(user, pass).getStore("imaps")
+            store.connect(IMAP_HOST, user, pass)
+            val folder = resolveFolder(store, key) ?: run {
+                store.close()
+                return EmailSyncService.InboxResult(false, error = "No encontré la carpeta")
+            }
+            folder.open(Folder.READ_ONLY)
+            val term = OrTerm(FromStringTerm(q), SubjectTerm(q))
+            val found = runCatching { folder.search(term) }.getOrDefault(emptyArray())
+            val msgs = if (found.size > max) found.copyOfRange(found.size - max, found.size) else found
+            if (msgs.isNotEmpty()) {
+                val fp = FetchProfile().apply {
+                    add(FetchProfile.Item.ENVELOPE)
+                    add(FetchProfile.Item.FLAGS)
+                    add(FetchProfile.Item.CONTENT_INFO)
+                }
+                runCatching { folder.fetch(msgs, fp) }
+            }
+            val uidFolder = folder as? UIDFolder
+            val out = ArrayList<EmailSyncService.MailSummary>()
+            for (m in msgs.reversed()) {
+                val uid = runCatching { uidFolder?.getUID(m) }.getOrNull() ?: 0L
+                out.add(summaryOf(m, uid))
+            }
+            folder.close(false)
+            store.close()
+            EmailSyncService.InboxResult(true, out)
+        } catch (e: Exception) {
+            Log.e(TAG, "search($key,'$q'): ${e.javaClass.name}: ${e.message}", e)
+            EmailSyncService.InboxResult(false, error = e.message ?: e.javaClass.simpleName)
+        }
+    }
+
     fun listFolder(context: Context, key: String, max: Int = 15): EmailSyncService.InboxResult {
         val user = SmtpPrefs.getEmail(context)
         val pass = SmtpPrefs.getPassword(context)
@@ -239,18 +302,7 @@ object MailClient {
                 for (idx in msgs.indices.reversed()) {
                     val m = msgs[idx]
                     val uid = runCatching { uidFolder?.getUID(m) }.getOrNull() ?: (start + idx).toLong()
-                    out.add(
-                        EmailSyncService.MailSummary(
-                            threadId = uid.toString(),
-                            from = runCatching { firstAddress(m.from) }.getOrDefault(""),
-                            subject = runCatching { m.subject ?: "" }.getOrDefault(""),
-                            snippet = "",
-                            date = runCatching { (m.receivedDate ?: m.sentDate)?.toString() ?: "" }
-                                .getOrDefault(""),
-                            unread = runCatching { !m.isSet(Flags.Flag.SEEN) }.getOrDefault(false),
-                            messageCount = 1
-                        )
-                    )
+                    out.add(summaryOf(m, uid))
                 }
             }
             folder.close(false)
