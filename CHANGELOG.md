@@ -1,5 +1,21 @@
 # Registro de cambios
 
+## [4.9] — 2026-10-07
+
+### Agregado
+- **Ajustes ▸ Gestión: opciones personalizables.** Administra las listas de
+  **Seguimiento (Tipificación)**, **Status** y **Medio de contacto**: **agregar,
+  editar y borrar sin límite**. Esas listas son las que aparecen en los
+  desplegables al gestionar un cliente. Las importaciones de Drive **suman**
+  valores sin borrar los tuyos.
+
+### Mejorado
+- Al **guardar una gestión**, cualquier valor nuevo que escribas se **recuerda**
+  y queda disponible la próxima vez.
+
+### Cambiado
+- La versión sube a **4.9 (`versionCode 32`)**.
+
 ## [4.8] — 2026-10-06
 
 ### Agregado

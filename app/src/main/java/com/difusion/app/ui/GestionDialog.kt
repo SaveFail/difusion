@@ -168,7 +168,15 @@ fun GestionDialog(
                 ) {
                     TextButton(onClick = onDismiss) { Text("Cancelar") }
                     Spacer(modifier = Modifier.width(8.dp))
-                    Button(onClick = { onSave(gestion, estado, medio, fechaGestion) }) {
+                    Button(onClick = {
+                        // Recuerda los valores usados para las próximas gestiones.
+                        runCatching {
+                            GestionPresets.addGestion(context, listOf(gestion))
+                            GestionPresets.addEstado(context, listOf(estado))
+                            GestionPresets.addMedio(context, listOf(medio))
+                        }
+                        onSave(gestion, estado, medio, fechaGestion)
+                    }) {
                         Text("Guardar")
                     }
                 }
