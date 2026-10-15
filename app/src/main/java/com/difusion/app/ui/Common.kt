@@ -1,5 +1,8 @@
 package com.difusion.app.ui
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -301,6 +304,34 @@ fun InitialsAvatar(
 }
 // Compara dos teléfonos por sus últimos 10 dígitos, ignorando el 0 inicial y
 // el prefijo internacional +58. Se usa para asociar llamadas/chats a contactos.
+/** Convierte un teléfono al formato internacional para WhatsApp (p. ej. 58 + 10 dígitos). */
+fun whatsAppNumber(phone: String): String {
+    var d = phone.filter { it.isDigit() }
+    if (d.startsWith("00")) d = d.substring(2)
+    return when {
+        d.startsWith("58") -> d
+        d.startsWith("0") -> "58" + d.substring(1)
+        d.length == 10 && (d.startsWith("4") || d.startsWith("2")) -> "58$d"
+        else -> d
+    }
+}
+
+/** Abre WhatsApp con el número del contacto (y opcionalmente un texto). */
+fun openWhatsApp(context: Context, phone: String, text: String? = null) {
+    val num = whatsAppNumber(phone)
+    if (num.isBlank()) return
+    val url = if (text.isNullOrBlank()) {
+        "https://wa.me/$num"
+    } else {
+        "https://wa.me/$num?text=" + android.net.Uri.encode(text)
+    }
+    runCatching {
+        context.startActivity(
+            Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+    }
+}
+
 fun samePhoneNumber(a: String, b: String): Boolean {
     fun digits(s: String): String {
         var d = s.filter { it.isDigit() }

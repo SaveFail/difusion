@@ -1,5 +1,17 @@
 # Registro de cambios
 
+## [5.0] — 2026-10-15
+
+### Agregado
+- **Botón de WhatsApp por contacto.** En **Mis Contactos**, cada fila tiene un
+  botón de **WhatsApp** que abre directo el chat con esa persona (número
+  normalizado a formato internacional, p. ej. `58…`). Ahorra tiempo al contactar.
+- **Atajo de WhatsApp en la llamada** (pantalla de llamada) y en la **barra del
+  chat** de la conversación.
+
+### Cambiado
+- La versión sube a **5.0 (`versionCode 33`)**.
+
 ## [4.9] — 2026-10-07
 
 ### Agregado

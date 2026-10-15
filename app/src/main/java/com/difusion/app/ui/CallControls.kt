@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CallEnd
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.filled.Delete
@@ -408,6 +409,18 @@ fun FullCallPanel(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Gestionar cliente")
+                }
+            }
+
+            if (callNumber.isNotBlank()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = { openWhatsApp(context, callNumber) },
+                    modifier = Modifier.fillMaxWidth(0.85f)
+                ) {
+                    AppIcon(Icons.Default.Chat, contentDescription = null, size = 18.dp)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("WhatsApp")
                 }
             }
         } else {

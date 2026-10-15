@@ -11,6 +11,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
@@ -31,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -507,6 +509,7 @@ private fun ContactRow(
     onCallContact: (Contact) -> Unit,
     onAssignSingle: () -> Unit
 ) {
+    val context = LocalContext.current
     val shape = RoundedCornerShape(14.dp)
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -608,7 +611,14 @@ private fun ContactRow(
                 }
             }
             SelectionIndicator(isSelected)
-            Spacer(modifier = Modifier.width(4.dp))
+            Spacer(modifier = Modifier.width(2.dp))
+            IconButton(onClick = { openWhatsApp(context, contact.phone) }) {
+                AppIcon(
+                    Icons.Default.Chat,
+                    contentDescription = "WhatsApp a ${contact.name}",
+                    tint = Color(0xFF25D366)
+                )
+            }
             IconButton(onClick = { onCallContact(contact) }) {
                 AppIcon(
                     Icons.Default.Phone,

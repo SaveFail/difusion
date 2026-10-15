@@ -279,6 +279,13 @@ fun ConversationScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { openWhatsApp(context, conversation.address) }) {
+                        Icon(
+                            Icons.Default.Chat,
+                            contentDescription = "Abrir en WhatsApp",
+                            tint = Color(0xFF25D366)
+                        )
+                    }
                     if (gestionContact != null) {
                         IconButton(onClick = { showGestionDialog = true }) {
                             Icon(Icons.Default.Edit, contentDescription = "Gestionar cliente")
@@ -589,15 +596,7 @@ private fun ContactInfoDialog(
                                 onOpenCalls(conversation.name, conversation.address)
                             }
                             ContactActionRow("WhatsApp") {
-                                try {
-                                    val wa = Intent(
-                                        Intent.ACTION_VIEW,
-                                        Uri.parse("https://wa.me/${conversation.address.replace(Regex("[^0-9+]"), "")}")
-                                    )
-                                    context.startActivity(wa)
-                                } catch (_: Exception) {
-                                    Toast.makeText(context, "WhatsApp no disponible", Toast.LENGTH_SHORT).show()
-                                }
+                                openWhatsApp(context, conversation.address)
                             }
                             ContactActionRow("Compartir contacto") {
                                 val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
