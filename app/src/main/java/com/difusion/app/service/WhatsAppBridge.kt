@@ -33,12 +33,24 @@ object WhatsAppBridge {
         val error: String = ""
     )
 
+    /** Acción de una regla del bot. */
+    sealed class Action {
+        data class Reply(val text: String) : Action()
+        data class Wait(val seconds: Int) : Action()
+        data class Http(val url: String, val method: String = "POST") : Action()
+    }
+
     data class Rule(
         val keyword: String,
-        val reply: String,
-        val match: String = "contains",
-        val stop: Boolean = true
-    )
+        val match: String = "contains", // contains | equals | startsWith
+        val caseSensitive: Boolean = false,
+        val stop: Boolean = true,
+        val actions: List<Action> = emptyList()
+    ) {
+        // Compatibilidad: primera respuesta de la regla.
+        val reply: String
+            get() = actions.filterIsInstance<Action.Reply>().firstOrNull()?.text ?: ""
+    }
 
     private fun url(context: Context, path: String): String =
         WaPrefs.getUrl(context) + path
@@ -125,11 +137,22 @@ object WhatsAppBridge {
     fun rulesToJson(rules: List<Rule>): String {
         val arr = JSONArray()
         rules.forEach { r ->
+            val actions = JSONArray()
+            r.actions.forEach { a ->
+                when (a) {
+                    is Action.Reply -> actions.put(JSONObject().put("type", "reply").put("text", a.text))
+                    is Action.Wait -> actions.put(JSONObject().put("type", "wait").put("seconds", a.seconds))
+                    is Action.Http -> actions.put(
+                        JSONObject().put("type", "http").put("url", a.url).put("method", a.method)
+                    )
+                }
+            }
             arr.put(JSONObject().apply {
                 put("keyword", r.keyword)
-                put("reply", r.reply)
                 put("match", r.match)
+                put("caseSensitive", r.caseSensitive)
                 put("stop", r.stop)
+                put("actions", actions)
             })
         }
         return arr.toString()
@@ -140,9 +163,37 @@ object WhatsAppBridge {
         (0 until arr.length()).mapNotNull { i ->
             val o = arr.optJSONObject(i) ?: return@mapNotNull null
             val k = o.optString("keyword", "")
-            val r = o.optString("reply", "")
-            if (k.isBlank() || r.isBlank()) null
-            else Rule(k, r, o.optString("match", "contains"), o.optBoolean("stop", true))
+            if (k.isBlank()) return@mapNotNull null
+            val actions = ArrayList<Action>()
+            val arrA = o.optJSONArray("actions")
+            if (arrA != null) {
+                for (j in 0 until arrA.length()) {
+                    val a = arrA.optJSONObject(j) ?: continue
+                    when (a.optString("type", "reply")) {
+                        "wait" -> actions.add(Action.Wait(a.optInt("seconds", 1).coerceIn(1, 3600)))
+                        "http" -> {
+                            val u = a.optString("url", "")
+                            if (u.isNotBlank()) actions.add(Action.Http(u, a.optString("method", "POST")))
+                        }
+                        else -> {
+                            val t = a.optString("text", "")
+                            if (t.isNotBlank()) actions.add(Action.Reply(t))
+                        }
+                    }
+                }
+            }
+            if (actions.isEmpty()) {
+                val legacy = o.optString("reply", "")
+                if (legacy.isNotBlank()) actions.add(Action.Reply(legacy))
+            }
+            if (actions.isEmpty()) return@mapNotNull null
+            Rule(
+                keyword = k,
+                match = o.optString("match", "contains"),
+                caseSensitive = o.optBoolean("caseSensitive", false),
+                stop = o.optBoolean("stop", true),
+                actions = actions
+            )
         }
     } catch (_: Exception) {
         emptyList()

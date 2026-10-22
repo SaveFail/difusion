@@ -167,22 +167,96 @@ function doSend(to, text, cb) {
     .catch((e) => { if (cb) cb(false, e && e.message ? e.message : String(e)); });
 }
 
+function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
+function interpolate(text, jid) {
+  const phone = jid.split('@')[0];
+  return String(text || '')
+    .replace(/\{telefono\}/gi, phone)
+    .replace(/\{nombre\}/gi, phone);
+}
+
+function sendAsync(jid, text) {
+  return new Promise((resolve) => {
+    doSend(jid, text, (ok, err) => resolve({ ok, err }));
+  });
+}
+
+// Normaliza una regla: admite el formato viejo {reply} y el nuevo {actions:[]}.
+function normalizeRule(r) {
+  if (!r) return null;
+  const keyword = String(r.keyword || '').trim();
+  if (!keyword) return null;
+  const match = r.match === 'equals' || r.match === 'startsWith' ? r.match : 'contains';
+  let actions = Array.isArray(r.actions) ? r.actions : [];
+  actions = actions
+    .map((a) => {
+      if (!a) return null;
+      if (a.type === 'wait') {
+        const seconds = Math.max(1, Math.min(3600, Number(a.seconds) || 1));
+        return { type: 'wait', seconds };
+      }
+      if (a.type === 'http') {
+        const url = String(a.url || '').trim();
+        if (!url) return null;
+        return { type: 'http', url, method: a.method === 'GET' ? 'GET' : 'POST' };
+      }
+      // reply por defecto
+      const text = String(a.text || '').trim();
+      if (!text) return null;
+      return { type: 'reply', text };
+    })
+    .filter(Boolean);
+  if (actions.length === 0 && r.reply) actions = [{ type: 'reply', text: String(r.reply) }];
+  if (actions.length === 0) return null;
+  return {
+    keyword,
+    match,
+    caseSensitive: !!r.caseSensitive,
+    stop: r.stop !== false,
+    actions
+  };
+}
+
+async function runActions(jid, actions) {
+  for (const a of actions) {
+    if (a.type === 'wait') {
+      await sleep(a.seconds * 1000);
+    } else if (a.type === 'reply') {
+      const text = interpolate(a.text, jid);
+      const { ok, err } = await sendAsync(jid, text);
+      logLine('bot ' + (ok ? 'respondió' : 'falló') + ' a ' + jid + (err ? ' -> ' + err : ''));
+    } else if (a.type === 'http') {
+      try {
+        await fetch(a.url, {
+          method: a.method || 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: a.method === 'GET' ? undefined : JSON.stringify({ jid, phone: jid.split('@')[0], name: jid.split('@')[0] })
+        });
+        logLine('bot webhook ok: ' + a.url);
+      } catch (e) {
+        logLine('bot webhook falló: ' + (e && e.message ? e.message : e));
+      }
+    }
+  }
+}
+
 function applyBot(jid, text) {
   if (!botConfig.enabled || !Array.isArray(botConfig.rules) || botConfig.rules.length === 0) return;
-  const t = String(text || '').toLowerCase();
+  const raw = String(text || '');
+  const t = raw.toLowerCase();
   for (const r of botConfig.rules) {
-    if (!r || !r.keyword || !r.reply) continue;
-    const kw = String(r.keyword).toLowerCase().trim();
-    if (!kw) continue;
-    const match = r.match === 'equals' ? t.trim() === kw : t.includes(kw);
+    const rule = normalizeRule(r);
+    if (!rule) continue;
+    const hay = rule.caseSensitive ? raw : t;
+    const kw = rule.caseSensitive ? rule.keyword : rule.keyword.toLowerCase();
+    const match = rule.match === 'equals'
+      ? hay.trim() === kw
+      : (rule.match === 'startsWith' ? hay.trim().startsWith(kw) : hay.includes(kw));
     if (!match) continue;
-    const reply = String(r.reply)
-      .replace(/\{telefono\}/gi, jid.split('@')[0])
-      .replace(/\{nombre\}/gi, jid.split('@')[0]);
-    doSend(jid, reply, (ok, err) => {
-      logLine('bot ' + (ok ? 'respondió' : 'falló') + ' a ' + jid + (err ? ' -> ' + err : ''));
-    });
-    if (r.stop !== false) break;
+    // Ejecuta la secuencia sin bloquear el resto de chats.
+    runActions(jid, rule.actions).catch((e) => logLine('bot error: ' + (e && e.message ? e.message : e)));
+    if (rule.stop) break;
   }
 }
 
@@ -255,7 +329,9 @@ const httpServer = http.createServer(async (req, res) => {
       const body = await readBody(req);
       botConfig = {
         enabled: !!body.enabled,
-        rules: Array.isArray(body.rules) ? body.rules.slice(0, 500) : []
+        rules: (Array.isArray(body.rules) ? body.rules.slice(0, 500) : [])
+          .map(normalizeRule)
+          .filter(Boolean)
       };
       logLine('bot actualizado: enabled=' + botConfig.enabled + ' rules=' + botConfig.rules.length);
       return json(res, 200, { ok: true, ...botConfig });

@@ -56,21 +56,36 @@ Todas las rutas aceptan el token por cabecera `x-token` o `?token=`.
 | GET | `/bot` | — | `{enabled, rules}` |
 | POST | `/bot` | `{enabled, rules}` | Configura el bot |
 
-### Reglas del bot
+### Reglas del bot (con varias acciones)
 
 ```json
 {
   "enabled": true,
   "rules": [
-    { "keyword": "precio", "reply": "Hola {nombre}, con gusto te ayudamos…", "match": "contains", "stop": true },
-    { "keyword": "pago",   "reply": "Puedes pagar en…", "match": "contains", "stop": false }
+    {
+      "keyword": "pago",
+      "match": "contains",
+      "caseSensitive": false,
+      "stop": true,
+      "actions": [
+        { "type": "reply", "text": "Hola {nombre}, ¿cuál es tu cédula?" },
+        { "type": "wait",  "seconds": 5 },
+        { "type": "reply", "text": "Gracias. Un asesor te atenderá." },
+        { "type": "http",  "url": "https://tu-sistema/api/wa", "method": "POST" }
+      ]
+    }
   ]
 }
 ```
 
-- `match`: `contains` (por defecto) o `equals`.
-- `stop`: si es `true`, deja de evaluar reglas tras responder.
-- `{nombre}` y `{telefono}` se reemplazan por el número del cliente.
+- `match`: `contains` (por defecto), `equals` o `startsWith`.
+- `caseSensitive`: distingue mayúsculas/minúsculas.
+- `stop`: si es `true`, deja de evaluar reglas tras ejecutar la secuencia.
+- Acciones:
+  - **`reply`** → envía un texto (admite `{nombre}` y `{telefono}`).
+  - **`wait`** → espera N segundos (1–3600) antes de la siguiente acción.
+  - **`http`** → llama una URL (POST con `{jid, phone, name}` o GET).
+- El formato antiguo `{ "keyword": "...", "reply": "..." }` sigue funcionando.
 
 La app **sincroniza** estas reglas desde **Ajustes ▸ Bot**, así que normalmente
 no hace falta llamar esta API a mano.

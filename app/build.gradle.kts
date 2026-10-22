@@ -40,8 +40,8 @@ android {
         applicationId = "com.difusion.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 34
-        versionName = "5.1"
+        versionCode = 35
+        versionName = "5.2"
         buildConfigField("String", "GMAIL_OAUTH_CLIENT_ID", "\"$gmailClientId\"")
         buildConfigField("String", "EMAIL_BRIDGE_URL", "\"$emailBridgeUrl\"")
         buildConfigField("String", "EMAIL_BRIDGE_TOKEN", "\"$emailBridgeToken\"")

@@ -1,5 +1,19 @@
 # Registro de cambios
 
+## [5.2] — 2026-10-22
+
+### Agregado
+- **Bot con reglas de varias acciones.** Cada palabra clave puede ejecutar una
+  **secuencia**: **respuestas**, **esperas** (N segundos) y **webhooks** (llamar
+  una URL), en orden y sin límite. Coincidencia: *contiene / es igual / empieza
+  con*, con opción de mayúsculas y de detener la evaluación.
+- **Ayuda flotante** en Ajustes ▸ Bot: burbuja **"?"** que explica cada opción.
+- **Envío directo de WhatsApp** desde Ajustes ▸ Bot (número + mensaje).
+- El worker (`wa-bridge`) ejecuta las secuencias y expone el nuevo formato.
+
+### Cambiado
+- La versión sube a **5.2 (`versionCode 35`)**.
+
 ## [5.1] — 2026-10-22
 
 ### Agregado

@@ -14,7 +14,7 @@ pantalla de llamada y controlar el audio durante la llamada.
 
 - **Paquete:** `com.difusion.app`
 - **Nombre visible:** Difusión
-- **Versión:** 5.1 (`versionCode 34`)
+- **Versión:** 5.2 (`versionCode 35`)
 - **minSdk:** 26 (Android 8) · **targetSdk/compileSdk:** 35 (Android 15)
 
 ---
