@@ -23,4 +23,11 @@ object RecipientsPrefs {
         .map { it.trim() }
         .filter { it.contains("@") && it.contains(".") }
         .distinct()
+
+    /** Igual, pero para teléfonos (al menos 10 dígitos). */
+    fun parsePhones(value: String): List<String> = value
+        .split(Regex("[\\s,;]+"))
+        .map { it.trim() }
+        .filter { it.filter { c -> c.isDigit() }.length >= 10 }
+        .distinct()
 }

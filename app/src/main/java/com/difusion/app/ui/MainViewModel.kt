@@ -323,6 +323,56 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearEmailResult() { _emailResult.value = null }
 
+    // --- Envío de WhatsApp en segundo plano ---
+    private val _waProgress = MutableStateFlow<Pair<Int, Int>?>(null)
+    val waProgress: StateFlow<Pair<Int, Int>?> = _waProgress.asStateFlow()
+    private val _waResult = MutableStateFlow<String?>(null)
+    val waResult: StateFlow<String?> = _waResult.asStateFlow()
+
+    fun clearWaResult() { _waResult.value = null }
+
+    fun sendWhatsAppBackground(phones: List<String>, text: String) {
+        val list = phones.map { it.trim() }.filter { it.isNotBlank() }.distinct()
+        if (list.isEmpty()) {
+            _waResult.value = "Sin destinatarios"
+            return
+        }
+        val data = androidx.work.workDataOf(
+            com.difusion.app.worker.WhatsAppSendWorker.KEY_RECIPIENTS to
+                org.json.JSONArray(list).toString(),
+            com.difusion.app.worker.WhatsAppSendWorker.KEY_TEXT to text
+        )
+        val req = androidx.work.OneTimeWorkRequestBuilder<com.difusion.app.worker.WhatsAppSendWorker>()
+            .setInputData(data)
+            .build()
+        val wm = androidx.work.WorkManager.getInstance(getApplication())
+        wm.enqueue(req)
+        _waResult.value = null
+        _waProgress.value = 0 to list.size
+        viewModelScope.launch {
+            while (true) {
+                val info = runCatching { wm.getWorkInfoById(req.id).await() }.getOrNull() ?: break
+                val sent = info.progress.getInt(com.difusion.app.worker.WhatsAppSendWorker.KEY_SENT, 0)
+                val total = info.progress.getInt(com.difusion.app.worker.WhatsAppSendWorker.KEY_TOTAL, list.size)
+                if (info.state.isFinished) {
+                    _waProgress.value = null
+                    val fsent = info.outputData.getInt(com.difusion.app.worker.WhatsAppSendWorker.KEY_SENT, sent)
+                    val ffailed = info.outputData.getInt("failed", 0)
+                    val ferr = info.outputData.getString("error") ?: ""
+                    _waResult.value = if (fsent == 0 && ferr.isNotBlank()) {
+                        "Error WhatsApp: $ferr"
+                    } else {
+                        "WhatsApp: $fsent enviados · $ffailed fallidos" +
+                            if (ferr.isNotBlank()) " ($ferr)" else ""
+                    }
+                    break
+                }
+                _waProgress.value = sent to total
+                delay(400)
+            }
+        }
+    }
+
     fun sendBulkEmailBackground(recipients: List<String>, subject: String, body: String) {
         val list = recipients.map { it.trim() }.filter { it.isNotBlank() }.distinct()
         if (list.isEmpty()) {

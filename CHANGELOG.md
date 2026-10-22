@@ -1,5 +1,24 @@
 # Registro de cambios
 
+## [5.1] — 2026-10-22
+
+### Agregado
+- **Bot de WhatsApp (open source, sin API de Meta).** La app se conecta a un
+  **worker Node + Baileys** (`wa-bridge/`) que corre en un PC/servidor y expone
+  una API HTTP. En **Ajustes ▸ Bot**:
+  - Conexión (URL + token) y **vinculación** con código.
+  - **Bot activo** y **reglas por palabra clave → respuesta** (sin límite),
+    sincronizadas al worker para responder **en tiempo real**.
+- **Canal WhatsApp en el editor de mensajes** (junto a SMS y Correo):
+  - Envío **inmediato en segundo plano** con contador y notificación.
+  - **Envíos programados** (varios, sin límite) guardados y visibles en
+    **Historial ▸ Programados**.
+  - Destinatarios: **Seleccionados / Lista de números / Individual**.
+- **`wa-bridge/`** con el worker, `package.json` e instrucciones completas.
+
+### Cambiado
+- La versión sube a **5.1 (`versionCode 34`)**.
+
 ## [5.0] — 2026-10-15
 
 ### Agregado

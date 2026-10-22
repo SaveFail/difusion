@@ -31,40 +31,75 @@ class ScheduledSendWorker(
             for (item in due) {
                 if (db.scheduledSendDao().claim(item.id) != 1) continue
                 try {
-                    if (item.channel == 1) {
-                        val emails = parseJson(item.emailsJson)
-                        if (emails.isEmpty()) {
-                            db.scheduledSendDao().updateStatus(item.id, 2, now, "Sin correos")
-                            continue
-                        }
-                        val res = EmailSyncService.sendSmart(
-                            applicationContext,
-                            emails,
-                            item.subject.ifBlank { "Mensaje" },
-                            item.message
-                        )
-                        if (res.success) {
-                            db.scheduledSendDao().updateStatus(
-                                item.id, 1, now, "Enviado: ${res.sent} de ${res.total}"
+                    when (item.channel) {
+                        1 -> {
+                            val emails = parseJson(item.emailsJson)
+                            if (emails.isEmpty()) {
+                                db.scheduledSendDao().updateStatus(item.id, 2, now, "Sin correos")
+                                continue
+                            }
+                            val res = EmailSyncService.sendSmart(
+                                applicationContext,
+                                emails,
+                                item.subject.ifBlank { "Mensaje" },
+                                item.message
                             )
-                        } else {
+                            if (res.success) {
+                                db.scheduledSendDao().updateStatus(
+                                    item.id, 1, now, "Enviado: ${res.sent} de ${res.total}"
+                                )
+                            } else {
+                                db.scheduledSendDao().updateStatus(
+                                    item.id, 2, now, res.error
+                                )
+                            }
+                        }
+                        2 -> {
+                            // WhatsApp: los destinatarios pueden venir en phones o
+                            // en emails (según el modo del editor).
+                            val numbers = (parseJson(item.phonesJson) + parseJson(item.emailsJson))
+                                .map { it.trim() }.filter { it.isNotBlank() }.distinct()
+                            if (numbers.isEmpty()) {
+                                db.scheduledSendDao().updateStatus(item.id, 2, now, "Sin números")
+                                continue
+                            }
+                            var sent = 0
+                            var failed = 0
+                            var firstErr = ""
+                            for (n in numbers) {
+                                val (ok, err) = com.difusion.app.service.WhatsAppBridge.send(
+                                    applicationContext, n, item.message
+                                )
+                                if (ok) sent++ else {
+                                    failed++
+                                    if (firstErr.isBlank()) firstErr = err
+                                }
+                            }
+                            if (sent > 0) {
+                                db.scheduledSendDao().updateStatus(
+                                    item.id, 1, now,
+                                    "WhatsApp: $sent enviados · $failed fallidos"
+                                )
+                            } else {
+                                db.scheduledSendDao().updateStatus(
+                                    item.id, 2, now, firstErr.ifBlank { "No se pudo enviar" }
+                                )
+                            }
+                        }
+                        else -> {
+                            val phones = parseJson(item.phonesJson)
+                            if (phones.isEmpty()) {
+                                db.scheduledSendDao().updateStatus(item.id, 2, now, "Sin teléfonos")
+                                continue
+                            }
+                            val contacts = phones.map { Contact(id = -1, name = it, phone = it) }
+                            val result = SmsController.get(applicationContext)
+                                .sendBatch(contacts, item.message, 4000L, safeMode = true, subId = null)
                             db.scheduledSendDao().updateStatus(
-                                item.id, 2, now, res.error
+                                item.id, 1, now,
+                                "Enviado: ${result.sent} · Fallidos: ${result.failed}"
                             )
                         }
-                    } else {
-                        val phones = parseJson(item.phonesJson)
-                        if (phones.isEmpty()) {
-                            db.scheduledSendDao().updateStatus(item.id, 2, now, "Sin teléfonos")
-                            continue
-                        }
-                        val contacts = phones.map { Contact(id = -1, name = it, phone = it) }
-                        val result = SmsController.get(applicationContext)
-                            .sendBatch(contacts, item.message, 4000L, safeMode = true, subId = null)
-                        db.scheduledSendDao().updateStatus(
-                            item.id, 1, now,
-                            "Enviado: ${result.sent} · Fallidos: ${result.failed}"
-                        )
                     }
                 } catch (e: Exception) {
                     db.scheduledSendDao().updateStatus(item.id, 2, now, e.message ?: "Error")

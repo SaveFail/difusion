@@ -1,0 +1,12 @@
+{
+  "name": "difusion-wa-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "main": "main.js",
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "@whiskeysockets/baileys": "6.7.24",
+    "curve25519-js": "^0.0.4",
+    "pino": "^9.0.0"
+  }
+}

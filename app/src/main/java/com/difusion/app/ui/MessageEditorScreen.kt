@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BookmarkAdd
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Send
@@ -48,6 +49,9 @@ fun MessageEditorScreen(
     // Correo masivo (opcional). mode: 0=seleccionados, 1=lista, 2=individual.
     onSendEmail: ((subject: String, body: String, mode: Int, emails: List<String>) -> Unit)? = null,
     emailAvailable: Boolean = false,
+    // WhatsApp (worker open source).
+    onSendWhatsApp: ((mode: Int, phones: List<String>, body: String) -> Unit)? = null,
+    waAvailable: Boolean = false,
     // Envío programado: canal 0 = SMS, 1 = correo.
     onSchedule: ((subject: String, body: String, channel: Int, atMillis: Long, mode: Int, emails: List<String>) -> Unit)? = null,
     scheduledSends: List<ScheduledSend> = emptyList(),
@@ -102,36 +106,45 @@ fun MessageEditorScreen(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            // Selector de canal.
+            // Selector de canal (SMS / Correo / WhatsApp según configuración).
+            val channels = buildList {
+                add(0)
+                if (emailAvailable) add(1)
+                if (waAvailable) add(2)
+            }
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                SegmentedButton(
-                    selected = channel == 0,
-                    onClick = { channel = 0 },
-                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = if (emailAvailable) 2 else 1),
-                    label = { Text("SMS") }
-                )
-                if (emailAvailable) {
+                channels.forEachIndexed { index, ch ->
                     SegmentedButton(
-                        selected = channel == 1,
-                        onClick = { channel = 1 },
-                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                        label = { Text("Correo") }
+                        selected = channel == ch,
+                        onClick = { channel = ch },
+                        shape = SegmentedButtonDefaults.itemShape(index = index, count = channels.size),
+                        label = {
+                            Text(
+                                when (ch) {
+                                    1 -> "Correo"
+                                    2 -> "WhatsApp"
+                                    else -> "SMS"
+                                }
+                            )
+                        }
                     )
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
 
-            if (channel == 1) {
-                OutlinedTextField(
-                    value = subject,
-                    onValueChange = { subject = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Asunto del correo") },
-                    placeholder = { Text("Ej: Aviso de pago") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(14.dp)
-                )
-                Spacer(modifier = Modifier.height(10.dp))
+            if (channel == 1 || channel == 2) {
+                if (channel == 1) {
+                    OutlinedTextField(
+                        value = subject,
+                        onValueChange = { subject = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Asunto del correo") },
+                        placeholder = { Text("Ej: Aviso de pago") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(14.dp)
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                }
                 Text(
                     "Destinatarios",
                     style = MaterialTheme.typography.titleSmall,
@@ -162,8 +175,13 @@ fun MessageEditorScreen(
                 Spacer(modifier = Modifier.height(8.dp))
                 when (emailMode) {
                     0 -> Text(
-                        "Un correo INDIVIDUAL a cada uno de los $selectedCount contactos " +
-                            "seleccionados que tengan correo (sin CC ni CCO).",
+                        if (channel == 2) {
+                            "Un WhatsApp INDIVIDUAL a cada uno de los $selectedCount " +
+                                "contactos seleccionados con teléfono."
+                        } else {
+                            "Un correo INDIVIDUAL a cada uno de los $selectedCount contactos " +
+                                "seleccionados que tengan correo (sin CC ni CCO)."
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -177,13 +195,28 @@ fun MessageEditorScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .heightIn(min = 90.dp),
-                            label = { Text("Correos precargados (coma o línea)") },
-                            placeholder = { Text("cliente1@correo.com, cliente2@correo.com") },
+                            label = {
+                                Text(
+                                    if (channel == 2) "Números (coma o línea)"
+                                    else "Correos precargados (coma o línea)"
+                                )
+                            },
+                            placeholder = {
+                                Text(
+                                    if (channel == 2) "584241234567, 584149876543"
+                                    else "cliente1@correo.com, cliente2@correo.com"
+                                )
+                            },
                             shape = RoundedCornerShape(14.dp)
                         )
                         Spacer(modifier = Modifier.height(4.dp))
+                        val count = if (channel == 2) {
+                            RecipientsPrefs.parsePhones(emailList).size
+                        } else {
+                            RecipientsPrefs.parse(emailList).size
+                        }
                         Text(
-                            "${RecipientsPrefs.parse(emailList).size} correos válidos",
+                            if (channel == 2) "$count números válidos" else "$count correos válidos",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -192,8 +225,12 @@ fun MessageEditorScreen(
                         value = singleEmail,
                         onValueChange = { singleEmail = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Correo individual") },
-                        placeholder = { Text("persona@correo.com") },
+                        label = {
+                            Text(if (channel == 2) "Número de WhatsApp" else "Correo individual")
+                        },
+                        placeholder = {
+                            Text(if (channel == 2) "584241234567" else "persona@correo.com")
+                        },
                         singleLine = true,
                         shape = RoundedCornerShape(14.dp)
                     )
@@ -399,8 +436,12 @@ fun MessageEditorScreen(
                 }
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    "Se enviarán ${selectedCount} destinatarios por " +
-                        (if (channel == 1) "correo" else "SMS") +
+                    "Se enviará a los destinatarios elegidos por " +
+                        (when (channel) {
+                            1 -> "correo"
+                            2 -> "WhatsApp"
+                            else -> "SMS"
+                        }) +
                         " a la fecha y hora indicadas, aunque cierres la app.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -422,16 +463,31 @@ fun MessageEditorScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            val emailReady = when (emailMode) {
-                0 -> selectedCount > 0
-                1 -> RecipientsPrefs.parse(emailList).isNotEmpty()
-                else -> singleEmail.contains("@")
+            val isWa = channel == 2
+            val listRecipients = if (isWa) {
+                RecipientsPrefs.parsePhones(emailList)
+            } else {
+                RecipientsPrefs.parse(emailList)
             }
-            val canAct = messageBody.isNotBlank() &&
-                (channel == 0 || (subject.isNotBlank() && emailReady))
+            val singleRecipients = if (isWa) {
+                RecipientsPrefs.parsePhones(singleEmail)
+            } else {
+                listOf(singleEmail.trim()).filter { it.isNotBlank() }
+            }
+            val readyCount = when (emailMode) {
+                0 -> selectedCount
+                1 -> listRecipients.size
+                else -> singleRecipients.size
+            }
+            val canAct = messageBody.isNotBlank() && (
+                channel == 0 ||
+                    (channel == 1 && subject.isNotBlank() && readyCount > 0) ||
+                    (channel == 2 && readyCount > 0)
+                )
             val label = when {
-                scheduleEnabled -> "Programar envío (${selectedCount})"
-                channel == 1 -> "Enviar correo a $selectedCount"
+                scheduleEnabled -> "Programar (${readyCount})"
+                channel == 1 -> "Enviar correo a $readyCount"
+                channel == 2 -> "Enviar por WhatsApp a $readyCount"
                 selectedCount > 0 -> "Enviar a $selectedCount destinatarios"
                 else -> "Enviar SMS"
             }
@@ -439,6 +495,11 @@ fun MessageEditorScreen(
             PrimaryActionButton(
                 text = label,
                 onClick = {
+                    val extras = when (emailMode) {
+                        1 -> listRecipients
+                        2 -> singleRecipients
+                        else -> emptyList()
+                    }
                     if (scheduleEnabled) {
                         val date = datePickerState.selectedDateMillis ?: return@PrimaryActionButton
                         val cal = Calendar.getInstance().apply {
@@ -449,24 +510,22 @@ fun MessageEditorScreen(
                             set(Calendar.MILLISECOND, 0)
                         }
                         onSchedule?.invoke(
-                            subject, messageBody, channel, cal.timeInMillis, emailMode,
-                            if (emailMode == 1) RecipientsPrefs.parse(emailList)
-                            else if (emailMode == 2) listOf(singleEmail.trim()).filter { it.isNotBlank() }
-                            else emptyList()
+                            subject, messageBody, channel, cal.timeInMillis, emailMode, extras
                         )
                     } else if (channel == 1) {
-                        onSendEmail?.invoke(
-                            subject, messageBody, emailMode,
-                            if (emailMode == 1) RecipientsPrefs.parse(emailList)
-                            else if (emailMode == 2) listOf(singleEmail.trim()).filter { it.isNotBlank() }
-                            else emptyList()
-                        )
+                        onSendEmail?.invoke(subject, messageBody, emailMode, extras)
+                    } else if (channel == 2) {
+                        onSendWhatsApp?.invoke(emailMode, extras, messageBody)
                     } else {
                         onSend()
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                icon = if (channel == 1) Icons.Default.Email else Icons.Default.Send,
+                icon = when (channel) {
+                    1 -> Icons.Default.Email
+                    2 -> Icons.Default.Chat
+                    else -> Icons.Default.Send
+                },
                 enabled = canAct
             )
 

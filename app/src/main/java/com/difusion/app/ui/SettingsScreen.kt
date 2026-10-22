@@ -118,7 +118,7 @@ fun SettingsScreen(
         )
 
         // Pestañas para ordenar la configuración por temas.
-        val settingsTabs = listOf("Permisos", "Actualizaciones", "Drive", "Llamadas", "Apariencia", "Envío", "General", "Correo", "Gestión")
+        val settingsTabs = listOf("Permisos", "Actualizaciones", "Drive", "Llamadas", "Apariencia", "Envío", "General", "Correo", "Gestión", "Bot")
         var settingsTab by remember { mutableStateOf(0) }
         ScrollableTabRow(
             selectedTabIndex = settingsTab,
@@ -1434,6 +1434,10 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 GestionOptionsManager()
             } // fin Gestión
+            if (settingsTab == 9) {
+                Spacer(modifier = Modifier.height(16.dp))
+                BotScreen()
+            } // fin Bot
             } // fin contenido de pestaña
         }
 

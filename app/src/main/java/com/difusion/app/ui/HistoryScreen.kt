@@ -658,7 +658,11 @@ private fun ScheduledTab(
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
-                                (if (item.channel == 1) "Correo" else "SMS") + " · " +
+                                (when (item.channel) {
+                                    1 -> "Correo"
+                                    2 -> "WhatsApp"
+                                    else -> "SMS"
+                                }) + " · " +
                                     sdf.format(Date(item.scheduledAt)),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.SemiBold,

@@ -997,13 +997,31 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                                 viewModel.sendBulkEmailBackground(recipients, subject, body)
                             }
                         },
+                        waAvailable = com.difusion.app.storage.WaPrefs.isConfigured(context),
+                        onSendWhatsApp = { mode, phones, body ->
+                            val sel = contacts.filter { selected.contains(it.id) }
+                            val recipients = if (mode == 0) {
+                                sel.map { it.phone }.filter { it.isNotBlank() }
+                            } else {
+                                phones
+                            }
+                            if (recipients.isEmpty()) {
+                                Toast.makeText(
+                                    context,
+                                    "Sin destinatarios con teléfono.",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            } else {
+                                viewModel.sendWhatsAppBackground(recipients, body)
+                            }
+                        },
                         onSchedule = { subject, body, channel, at, mode, emails ->
                             val sel = contacts.filter { selected.contains(it.id) }
                             val useContacts = mode == 0
                             if (at <= System.currentTimeMillis()) {
                                 Toast.makeText(context, "Elige una fecha y hora futuras", Toast.LENGTH_LONG).show()
                             } else if ((useContacts && sel.isEmpty()) || (!useContacts && emails.isEmpty())) {
-                                Toast.makeText(context, "Selecciona contactos o agrega correos", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, "Selecciona contactos o agrega destinatarios", Toast.LENGTH_LONG).show()
                             } else {
                                 viewModel.scheduleSend(
                                     if (useContacts) sel else emptyList(),
@@ -1415,6 +1433,40 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                     Text(
                         "Toca \"Segundo plano\" para seguir usando la app: el envío continúa " +
                             "y verás el avance en la notificación.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        )
+    }
+
+    val waProgress by viewModel.waProgress.collectAsStateWithLifecycle()
+    val waResult by viewModel.waResult.collectAsStateWithLifecycle()
+    LaunchedEffect(waResult) {
+        val r = waResult
+        if (!r.isNullOrBlank()) {
+            Toast.makeText(context, r, Toast.LENGTH_LONG).show()
+            viewModel.clearWaResult()
+        }
+    }
+    if (waProgress != null) {
+        val p = waProgress!!
+        AlertDialog(
+            onDismissRequest = {},
+            confirmButton = {},
+            title = { Text("Enviando WhatsApp") },
+            text = {
+                Column {
+                    Text("${p.first} de ${p.second}")
+                    Spacer(Modifier.height(10.dp))
+                    LinearProgressIndicator(
+                        progress = { if (p.second > 0) p.first.toFloat() / p.second else 0f },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "Puedes dejar la app en segundo plano; el envío continúa.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
