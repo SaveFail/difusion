@@ -134,6 +134,36 @@ object WhatsAppBridge {
         }
     }
 
+    data class Incoming(val jid: String, val text: String, val ts: Long)
+
+    /** Mensajes entrantes recientes (buffer del worker). */
+    fun fetchMessages(context: Context, since: Long): List<Incoming> {
+        if (!WaPrefs.isConfigured(context)) return emptyList()
+        return try {
+            val req = request(context)
+                .url(url(context, "/messages?since=$since"))
+                .get()
+                .build()
+            http.newCall(req).execute().use { r ->
+                val text = r.body?.string() ?: ""
+                if (!r.isSuccessful) return emptyList()
+                val o = runCatching { JSONObject(text) }.getOrNull() ?: return emptyList()
+                val arr = o.optJSONArray("messages") ?: return emptyList()
+                (0 until arr.length()).mapNotNull { i ->
+                    val m = arr.optJSONObject(i) ?: return@mapNotNull null
+                    if (m.optBoolean("fromMe", false)) return@mapNotNull null
+                    val jid = m.optString("jid", "")
+                    val body = m.optString("text", "")
+                    if (jid.isBlank() || body.isBlank()) return@mapNotNull null
+                    Incoming(jid, body, m.optLong("ts", 0L))
+                }
+            }
+        } catch (e: Exception) {
+            Log.d(TAG, "fetchMessages: ${e.message}")
+            emptyList()
+        }
+    }
+
     fun rulesToJson(rules: List<Rule>): String {
         val arr = JSONArray()
         rules.forEach { r ->

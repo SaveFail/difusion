@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,11 +25,18 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.difusion.app.service.BotAutomation
 import com.difusion.app.service.WhatsAppBridge
+import com.difusion.app.storage.RecipientsPrefs
 import com.difusion.app.storage.WaPrefs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * Bot de WhatsApp (worker Baileys open source): conexión, vinculación,
@@ -52,6 +60,25 @@ fun BotScreen() {
 
     var sendPhone by remember { mutableStateOf("") }
     var sendText by remember { mutableStateOf("") }
+
+    // Automatizaciones de la app (acceso completo a procesos).
+    var autoRules by remember {
+        mutableStateOf(BotAutomation.parseRules(WaPrefs.getAutoRulesJson(context)))
+    }
+    var editingAuto by remember { mutableStateOf<Int?>(null) }
+
+    // Mensajes programados (varios).
+    val vm: MainViewModel = viewModel()
+    val scheduled by vm.scheduledSends.collectAsStateWithLifecycle()
+    val pendingWa = scheduled.filter { it.channel == 2 && it.status == 0 }
+    var schNumbers by remember { mutableStateOf("") }
+    var schText by remember { mutableStateOf("") }
+    var schAt by remember { mutableStateOf<Long?>(null) }
+
+    fun saveAuto(newRules: List<BotAutomation.Rule>) {
+        autoRules = newRules
+        WaPrefs.setAutoRulesJson(context, BotAutomation.rulesToJson(newRules))
+    }
 
     fun saveConfig() {
         WaPrefs.setUrl(context, url)
@@ -220,6 +247,10 @@ fun BotScreen() {
                         onCheckedChange = {
                             botEnabled = it
                             persistAndPush(rules)
+                            if (it) {
+                                BotAutomation.ensurePolling(context)
+                                BotAutomation.pollNow(context)
+                            }
                         }
                     )
                     Spacer(Modifier.width(8.dp))
@@ -367,6 +398,187 @@ fun BotScreen() {
                 }
             }
 
+            Spacer(Modifier.height(12.dp))
+
+            // --- Automatizaciones de la app (acceso completo) ---
+            SectionCard {
+                Text(
+                    "Automatizaciones de la app (acceso completo)",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Cuando el cliente escriba una palabra clave, la app puede: responder, " +
+                        "cambiar Seguimiento/Status/Medio del contacto, etiquetarlo y programar " +
+                        "un mensaje.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                if (autoRules.isEmpty()) {
+                    Text(
+                        "Aún no hay automatizaciones.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    autoRules.forEachIndexed { index, r ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    "“${r.keyword}”",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    autoSummary(r),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            IconButton(onClick = { editingAuto = index }) {
+                                AppIcon(Icons.Default.Edit, contentDescription = "Editar", size = 20.dp)
+                            }
+                            IconButton(onClick = {
+                                saveAuto(autoRules.filterIndexed { i, _ -> i != index })
+                            }) {
+                                AppIcon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "Borrar",
+                                    tint = MaterialTheme.colorScheme.error,
+                                    size = 20.dp
+                                )
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Button(
+                        onClick = { editingAuto = -1 },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        AppIcon(Icons.Default.Add, contentDescription = null, size = 18.dp)
+                        Spacer(Modifier.width(4.dp))
+                        Text("Agregar")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            BotAutomation.ensurePolling(context)
+                            BotAutomation.pollNow(context)
+                            statusText = "Procesando mensajes entrantes…"
+                        }
+                    ) {
+                        AppIcon(Icons.Default.Refresh, contentDescription = null, size = 18.dp)
+                        Spacer(Modifier.width(4.dp))
+                        Text("Procesar")
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // --- Mensajes programados de WhatsApp (varios) ---
+            SectionCard {
+                Text(
+                    "Mensajes programados de WhatsApp",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Programa varios mensajes. Quedan registrados en Historial ▸ Programados.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = schNumbers,
+                    onValueChange = { schNumbers = it },
+                    label = { Text("Números (coma o línea)") },
+                    placeholder = { Text("584241234567, 584149876543") },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(6.dp))
+                OutlinedTextField(
+                    value = schText,
+                    onValueChange = { schText = it },
+                    label = { Text("Mensaje a programar") },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+                ScheduleControls(onAtMillis = { schAt = it })
+                Spacer(Modifier.height(8.dp))
+                val parsedPhones = RecipientsPrefs.parsePhones(schNumbers)
+                Button(
+                    enabled = parsedPhones.isNotEmpty() && schText.isNotBlank() && schAt != null,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = {
+                        val at = schAt ?: return@Button
+                        if (at <= System.currentTimeMillis()) {
+                            Toast.makeText(context, "Elige una fecha y hora futuras", Toast.LENGTH_LONG).show()
+                        } else {
+                            vm.scheduleSend(emptyList(), schText.trim(), "", 2, at, parsedPhones)
+                            Toast.makeText(
+                                context,
+                                "Programado para ${parsedPhones.size} número(s)",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            schText = ""
+                        }
+                    }
+                ) { Text("Programar mensaje (${parsedPhones.size})") }
+
+                if (pendingWa.isNotEmpty()) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        "Pendientes (${pendingWa.size}):",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+                    pendingWa.take(10).forEach { item ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    sdf.format(Date(item.scheduledAt)),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    item.message.take(50),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            TextButton(onClick = {
+                                vm.cancelScheduledSend(item)
+                                Toast.makeText(context, "Cancelado", Toast.LENGTH_SHORT).show()
+                            }) { Text("Cancelar") }
+                        }
+                    }
+                }
+            }
+
             Spacer(Modifier.height(24.dp))
         }
 
@@ -437,6 +649,155 @@ fun BotScreen() {
             }
         )
     }
+
+    val autoIdx = editingAuto
+    if (autoIdx != null) {
+        val current = if (autoIdx >= 0 && autoIdx < autoRules.size) autoRules[autoIdx] else null
+        AutoRuleDialog(
+            initial = current,
+            onDismiss = { editingAuto = null },
+            onSave = { rule ->
+                val l = autoRules.toMutableList()
+                if (autoIdx in l.indices) l[autoIdx] = rule else l.add(rule)
+                saveAuto(l)
+                editingAuto = null
+            }
+        )
+    }
+}
+
+private fun autoSummary(r: BotAutomation.Rule): String {
+    val parts = ArrayList<String>()
+    if (r.reply.isNotBlank()) parts.add("responde")
+    if (r.setGestion.isNotBlank()) parts.add("seguimiento=${r.setGestion}")
+    if (r.setEstado.isNotBlank()) parts.add("status=${r.setEstado}")
+    if (r.setMedio.isNotBlank()) parts.add("medio=${r.setMedio}")
+    if (r.addTag.isNotBlank()) parts.add("etiqueta=${r.addTag}")
+    if (r.scheduleMinutes > 0) parts.add("programa en ${r.scheduleMinutes} min")
+    return if (parts.isEmpty()) "sin acciones" else parts.joinToString(" · ")
+}
+
+@Composable
+private fun AutoRuleDialog(
+    initial: BotAutomation.Rule?,
+    onDismiss: () -> Unit,
+    onSave: (BotAutomation.Rule) -> Unit
+) {
+    var keyword by remember { mutableStateOf(initial?.keyword ?: "") }
+    var reply by remember { mutableStateOf(initial?.reply ?: "") }
+    var setGestion by remember { mutableStateOf(initial?.setGestion ?: "") }
+    var setEstado by remember { mutableStateOf(initial?.setEstado ?: "") }
+    var setMedio by remember { mutableStateOf(initial?.setMedio ?: "") }
+    var addTag by remember { mutableStateOf(initial?.addTag ?: "") }
+    var minutes by remember { mutableStateOf((initial?.scheduleMinutes ?: 0).toString()) }
+    var scheduleText by remember { mutableStateOf(initial?.scheduleText ?: "") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (initial == null) "Nueva automatización" else "Editar automatización") },
+        text = {
+            Column(
+                Modifier
+                    .heightIn(max = 480.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Text(
+                    "Cuando el mensaje entrante contenga la palabra clave, se ejecutan las acciones.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = keyword,
+                    onValueChange = { keyword = it },
+                    label = { Text("Palabra clave") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+                Text("Responder por WhatsApp (opcional)", style = MaterialTheme.typography.labelMedium)
+                OutlinedTextField(
+                    value = reply,
+                    onValueChange = { reply = it },
+                    label = { Text("Respuesta") },
+                    placeholder = { Text("Hola {nombre}, …") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+                Text("Actualizar el contacto (opcional)", style = MaterialTheme.typography.labelMedium)
+                OutlinedTextField(
+                    value = setGestion,
+                    onValueChange = { setGestion = it },
+                    label = { Text("Seguimiento (ej. CONTESTA)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(6.dp))
+                OutlinedTextField(
+                    value = setEstado,
+                    onValueChange = { setEstado = it },
+                    label = { Text("Status (ej. PROMESA DE PAGO)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(6.dp))
+                OutlinedTextField(
+                    value = setMedio,
+                    onValueChange = { setMedio = it },
+                    label = { Text("Medio (ej. WHATSAPP)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(6.dp))
+                OutlinedTextField(
+                    value = addTag,
+                    onValueChange = { addTag = it },
+                    label = { Text("Agregar etiqueta") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+                Text("Programar un mensaje (opcional)", style = MaterialTheme.typography.labelMedium)
+                OutlinedTextField(
+                    value = minutes,
+                    onValueChange = { minutes = it.filter { c -> c.isDigit() } },
+                    label = { Text("En X minutos") },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = KeyboardType.Number
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(6.dp))
+                OutlinedTextField(
+                    value = scheduleText,
+                    onValueChange = { scheduleText = it },
+                    label = { Text("Texto a programar") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = keyword.isNotBlank(),
+                onClick = {
+                    onSave(
+                        BotAutomation.Rule(
+                            keyword = keyword.trim(),
+                            reply = reply.trim(),
+                            setGestion = setGestion.trim(),
+                            setEstado = setEstado.trim(),
+                            setMedio = setMedio.trim(),
+                            addTag = addTag.trim(),
+                            scheduleMinutes = minutes.toIntOrNull() ?: 0,
+                            scheduleText = scheduleText.trim()
+                        )
+                    )
+                }
+            ) { Text("Guardar") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+    )
 }
 
 private fun matchLabel(match: String): String = when (match) {

@@ -1,5 +1,23 @@
 # Registro de cambios
 
+## [5.6] — 2026-10-23
+
+### Agregado
+- **Automatizaciones de la app dentro del Bot (acceso completo).** Por palabra
+  clave, la app puede:
+  - **Responder** por WhatsApp.
+  - **Cambiar Seguimiento, Status y Medio** del contacto que escribe.
+  - **Agregar una etiqueta** al contacto.
+  - **Programar un mensaje** (en X minutos).
+- **Mensajes programados de WhatsApp desde el Bot:** número(s), mensaje, fecha y
+  hora. Se pueden programar **varios** y quedan en **Historial ▸ Programados**
+  (con opción de cancelar).
+- **Sondeo automático** de mensajes entrantes cada 15 min (WorkManager) y botón
+  **"Procesar"** para ejecutarlo al instante.
+
+### Cambiado
+- La versión sube a **5.6 (`versionCode 39`)**.
+
 ## [5.5] — 2026-10-23
 
 ### Corregido
