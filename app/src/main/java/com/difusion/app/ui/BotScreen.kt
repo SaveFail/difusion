@@ -102,7 +102,11 @@ fun BotScreen() {
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = url,
-                    onValueChange = { url = it },
+                    onValueChange = {
+                        url = it
+                        // Se guarda al escribir, sin depender de tocar "Probar".
+                        WaPrefs.setUrl(context, it)
+                    },
                     label = { Text("URL del worker") },
                     placeholder = { Text("http://192.168.1.10:3001") },
                     singleLine = true,
@@ -112,7 +116,10 @@ fun BotScreen() {
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = token,
-                    onValueChange = { token = it },
+                    onValueChange = {
+                        token = it
+                        WaPrefs.setToken(context, it)
+                    },
                     label = { Text("Token (WA_TOKEN)") },
                     singleLine = true,
                     visualTransformation = PasswordVisualTransformation(),
@@ -175,6 +182,15 @@ fun BotScreen() {
                 Text(
                     statusText,
                     style = MaterialTheme.typography.bodySmall,
+                    color = if (statusText.startsWith("Error") || statusText.startsWith("No se pudo"))
+                        MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    "Si el worker está en un PC, usa la IP del PC (no 127.0.0.1). " +
+                        "Si está en el teléfono (Termux), usa 127.0.0.1.",
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(8.dp))
@@ -262,12 +278,13 @@ fun BotScreen() {
                         enabled = sendPhone.isNotBlank() && sendText.isNotBlank() && url.isNotBlank(),
                         modifier = Modifier.weight(1f),
                         onClick = {
+                            saveConfig() // asegura URL/token guardados antes de enviar
                             scope.launch {
                                 val (ok, err) = withContext(Dispatchers.IO) {
                                     WhatsAppBridge.send(context, sendPhone, sendText)
                                 }
                                 statusText = if (ok) "WhatsApp enviado a $sendPhone"
-                                else "No se pudo enviar: $err"
+                                else "No se pudo enviar: " + (err.ifBlank { "sin respuesta del worker" })
                                 if (ok) sendText = ""
                             }
                         }

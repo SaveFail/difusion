@@ -1,5 +1,21 @@
 # Registro de cambios
 
+## [5.5] — 2026-10-23
+
+### Corregido
+- **WhatsApp: la URL/token se guardan al escribir** (antes solo al tocar
+  "Probar" o "Vincular"). Si escribías la URL y tocabas **Enviar**, quedaba
+  vacía y no enviaba. Ahora **Enviar** también guarda la configuración antes.
+- Los **errores de envío se muestran** en rojo con el detalle del worker
+  (p. ej. `no session` si falta vincular).
+
+### Agregado
+- Ayuda en la pantalla: usa la **IP del PC** si el worker está en el PC, o
+  **127.0.0.1** si está en el teléfono (Termux).
+
+### Cambiado
+- La versión sube a **5.5 (`versionCode 38`)**.
+
 ## [5.4] — 2026-10-23
 
 ### Corregido
