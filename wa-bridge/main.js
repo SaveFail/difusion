@@ -39,6 +39,7 @@ const FILES_DIR = process.env.NODE_PATH || process.argv[2] || process.cwd();
 const AUTH_DIR = path.join(FILES_DIR, 'wa-auth');
 const PORT_FILE = path.join(FILES_DIR, 'wa-port.txt');
 const LOG_FILE = path.join(FILES_DIR, 'wa-worker.log');
+const BOT_FILE = path.join(FILES_DIR, 'bot-config.json');
 
 const HTTP_PORT = Number(process.env.WA_HTTP_PORT || 3001);
 const HTTP_HOST = process.env.WA_HTTP_HOST || '0.0.0.0';
@@ -60,8 +61,16 @@ let DisconnectReason = null;
 let Browsers = null;
 const clients = new Set();
 
-// Bot: reglas {keyword, reply, match: 'contains'|'equals', stop:bool}
+// Bot: reglas {keyword, match, actions:[...]}
 let botConfig = { enabled: false, rules: [] };
+try {
+  // Persistencia: si el servidor se reinicia, el bot sigue respondiendo.
+  if (fs.existsSync(BOT_FILE)) {
+    botConfig = JSON.parse(fs.readFileSync(BOT_FILE, 'utf8'));
+  }
+} catch (e) {
+  logLine('No se pudo cargar bot-config.json: ' + (e && e.message));
+}
 const messagesBuffer = [];
 
 function broadcast(obj) {
@@ -333,6 +342,11 @@ const httpServer = http.createServer(async (req, res) => {
           .map(normalizeRule)
           .filter(Boolean)
       };
+      try {
+        fs.writeFileSync(BOT_FILE, JSON.stringify(botConfig, null, 2));
+      } catch (e) {
+        logLine('No se pudo guardar bot-config.json: ' + (e && e.message));
+      }
       logLine('bot actualizado: enabled=' + botConfig.enabled + ' rules=' + botConfig.rules.length);
       return json(res, 200, { ok: true, ...botConfig });
     }

@@ -1,5 +1,20 @@
 # Registro de cambios
 
+## [5.7] — 2026-10-23
+
+### Agregado
+- **Bot persistente en el servidor:** el worker guarda las reglas en
+  `bot-config.json` y las carga al reiniciar, así **responde automáticamente
+  24/7** aunque la app esté cerrada.
+- Al abrir **Ajustes ▸ Bot**, la app **reenvía las reglas** al worker (por si el
+  servidor se reinició) y activa el sondeo.
+- **Equipo externo como servidor:** `wa-bridge/Dockerfile` y
+  `docker-compose.yml` para desplegar en un PC/VPS, con guía de acceso seguro
+  (**Cloudflare Tunnel** o **Tailscale**).
+
+### Cambiado
+- La versión sube a **5.7 (`versionCode 40`)**.
+
 ## [5.6] — 2026-10-23
 
 ### Agregado

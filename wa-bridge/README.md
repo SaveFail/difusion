@@ -31,13 +31,52 @@ También puede correr **en el propio teléfono** (Node.js en Android) usando
 
 > La app se conecta a `http://127.0.0.1:3001` (mismo dispositivo). No necesita PC.
 
-## Opción B — En un PC/servidor
+## Opción B — En un PC/servidor (recomendado para 24/7)
+
+### Con Docker (recomendado)
+
+```bash
+cd wa-bridge
+# Edita docker-compose.yml y pon un WA_TOKEN largo y secreto
+docker compose up -d --build
+```
+
+Queda escuchando en `http://IP-DEL-SERVIDOR:3001`. Los datos persisten en
+`./data` (`wa-auth` = sesión, `bot-config.json` = reglas del bot), así que el
+bot **sigue respondiendo aunque la app esté cerrada o el servidor se reinicie**.
+
+### Sin Docker
 
 ```bash
 cd wa-bridge
 npm install
 WA_HTTP_PORT=3001 WA_TOKEN=mi-token-secreto node main.js
 ```
+
+### Acceso seguro desde Internet
+
+No expongas el puerto 3001 en claro a Internet. Opciones:
+
+- **Cloudflare Tunnel** (gratis, sin abrir puertos):
+  ```bash
+  cloudflared tunnel --url http://localhost:3001
+  ```
+  Te da una URL `https://...trycloudflare.com` (o un dominio propio).
+- **Tailscale** (red privada): instala Tailscale en el servidor y en el
+  teléfono; usa la IP `100.x.x.x` del servidor.
+- **Nginx/Caddy** con HTTPS y el puerto 3001 solo en localhost.
+
+En la app: **Ajustes ▸ Bot** → URL del servidor (https o Tailscale) + token →
+**Probar conexión** → **Vincular**.
+
+### ¿Qué corre en el servidor y qué en el teléfono?
+
+- **Servidor (24/7):** la sesión de WhatsApp y las **reglas del bot**
+  (respuesta/espera/webhook) se ejecutan al instante, aunque la app esté cerrada.
+- **Teléfono:** las **automatizaciones de la app** (cambiar seguimiento/status/
+  medio del contacto, etiquetar, programar mensajes) se aplican cuando la app
+  procesa los entrantes (sondeo cada 15 min o botón "Procesar") y los
+  **mensajes programados** los dispara la app vía WorkManager.
 
 - `WA_HTTP_PORT` (por defecto `3001`)
 - `WA_HTTP_HOST` (por defecto `0.0.0.0`)

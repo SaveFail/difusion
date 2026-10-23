@@ -80,6 +80,18 @@ fun BotScreen() {
         WaPrefs.setAutoRulesJson(context, BotAutomation.rulesToJson(newRules))
     }
 
+    // Al abrir la pantalla, empuja al worker las reglas guardadas (por si el
+    // servidor se reinició) y activa el sondeo de automatizaciones.
+    LaunchedEffect(Unit) {
+        if (WaPrefs.isConfigured(context)) {
+            val saved = WhatsAppBridge.parseRules(WaPrefs.getRulesJson(context))
+            withContext(Dispatchers.IO) {
+                WhatsAppBridge.pushBot(context, WaPrefs.isBotEnabled(context), saved)
+            }
+            if (WaPrefs.isBotEnabled(context)) BotAutomation.ensurePolling(context)
+        }
+    }
+
     fun saveConfig() {
         WaPrefs.setUrl(context, url)
         WaPrefs.setToken(context, token)

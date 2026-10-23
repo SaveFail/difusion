@@ -1,0 +1,17 @@
+services:
+  wa-bridge:
+    build: .
+    container_name: difusion-wa
+    restart: unless-stopped
+    ports:
+      # Solo para red local. Para Internet usa un túnel/proxy (ver README).
+      - "3001:3001"
+    environment:
+      WA_HTTP_PORT: "3001"
+      WA_HTTP_HOST: "0.0.0.0"
+      # Cambia este token por uno largo y secreto (el mismo en la app).
+      WA_TOKEN: "cambia-este-token-largo"
+      NODE_PATH: "/data"
+    volumes:
+      # Persistente: wa-auth (sesión) y bot-config.json (reglas del bot).
+      - ./data:/data
