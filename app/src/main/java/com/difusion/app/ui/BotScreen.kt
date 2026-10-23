@@ -1,5 +1,9 @@
 package com.difusion.app.ui
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -43,6 +47,7 @@ fun BotScreen() {
     var pairPhone by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var showHelp by remember { mutableStateOf(false) }
+    var showPhoneHelp by remember { mutableStateOf(false) }
     var editingIndex by remember { mutableStateOf<Int?>(null) }
 
     var sendPhone by remember { mutableStateOf("") }
@@ -168,6 +173,21 @@ fun BotScreen() {
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    OutlinedButton(
+                        onClick = {
+                            url = "http://127.0.0.1:3001"
+                            saveConfig()
+                            statusText = "URL local lista. Toca Probar conexión."
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Usar 127.0.0.1") }
+                    OutlinedButton(
+                        onClick = { showPhoneHelp = true },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("¿Sin PC?") }
+                }
             }
 
             Spacer(Modifier.height(12.dp))
@@ -327,6 +347,55 @@ fun BotScreen() {
 
     if (showHelp) {
         BotHelpDialog(onDismiss = { showHelp = false })
+    }
+
+    if (showPhoneHelp) {
+        val command = "pkg install -y git && git clone --depth 1 " +
+            "https://github.com/SaveFail/difusion.git ~/difusion-src && " +
+            "bash ~/difusion-src/wa-bridge/termux-install.sh"
+        AlertDialog(
+            onDismissRequest = { showPhoneHelp = false },
+            title = { Text("Ejecutar en el teléfono (sin PC)") },
+            text = {
+                Column(
+                    Modifier
+                        .heightIn(max = 460.dp)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    Text(
+                        "El worker (Node + Baileys) puede correr EN EL TELÉFONO con Termux. " +
+                            "Así no necesitas PC.",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    HelpItem("1) Instala Termux", "Desde F-Droid: https://f-droid.org/packages/com.termux/")
+                    HelpItem("2) Abre Termux y pega este comando", command)
+                    HelpItem(
+                        "3) Vuelve a esta pantalla",
+                        "Toca \"Usar 127.0.0.1\" y luego \"Probar conexión\"."
+                    )
+                    HelpItem(
+                        "4) Para que siga en segundo plano",
+                        "Instala Termux:Boot (F-Droid) y copia el arranque a ~/.termux/boot/."
+                    )
+                    HelpItem(
+                        "Nota",
+                        "El worker corre en el teléfono; la app se conecta a 127.0.0.1. " +
+                            "Mantén Termux con permiso de batería sin restricciones."
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    cm.setPrimaryClip(ClipData.newPlainText("comando", command))
+                    Toast.makeText(context, "Comando copiado", Toast.LENGTH_SHORT).show()
+                }) { Text("Copiar comando") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPhoneHelp = false }) { Text("Cerrar") }
+            }
+        )
     }
 
     val idx = editingIndex

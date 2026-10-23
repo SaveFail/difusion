@@ -1,5 +1,20 @@
 # Registro de cambios
 
+## [5.3] — 2026-10-23
+
+### Agregado
+- **WhatsApp en el propio teléfono (sin PC).** El worker (`wa-bridge`) puede
+  ejecutarse con **Termux** (Node.js en Android) y la app se conecta a
+  `http://127.0.0.1:3001`.
+  - Botón **"¿Sin PC?"** en Ajustes ▸ Bot con los pasos y el **comando listo
+    para copiar**.
+  - Botón **"Usar 127.0.0.1"** para configurar la conexión local.
+  - Script **`wa-bridge/termux-install.sh`** que instala y arranca el worker.
+- Se habilita tráfico HTTP local para el worker (red privada/localhost).
+
+### Cambiado
+- La versión sube a **5.3 (`versionCode 36`)**.
+
 ## [5.2] — 2026-10-22
 
 ### Agregado

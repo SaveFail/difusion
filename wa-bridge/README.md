@@ -12,7 +12,26 @@ auto-respuesta.
 - PC o servidor con **Node.js 18+** (recomendado 20).
 - Mismo WiFi que el teléfono (o IP pública/DDNS si es un servidor).
 
-## Instalar y ejecutar
+## Opción A — En el teléfono (sin PC, con Termux)
+
+También puede correr **en el propio teléfono** (Node.js en Android) usando
+[Termux](https://f-droid.org/packages/com.termux/) (open source):
+
+1. Instala **Termux** desde F-Droid.
+2. Abre Termux y ejecuta:
+   ```bash
+   pkg install -y git && git clone --depth 1 \
+     https://github.com/SaveFail/difusion.git ~/difusion-src && \
+     bash ~/difusion-src/wa-bridge/termux-install.sh
+   ```
+3. En la app: **Ajustes ▸ Bot** → **"Usar 127.0.0.1"** → **Probar conexión**.
+4. Vincula tu número y listo.
+5. Para que siga tras cerrar Termux, instala **Termux:Boot** y copia el arranque
+   a `~/.termux/boot/`. Quita la restricción de batería a Termux.
+
+> La app se conecta a `http://127.0.0.1:3001` (mismo dispositivo). No necesita PC.
+
+## Opción B — En un PC/servidor
 
 ```bash
 cd wa-bridge
