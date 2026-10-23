@@ -20,5 +20,7 @@ data class Contact(
     val idCuota: String = "",
     val monto: String = "",
     val fechaGestion: String = "",
-    val email: String = ""
+    val email: String = "",
+    // Etiquetas libres separadas por coma (ej. "moroso,vip,llamar").
+    val tags: String = ""
 )

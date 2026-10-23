@@ -1,5 +1,23 @@
 # Registro de cambios
 
+## [5.4] — 2026-10-23
+
+### Corregido
+- **Cierre de la app al abrir Ajustes ▸ Bot** (y ▸ Gestión): era un **scroll
+  anidado** (Ajustes ya tiene scroll y la pestaña añadía otro con `fillMaxSize`).
+  Ahora esas pestañas no duplican el scroll y abren sin cerrarse.
+
+### Agregado
+- **Etiquetas en contactos:** campo libre (separadas por coma), visibles en la
+  fila, **filtro por etiqueta** y botón **"Etiquetas"** para asignarlas a los
+  contactos seleccionados. Base de datos v16.
+- **Sección para enviar por WhatsApp más visible:** el canal **WhatsApp** aparece
+  siempre en el editor (SMS/Correo/WhatsApp) y en Ajustes ▸ Bot hay botón
+  **"Abrir WhatsApp"** además de **"Enviar"**.
+
+### Cambiado
+- La versión sube a **5.4 (`versionCode 37`)**.
+
 ## [5.3] — 2026-10-23
 
 ### Agregado

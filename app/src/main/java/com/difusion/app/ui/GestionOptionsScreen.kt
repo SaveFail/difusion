@@ -33,8 +33,7 @@ fun GestionOptionsManager() {
 
     Column(
         Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .fillMaxWidth()
             .padding(16.dp)
     ) {
         Text(

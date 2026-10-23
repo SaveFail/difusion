@@ -1168,6 +1168,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun setContactTags(ids: Set<Long>, tags: String) {
+        viewModelScope.launch {
+            val clean = tags.split(",").map { it.trim() }.filter { it.isNotBlank() }
+                .distinctBy { it.lowercase() }.joinToString(",")
+            db.contactDao().getByIds(ids).forEach { c ->
+                db.contactDao().update(c.copy(tags = clean))
+            }
+        }
+    }
+
     fun updateContactGestion(contactId: Long, gestion: String, estado: String, medio: String, fechaGestion: String) {
         viewModelScope.launch {
             val c = db.contactDao().getById(contactId) ?: return@launch

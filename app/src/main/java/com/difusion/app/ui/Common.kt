@@ -332,6 +332,16 @@ fun openWhatsApp(context: Context, phone: String, text: String? = null) {
     }
 }
 
+/** Abre la app de WhatsApp (no un chat concreto). Devuelve true si se abrió. */
+fun openWhatsAppApp(context: Context): Boolean {
+    val intent = context.packageManager.getLaunchIntentForPackage("com.whatsapp")
+        ?: return false
+    return runCatching {
+        context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        true
+    }.getOrDefault(false)
+}
+
 fun samePhoneNumber(a: String, b: String): Boolean {
     fun digits(s: String): String {
         var d = s.filter { it.isDigit() }

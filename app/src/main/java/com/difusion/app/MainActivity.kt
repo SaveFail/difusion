@@ -908,6 +908,10 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                                 showEmailToSelected = true
                             }
                         },
+                        onSetTags = { ids, tags ->
+                            viewModel.setContactTags(ids, tags)
+                            Toast.makeText(context, "Etiquetas guardadas", Toast.LENGTH_SHORT).show()
+                        },
                         onDeleteSelected = {
                             if (selected.isEmpty()) {
                                 Toast.makeText(context, "Selecciona al menos un contacto", Toast.LENGTH_LONG).show()
@@ -997,22 +1001,30 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                                 viewModel.sendBulkEmailBackground(recipients, subject, body)
                             }
                         },
-                        waAvailable = com.difusion.app.storage.WaPrefs.isConfigured(context),
+                        waAvailable = true,
                         onSendWhatsApp = { mode, phones, body ->
-                            val sel = contacts.filter { selected.contains(it.id) }
-                            val recipients = if (mode == 0) {
-                                sel.map { it.phone }.filter { it.isNotBlank() }
-                            } else {
-                                phones
-                            }
-                            if (recipients.isEmpty()) {
+                            if (!com.difusion.app.storage.WaPrefs.isConfigured(context)) {
                                 Toast.makeText(
                                     context,
-                                    "Sin destinatarios con teléfono.",
+                                    "Configura el worker en Ajustes ▸ Bot (URL y vincular).",
                                     Toast.LENGTH_LONG
                                 ).show()
                             } else {
-                                viewModel.sendWhatsAppBackground(recipients, body)
+                                val sel = contacts.filter { selected.contains(it.id) }
+                                val recipients = if (mode == 0) {
+                                    sel.map { it.phone }.filter { it.isNotBlank() }
+                                } else {
+                                    phones
+                                }
+                                if (recipients.isEmpty()) {
+                                    Toast.makeText(
+                                        context,
+                                        "Sin destinatarios con teléfono.",
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                } else {
+                                    viewModel.sendWhatsAppBackground(recipients, body)
+                                }
                             }
                         },
                         onSchedule = { subject, body, channel, at, mode, emails ->

@@ -71,13 +71,11 @@ fun BotScreen() {
         }
     }
 
-    Box(Modifier.fillMaxSize()) {
-        Column(
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
-        ) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
             Text(
                 "Bot de WhatsApp",
                 style = MaterialTheme.typography.titleLarge,
@@ -90,6 +88,12 @@ fun BotScreen() {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Spacer(Modifier.height(6.dp))
+            OutlinedButton(onClick = { showHelp = true }) {
+                Icon(Icons.Default.HelpOutline, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("¿Cómo funciona el bot?")
+            }
             Spacer(Modifier.height(12.dp))
 
             // --- Conexión ---
@@ -241,23 +245,37 @@ fun BotScreen() {
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(8.dp))
-                Button(
-                    enabled = sendPhone.isNotBlank() && sendText.isNotBlank() && url.isNotBlank(),
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = {
-                        scope.launch {
-                            val (ok, err) = withContext(Dispatchers.IO) {
-                                WhatsAppBridge.send(context, sendPhone, sendText)
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    OutlinedButton(
+                        onClick = {
+                            if (!openWhatsAppApp(context)) {
+                                Toast.makeText(context, "WhatsApp no está instalado", Toast.LENGTH_LONG).show()
                             }
-                            statusText = if (ok) "WhatsApp enviado a $sendPhone"
-                            else "No se pudo enviar: $err"
-                            if (ok) sendText = ""
-                        }
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        AppIcon(Icons.Default.Send, contentDescription = null, size = 18.dp)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Abrir WhatsApp")
                     }
-                ) {
-                    AppIcon(Icons.Default.Send, contentDescription = null, size = 18.dp)
-                    Spacer(Modifier.width(6.dp))
-                    Text("Enviar ahora")
+                    Button(
+                        enabled = sendPhone.isNotBlank() && sendText.isNotBlank() && url.isNotBlank(),
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            scope.launch {
+                                val (ok, err) = withContext(Dispatchers.IO) {
+                                    WhatsAppBridge.send(context, sendPhone, sendText)
+                                }
+                                statusText = if (ok) "WhatsApp enviado a $sendPhone"
+                                else "No se pudo enviar: $err"
+                                if (ok) sendText = ""
+                            }
+                        }
+                    ) {
+                        AppIcon(Icons.Default.Send, contentDescription = null, size = 18.dp)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Enviar")
+                    }
                 }
             }
 
@@ -332,18 +350,8 @@ fun BotScreen() {
                 }
             }
 
-            Spacer(Modifier.height(80.dp))
+            Spacer(Modifier.height(24.dp))
         }
-
-        FloatingActionButton(
-            onClick = { showHelp = true },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(20.dp)
-        ) {
-            Icon(Icons.Default.HelpOutline, contentDescription = "Ayuda")
-        }
-    }
 
     if (showHelp) {
         BotHelpDialog(onDismiss = { showHelp = false })

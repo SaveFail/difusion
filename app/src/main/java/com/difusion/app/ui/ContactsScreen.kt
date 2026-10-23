@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Phone
@@ -63,6 +64,7 @@ fun ContactsScreen(
     onCallContact: (Contact) -> Unit,
     onCallSelected: () -> Unit,
     onEmailSelected: () -> Unit = {},
+    onSetTags: (Set<Long>, String) -> Unit = { _, _ -> },
     onDeleteSelected: () -> Unit,
     onExportByAssignment: () -> Unit,
     onAssignUser: (Set<Long>, String) -> Unit,
@@ -89,6 +91,15 @@ fun ContactsScreen(
     val tipifCounts = remember(contacts) { contacts.groupingBy { it.gestion.trim() }.eachCount() }
     val estadoCounts = remember(contacts) { contacts.groupingBy { it.estado.trim() }.eachCount() }
     val medioCounts = remember(contacts) { contacts.groupingBy { it.medio.trim() }.eachCount() }
+    // Etiquetas (lista plana, sin duplicados por mayúsculas).
+    val allTags = remember(contacts) {
+        contacts.flatMap { it.tags.split(",") }
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .distinctBy { it.lowercase() }
+            .sortedBy { it.lowercase() }
+    }
+    val tagCounts = remember(contacts) { tagCountsOf(contacts) }
     // Usuarios disponibles para asignar (incluye los que ya traen los contactos).
     val assignableUsers = remember(users, contacts) {
         (users + contacts.map { it.assignment }.filter { it.isNotBlank() }).distinct().sorted()
@@ -97,6 +108,7 @@ fun ContactsScreen(
     var tipifFilter by remember { mutableStateOf(FILTER_ALL) }
     var estadoFilter by remember { mutableStateOf(FILTER_ALL) }
     var medioFilter by remember { mutableStateOf(FILTER_ALL) }
+    var tagFilter by remember { mutableStateOf(FILTER_ALL) }
     // Filtros colapsables: por defecto ocultos para que la lista de contactos
     // tenga casi toda la pantalla.
     var showFilters by remember { mutableStateOf(false) }
@@ -117,21 +129,27 @@ fun ContactsScreen(
             medioFilter !in medios
         ) medioFilter = FILTER_ALL
     }
+    LaunchedEffect(allTags) {
+        if (tagFilter != FILTER_ALL && tagFilter !in allTags) tagFilter = FILTER_ALL
+    }
 
     fun matchesFilter(value: String, filter: String): Boolean = when (filter) {
         FILTER_ALL -> true
         FILTER_UNMANAGED -> value.isBlank()
         else -> value.trim() == filter
     }
-    val visibleContacts = remember(contacts, tipifFilter, estadoFilter, medioFilter) {
+    val visibleContacts = remember(contacts, tipifFilter, estadoFilter, medioFilter, tagFilter) {
         contacts.filter {
             matchesFilter(it.gestion, tipifFilter) &&
                 matchesFilter(it.estado, estadoFilter) &&
-                matchesFilter(it.medio, medioFilter)
+                matchesFilter(it.medio, medioFilter) &&
+                (tagFilter == FILTER_ALL ||
+                    it.tags.split(",").any { t -> t.trim().equals(tagFilter, ignoreCase = true) })
         }
     }
     val anyFilterActive =
-        tipifFilter != FILTER_ALL || estadoFilter != FILTER_ALL || medioFilter != FILTER_ALL
+        tipifFilter != FILTER_ALL || estadoFilter != FILTER_ALL ||
+            medioFilter != FILTER_ALL || tagFilter != FILTER_ALL
 
     fun selectTipif(value: String) {
         if (value != tipifFilter) { tipifFilter = value; onClearSelection() }
@@ -145,6 +163,8 @@ fun ContactsScreen(
     var assignTitle by remember { mutableStateOf("Asignar usuario") }
     var showAssignDialog by remember { mutableStateOf(false) }
     var onConfirmAssign: ((String) -> Unit)? by remember { mutableStateOf(null) }
+    var showTagDialog by remember { mutableStateOf(false) }
+    var tagText by remember { mutableStateOf("") }
 
     fun openAssignDialog(title: String, target: Set<Long>) {
         assignTitle = title
@@ -220,6 +240,17 @@ fun ContactsScreen(
                         onClick = onEmailSelected,
                         modifier = Modifier.fillMaxWidth(),
                         icon = Icons.Default.Email,
+                        compact = true
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    SecondaryActionButton(
+                        text = "Etiquetas",
+                        onClick = {
+                            tagText = contacts.firstOrNull { selected.contains(it.id) }?.tags ?: ""
+                            showTagDialog = true
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        icon = Icons.Default.Label,
                         compact = true
                     )
                     Spacer(modifier = Modifier.height(6.dp))
@@ -327,6 +358,7 @@ fun ContactsScreen(
                         tipifFilter = FILTER_ALL
                         estadoFilter = FILTER_ALL
                         medioFilter = FILTER_ALL
+                        tagFilter = FILTER_ALL
                     }) { Text("Limpiar") }
                 }
             }
@@ -376,6 +408,27 @@ fun ContactsScreen(
                     },
                     onSelect = { selectMedio(it) }
                 )
+                if (allTags.isNotEmpty()) {
+                    CategoryFilterRow(
+                        label = "Etiqueta",
+                        categories = allTags,
+                        hasBlank = false,
+                        blankLabel = "",
+                        selected = tagFilter,
+                        countFor = { value ->
+                            when (value) {
+                                FILTER_ALL -> contacts.size
+                                else -> tagCounts[value] ?: 0
+                            }
+                        },
+                        onSelect = {
+                            if (it != tagFilter) {
+                                tagFilter = it
+                                onClearSelection()
+                            }
+                        }
+                    )
+                }
                 if (anyFilterActive) {
                     SecondaryActionButton(
                         text = "Exportar filtrados (${visibleContacts.size})",
@@ -439,6 +492,39 @@ fun ContactsScreen(
             title = assignTitle,
             onAssign = { userName -> onConfirmAssign?.invoke(userName) },
             onDismiss = { showAssignDialog = false }
+        )
+    }
+
+    if (showTagDialog) {
+        AlertDialog(
+            onDismissRequest = { showTagDialog = false },
+            title = { Text("Etiquetas (${selected.size} contactos)") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = tagText,
+                        onValueChange = { tagText = it },
+                        label = { Text("Etiquetas separadas por coma") },
+                        placeholder = { Text("moroso, vip, llamar") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        "Se aplican a los contactos seleccionados. Déjalo vacío para quitarlas.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onSetTags(selected, tagText)
+                    showTagDialog = false
+                }) { Text("Guardar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTagDialog = false }) { Text("Cancelar") }
+            }
         )
     }
 }
@@ -609,6 +695,19 @@ private fun ContactRow(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+                if (contact.tags.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        "🏷 " + contact.tags.split(",")
+                            .map { it.trim() }
+                            .filter { it.isNotBlank() }
+                            .joinToString(" · "),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
             SelectionIndicator(isSelected)
             Spacer(modifier = Modifier.width(2.dp))
@@ -732,4 +831,15 @@ private fun SelectionIndicator(isSelected: Boolean) {
 @Composable
 private fun Avatar(name: String) {
     InitialsAvatar(name = name, size = 42.dp)
+}
+private fun tagCountsOf(contacts: List<Contact>): Map<String, Int> {
+    val m = HashMap<String, Int>()
+    contacts.forEach { c ->
+        c.tags.split(",")
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .distinctBy { it.lowercase() }
+            .forEach { t -> m[t] = (m[t] ?: 0) + 1 }
+    }
+    return m
 }
