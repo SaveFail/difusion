@@ -1,5 +1,24 @@
 # Registro de cambios
 
+## [5.8] — 2026-10-27
+
+### Corregido
+- **Reescritura del número al enviar.** Cuando a un número le faltaba el `0`
+  inicial (ej. `412…` en vez de `0412…`), ahora al enviar (individual, masivo o
+  reenviar una cadena) se **corrige y persiste**:
+  - Se actualiza el **contacto** con el número corregido.
+  - Se **reescribe la dirección** de los mensajes: el número sin `0` **se borra**
+    y la cadena queda registrada con el número corregido.
+  - Los mensajes se **mueven al hilo** del número corregido, de modo que la
+    conversación queda unificada y se envía correctamente.
+- La reparación masiva de teléfonos (**"Corregir teléfonos"**) ahora **también
+  reescribe** la dirección de los mensajes, no solo los contactos.
+- Nueva función `Importer.correctPhone` que unifica la reparación del artefacto
+  del "9" de Excel y la restauración del `0` inicial.
+
+### Cambiado
+- La versión sube a **5.8 (`versionCode 41`)**.
+
 ## [5.7] — 2026-10-23
 
 ### Agregado

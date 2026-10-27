@@ -1226,8 +1226,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // El formato con guiones/espacios NO cuenta como error.
     private fun phoneNeedsRepair(phone: String): Boolean {
         val cleaned = phone.replace(Regex("[^0-9+]"), "")
-        return com.difusion.app.import.Importer.repairScientificArtifact(cleaned) != cleaned ||
-            com.difusion.app.import.Importer.normalizePhone(cleaned.toString()) != cleaned
+        return com.difusion.app.import.Importer.correctPhone(phone) != cleaned
     }
 
     // Cuenta cuántos contactos guardados tienen un número al que le falta el 0.
@@ -1240,19 +1239,39 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // Recorre todos los contactos, les agrega el 0 faltante y corrige los números
     // que quedaron con el "9" parásito de la notación científica de Excel.
+    // Además reescribe la dirección de los mensajes para que el número viejo
+    // (sin 0) desaparezca de las cadenas.
     suspend fun repairPhonesNow(): Int {
         val all = db.contactDao().getAllOnce()
         var fixed = 0
         for (c in all) {
-            val cleaned = c.phone.replace(Regex("[^0-9+]"), "")
-            val fixedPhone = com.difusion.app.import.Importer.repairScientificArtifact(cleaned)
-                .let { com.difusion.app.import.Importer.normalizePhone(it) }
-            if (fixedPhone != c.phone) {
+            val fixedPhone = com.difusion.app.import.Importer.correctPhone(c.phone)
+            if (fixedPhone.isNotBlank() && fixedPhone != c.phone) {
                 db.contactDao().update(c.copy(phone = fixedPhone))
+                rewriteMessageAddresses(c.phone, fixedPhone)
                 fixed++
             }
         }
         _needPhoneRepair.value = false
         return fixed
+    }
+
+    // Reescribe la dirección de los mensajes del número viejo al corregido (con
+    // el 0 inicial), moviéndolos al hilo del número corregido para que la cadena
+    // quede unificada bajo el número correcto.
+    private suspend fun rewriteMessageAddresses(old: String, new: String) {
+        if (old.isBlank() || old == new) return
+        val candidates = linkedSetOf(old, old.replace(Regex("[^0-9+]"), ""))
+        val newThreadId = runCatching {
+            com.difusion.app.data.ThreadResolver.resolve(getApplication(), new)
+        }.getOrDefault(0L)
+        for (c in candidates) {
+            if (c.isBlank() || c == new) continue
+            if (newThreadId != 0L) {
+                db.smsMessageDao().rewriteAddressAndThread(c, new, newThreadId)
+            } else {
+                db.smsMessageDao().rewriteAddress(c, new)
+            }
+        }
     }
 }

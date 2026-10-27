@@ -55,6 +55,18 @@ interface SmsMessageDao {
     @Query("DELETE FROM sms_messages WHERE threadId = :threadId")
     suspend fun deleteThread(threadId: Long)
 
+    // Reescribe la dirección de un número por su forma corregida (con el 0
+    // inicial). Se usa para que el número sin 0 desaparezca de los hilos y deje
+    // de quedar "registrado" al reenviar una cadena.
+    @Query("UPDATE sms_messages SET address = :newAddress WHERE address = :old")
+    suspend fun rewriteAddress(old: String, newAddress: String)
+
+    // Igual que arriba pero además mueve los mensajes al hilo del número
+    // corregido, de modo que la cadena vieja se funda en la nueva (una sola
+    // conversación con el número corregido).
+    @Query("UPDATE sms_messages SET address = :newAddress, threadId = :newThreadId WHERE address = :old")
+    suspend fun rewriteAddressAndThread(old: String, newAddress: String, newThreadId: Long)
+
     @Query("SELECT * FROM sms_messages WHERE threadId = :threadId AND inTrash = 0 ORDER BY date ASC")
     fun messagesForThread(threadId: Long): Flow<List<SmsMessage>>
 

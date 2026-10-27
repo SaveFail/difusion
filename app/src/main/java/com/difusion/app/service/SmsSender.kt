@@ -99,7 +99,8 @@ class SmsSender(private val context: Context) {
 
     // Envía un solo mensaje (usado desde la bandeja de mensajería).
     suspend fun sendSingle(phone: String, message: String, subId: Int? = null) {
-        val normalized = Importer.normalizePhone(phone)
+        val normalized = Importer.correctPhone(phone)
+        persistPhoneCorrection(phone, normalized)
         try {
             sendOne(normalized, message, subId)
             markSmsSentByPhone(normalized)
@@ -111,7 +112,8 @@ class SmsSender(private val context: Context) {
     // la misma fila para que el resultado (Enviado/No enviado) se refleje ahí,
     // limpiando la causa del fallo anterior.
     suspend fun resend(phone: String, message: String, rowId: Long, subId: Int? = null) {
-        val normalized = Importer.normalizePhone(phone)
+        val normalized = Importer.correctPhone(phone)
+        persistPhoneCorrection(phone, normalized)
         db.smsMessageDao().setStatusAndClearError(rowId, SmsStatus.SENDING)
         try {
             sendOne(normalized, message, subId)
@@ -160,7 +162,14 @@ class SmsSender(private val context: Context) {
 
             for ((index, contact) in contacts.withIndex()) {
                 if (isCancelled) break
-                val phone = Importer.normalizePhone(contact.phone)
+                val phone = Importer.correctPhone(contact.phone)
+                // Si al contacto le faltaba el 0 (o traía el artefacto del "9"),
+                // se reescribe el número en el contacto y en los mensajes para que
+                // el número viejo desaparezca y quede registrado el corregido.
+                if (phone != contact.phone) {
+                    db.contactDao().update(contact.copy(phone = phone))
+                    rewriteMessages(contact.phone, phone)
+                }
                 val message = template
                     .replace("{nombre}", contact.name)
                     .replace("{telefono}", phone)
@@ -259,6 +268,40 @@ class SmsSender(private val context: Context) {
             markSmsSent(found)
         } catch (_: Exception) {
         }
+    }
+
+    // Reescribe la dirección en los mensajes y los mueve al hilo del número
+    // corregido, para que el número sin 0 desaparezca de la cadena.
+    private suspend fun rewriteMessages(old: String, new: String) {
+        if (old.isBlank() || old == new) return
+        val candidates = linkedSetOf(old, old.replace(Regex("[^0-9+]"), ""))
+        val newThreadId = runCatching { ThreadResolver.resolve(context, new) }.getOrDefault(0L)
+        for (c in candidates) {
+            if (c.isBlank() || c == new) continue
+            if (newThreadId != 0L) {
+                db.smsMessageDao().rewriteAddressAndThread(c, new, newThreadId)
+            } else {
+                db.smsMessageDao().rewriteAddress(c, new)
+            }
+        }
+    }
+
+    // Actualiza el teléfono de los contactos que coinciden en los últimos 10
+    // dígitos (así no importa si estaban guardados con guiones o con +58).
+    private suspend fun updateContactPhone(raw: String, new: String) {
+        val key = raw.filter { it.isDigit() }.takeLast(10)
+        if (key.isBlank()) return
+        val found = db.contactDao().getAllOnce().filter {
+            it.phone != new && it.phone.filter { c -> c.isDigit() }.takeLast(10) == key
+        }
+        for (c in found) db.contactDao().update(c.copy(phone = new))
+    }
+
+    // Corrige y persiste el número (contacto + mensajes) si le faltaba el 0.
+    private suspend fun persistPhoneCorrection(raw: String, new: String) {
+        if (raw.isBlank() || raw == new) return
+        updateContactPhone(raw, new)
+        rewriteMessages(raw, new)
     }
 
     // Guarda el mensaje en la base local (respaldo), marca el estado como "enviando",

@@ -292,6 +292,14 @@ object Importer {
         return result
     }
 
+    // Corrección canónica de un teléfono: repara el artefacto del "9" de la
+    // notación científica de Excel y restaura el 0 inicial cuando hace falta.
+    // Devuelve la forma final con la que se debe guardar y enviar.
+    fun correctPhone(phone: String): String {
+        val cleaned = phone.replace(Regex("[^0-9+]"), "")
+        return normalizePhone(repairScientificArtifact(cleaned))
+    }
+
     fun normalizePhone(phone: String): String {
         val cleaned = phone.replace(Regex("[^0-9+]"), "")
         if (cleaned.isEmpty()) return cleaned
