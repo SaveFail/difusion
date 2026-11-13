@@ -1,5 +1,25 @@
 # Registro de cambios
 
+## [5.9] — 2026-11-13
+
+### Corregido (rendimiento y congelamientos)
+- **Importar archivos grandes ya no congela la app:** la lectura del archivo
+  (CSV/Excel/Drive) corre en segundo plano (`Dispatchers.IO`) en vez del hilo
+  principal.
+- **Inserción de contactos en UNA sola transacción:** antes se insertaba fila a
+  fila (miles de transacciones); ahora se usa `insertAll`, por lo que cargar
+  miles de contactos es mucho más rápido y no se traba.
+- **Envío masivo de hasta 10.000 mensajes sin congelarse:**
+  - El envío corre en `Dispatchers.IO` (apropiado para las llamadas bloqueantes
+    al proveedor de SMS), evitando agotar el pool de CPU.
+  - El marcado "Enviado por SMS" ya no hace una consulta extra por contacto.
+  - El listado de contactos usa `debounce`, así las ráfagas de actualizaciones
+    durante un envío masivo se colapsan y la interfaz no se satura.
+- Envío individual y reenvío movidos a `Dispatchers.IO`.
+
+### Cambiado
+- La versión sube a **5.9 (`versionCode 42`)**.
+
 ## [5.8] — 2026-10-27
 
 ### Corregido

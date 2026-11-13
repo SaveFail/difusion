@@ -30,7 +30,10 @@ import kotlinx.coroutines.launch
 // sin que el envío se corte.
 class SmsSendService : Service() {
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    // El envío masivo hace llamadas bloqueantes (proveedor de SMS/ContentResolver
+    // y base de datos), por eso usa Dispatchers.IO en vez de Default: así no
+    // agota el pool de CPU y la UI nunca se congela, ni con 10.000 mensajes.
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var started = false
     private var notifierJob: Job? = null
     private var wakeLock: PowerManager.WakeLock? = null

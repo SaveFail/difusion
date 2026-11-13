@@ -24,6 +24,11 @@ interface ContactDao {
     @Insert
     suspend fun insert(contact: Contact): Long
 
+    // Inserción masiva en una sola transacción (evita 10.000 transacciones
+    // individuales al importar archivos grandes).
+    @Insert
+    suspend fun insertAll(contacts: List<Contact>): List<Long>
+
     @Update
     suspend fun update(contact: Contact)
 

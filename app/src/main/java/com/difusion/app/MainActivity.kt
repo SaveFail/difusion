@@ -77,7 +77,9 @@ import com.difusion.app.ui.theme.exportConfig
 import com.difusion.app.ui.theme.installCustomFont
 import com.difusion.app.ui.theme.readConfigFromUri
 import androidx.documentfile.provider.DocumentFile
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.file.Files
@@ -668,7 +670,7 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
             importing = true
             scope.launch {
                 try {
-                    val rows = Importer.parseFile(context, uri)
+                    val rows = withContext(Dispatchers.IO) { Importer.parseFile(context, uri) }
                     importedRows = rows
                     showImport = true
                 } catch (e: Exception) {

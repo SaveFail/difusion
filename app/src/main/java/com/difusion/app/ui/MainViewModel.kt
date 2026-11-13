@@ -29,12 +29,14 @@ import com.difusion.app.storage.UserStore
 import com.difusion.app.ui.theme.ThemeConfig
 import com.difusion.app.ui.theme.ThemePrefs
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -42,6 +44,7 @@ import kotlinx.coroutines.delay
 import androidx.work.await
 import java.io.File
 
+@OptIn(FlowPreview::class)
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val db = AppDatabase.getInstance(application)
@@ -53,7 +56,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         const val KEY_MAX_CALL_MS = "max_call_ms"
         const val KEY_SAFE_MODE = "safe_mode"
     }
-    val contacts = db.contactDao().getAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    // Debounce: durante un envío masivo cada contacto se actualiza en la base y
+    // el flujo re-emitiría toda la lista cientos de veces, saturando la UI.
+    // Con 250ms las ráfagas se colapsan y la app no se congela.
+    val contacts = db.contactDao().getAll()
+        .debounce(250)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val templates = db.templateDao().getAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val sendRecords = db.sendDao().getAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val callRecords = db.callDao().getAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -973,7 +981,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun sendSingleMessage(address: String, body: String) {
         val subId = com.difusion.app.service.SimManager.getSmsSubId(getApplication())
         viewModelScope.launch {
-            smsSender.sendSingle(address, body, subId)
+            withContext(Dispatchers.IO) {
+                smsSender.sendSingle(address, body, subId)
+            }
         }
     }
 
@@ -1000,7 +1010,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun resendMessage(address: String, message: SmsMessage) {
         viewModelScope.launch {
             try {
-                smsSender.resend(address, message.body, message.id)
+                withContext(Dispatchers.IO) {
+                    smsSender.resend(address, message.body, message.id)
+                }
             } catch (_: Exception) {
             }
         }
@@ -1116,19 +1128,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun addContacts(rows: List<ParsedRow>) {
+        if (rows.isEmpty()) return
         viewModelScope.launch {
-            runCatching {
-                com.difusion.app.data.GestionPresets.saveFromImport(
-                    getApplication(),
-                    rows.map { it.gestion },
-                    rows.map { it.estado },
-                    rows.map { it.medio },
-                    rows.map { it.assignment }
-                )
-            }
-            for (row in rows) {
+            withContext(Dispatchers.IO) {
+                runCatching {
+                    com.difusion.app.data.GestionPresets.saveFromImport(
+                        getApplication(),
+                        rows.map { it.gestion },
+                        rows.map { it.estado },
+                        rows.map { it.medio },
+                        rows.map { it.assignment }
+                    )
+                }
                 // Se importan los teléfonos exactamente como vienen del archivo.
-                db.contactDao().insert(
+                // Inserción en UNA sola transacción para soportar miles de filas
+                // sin bloquear la app.
+                val contacts = rows.map { row ->
                     Contact(
                         name = row.name,
                         phone = row.phone.trim(),
@@ -1142,7 +1157,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         fechaGestion = row.fechaGestion.trim(),
                         email = row.email.trim()
                     )
-                )
+                }
+                db.contactDao().insertAll(contacts)
             }
         }
     }

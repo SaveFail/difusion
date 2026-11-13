@@ -166,9 +166,13 @@ class SmsSender(private val context: Context) {
                 // Si al contacto le faltaba el 0 (o traía el artefacto del "9"),
                 // se reescribe el número en el contacto y en los mensajes para que
                 // el número viejo desaparezca y quede registrado el corregido.
-                if (phone != contact.phone) {
-                    db.contactDao().update(contact.copy(phone = phone))
+                val working = if (phone != contact.phone) {
+                    val corrected = contact.copy(phone = phone)
+                    db.contactDao().update(corrected)
                     rewriteMessages(contact.phone, phone)
+                    corrected
+                } else {
+                    contact
                 }
                 val message = template
                     .replace("{nombre}", contact.name)
@@ -186,7 +190,7 @@ class SmsSender(private val context: Context) {
                 if (success) {
                     sent++
                     consecutiveFailures = 0
-                    markSmsSent(contact)
+                    markSmsSent(working)
                 } else {
                     failed++
                     consecutiveFailures++
@@ -243,11 +247,12 @@ class SmsSender(private val context: Context) {
         SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())
 
     // Al enviar un SMS se marca el contacto: medio = SMS y seguimiento
-    // "Enviado por SMS", con la fecha de gestión actualizada.
+    // "Enviado por SMS", con la fecha de gestión actualizada. Se recibe el
+    // contacto ya corregido (con el 0) para no hacer una consulta extra por
+    // mensaje durante un envío masivo.
     private suspend fun markSmsSent(contact: Contact) {
         try {
-            val fresh = db.contactDao().getById(contact.id) ?: contact
-            val updated = fresh.copy(
+            val updated = contact.copy(
                 medio = "SMS",
                 gestion = "Enviado por SMS",
                 fechaGestion = nowStamp()
