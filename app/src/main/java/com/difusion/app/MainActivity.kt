@@ -51,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -738,7 +739,17 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surface,
+                tonalElevation = 3.dp
+            ) {
+                val navColors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                    selectedTextColor = MaterialTheme.colorScheme.onPrimary,
+                    indicatorColor = MaterialTheme.colorScheme.primary,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 NavigationBarItem(
                     selected = currentRoute == "inbox",
                     onClick = {
@@ -747,7 +758,8 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                         }
                     },
                     icon = { AppIcon(Icons.Default.Sms, contentDescription = null) },
-                    label = null
+                    label = { Text("Mensajes", fontSize = 10.sp) },
+                    colors = navColors
                 )
                 NavigationBarItem(
                     selected = currentRoute == "calls",
@@ -757,7 +769,8 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                         }
                     },
                     icon = { AppIcon(Icons.Default.Phone, contentDescription = null) },
-                    label = null
+                    label = { Text("Llamadas", fontSize = 10.sp) },
+                    colors = navColors
                 )
                 NavigationBarItem(
                     selected = currentRoute == "contacts",
@@ -767,7 +780,8 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                         }
                     },
                     icon = { AppIcon(Icons.Default.Contacts, contentDescription = null) },
-                    label = null
+                    label = { Text("Contactos", fontSize = 10.sp) },
+                    colors = navColors
                 )
                 NavigationBarItem(
                     selected = currentRoute == "editor",
@@ -788,7 +802,8 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                             }
                         }
                     },
-                    label = null
+                    label = { Text("Redactar", fontSize = 10.sp) },
+                    colors = navColors
                 )
                 NavigationBarItem(
                     selected = currentRoute == "history",
@@ -798,7 +813,8 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                         }
                     },
                     icon = { AppIcon(Icons.Default.History, contentDescription = null) },
-                    label = null
+                    label = { Text("Historial", fontSize = 10.sp) },
+                    colors = navColors
                 )
                 NavigationBarItem(
                     selected = currentRoute == "recordings",
@@ -808,7 +824,8 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                         }
                     },
                     icon = { AppIcon(Icons.Default.Mic, contentDescription = null) },
-                    label = null
+                    label = { Text("Grabar", fontSize = 10.sp) },
+                    colors = navColors
                 )
                 NavigationBarItem(
                     selected = currentRoute == "settings",
@@ -818,7 +835,8 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                         }
                     },
                     icon = { AppIcon(Icons.Default.Settings, contentDescription = null) },
-                    label = null
+                    label = { Text("Ajustes", fontSize = 10.sp) },
+                    colors = navColors
                 )
             }
         }

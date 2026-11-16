@@ -93,33 +93,44 @@ fun ScreenHeader(
             .fillMaxWidth()
             .clip(RoundedCornerShape(bottomStart = bottomRadius * 1.5f, bottomEnd = bottomRadius * 1.5f))
             .background(background)
-            .padding(horizontal = 14.dp, vertical = 14.dp)
+            .padding(horizontal = 20.dp, vertical = 18.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (icon != null) {
-                AppIcon(
-                    icon,
-                    contentDescription = null,
-                    tint = colors.onPrimary,
-                    size = 26.dp
-                )
-                Spacer(modifier = Modifier.width(10.dp))
+                Box(
+                    Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(colors.onPrimary.copy(alpha = 0.18f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AppIcon(
+                        icon,
+                        contentDescription = null,
+                        tint = colors.onPrimary,
+                        size = 24.dp
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
             }
-            Text(
-                title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = colors.onPrimary
-            )
-        }
-        if (subtitle != null) {
-            Spacer(modifier = Modifier.height(3.dp))
-            Text(
-                subtitle,
-                style = MaterialTheme.typography.bodyMedium,
-                fontSize = 12.sp,
-                color = colors.onPrimary.copy(alpha = 0.85f)
-            )
+            Column(Modifier.weight(1f)) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.onPrimary,
+                    letterSpacing = (-0.2).sp
+                )
+                if (subtitle != null) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        subtitle,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontSize = 13.sp,
+                        color = colors.onPrimary.copy(alpha = 0.85f)
+                    )
+                }
+            }
         }
     }
 }
@@ -293,12 +304,14 @@ fun InitialsAvatar(
         modifier = modifier
             .size(size)
             .clip(CircleShape)
-            .background(colors.primary.copy(alpha = 0.16f)),
+            .background(
+                Brush.linearGradient(listOf(colors.primary, colors.tertiary))
+            ),
         contentAlignment = Alignment.Center
     ) {
         Text(
             initials,
-            color = colors.primary,
+            color = colors.onPrimary,
             fontWeight = FontWeight.Bold,
             fontSize = with(LocalDensity.current) { (size.value * 0.34f).sp }
         )

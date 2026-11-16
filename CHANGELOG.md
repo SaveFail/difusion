@@ -1,5 +1,18 @@
 # Registro de cambios
 
+## [6.2] — 2026-11-16
+
+### Cambiado (visual, visible de inmediato)
+- **Barra inferior rediseñada**: ahora cada pestaña muestra su **etiqueta**
+  (Mensajes, Llamadas, Contactos, Redactar, Historial, Grabar, Ajustes) y la
+  pestaña activa se resalta con una **píldora de color**.
+- **Cabeceras más llamativas**: ícono dentro de un círculo translúcido y título
+  más grande con mejor espaciado.
+- **Avatares con degradado** en Contactos (igual que la bandeja de mensajes).
+
+### Agregado (de la 6.1)
+- **Fondos de chat personalizables** en Ajustes ▸ Apariencia.
+
 ## [6.1] — 2026-11-16
 
 ### Agregado
