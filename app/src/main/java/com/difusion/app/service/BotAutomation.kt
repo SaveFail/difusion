@@ -107,6 +107,15 @@ object BotAutomation {
         for (msg in messages) {
             val phone = msg.jid.substringBefore("@")
             val contact = all.firstOrNull { samePhone(phone, it.phone) }
+
+            // 1) Flujos conversacionales (mapa de nodos): si un flujo atiende el
+            // mensaje (inicia o continúa una conversación), no se aplican las
+            // reglas planas para ese mensaje (evita respuestas dobles).
+            val flowHandled = try {
+                BotFlowRunner.handle(context, msg.jid, msg.text)
+            } catch (_: Exception) { false }
+            if (flowHandled) continue
+
             for (rule in rules) {
                 if (!msg.text.contains(rule.keyword, ignoreCase = true)) continue
 

@@ -1,5 +1,25 @@
 # Registro de cambios
 
+## [6.0] — 2026-11-16
+
+### Agregado
+- **Flujos del bot (mapa conceptual).** En **Ajustes ▸ Bot ▸ "Flujos del bot (mapa)"**
+  ahora puedes programar conversaciones completas como un **mapa de nodos**:
+  - **Pasos de mensaje** que envían un texto y esperan la respuesta del cliente.
+  - **Respuestas esperadas** (palabras clave) que dirigen a un paso u otro según
+    lo que responda el cliente, más un **camino por defecto**.
+  - **Pasos de acción** (cambiar seguimiento, status, medio, agregar etiqueta o
+    programar un mensaje) y **pasos de fin**.
+  - El flujo se muestra como un **mapa conceptual** (nodos conectados con
+    conectores y etiquetas) y se guarda en el teléfono.
+  - El bot recorre el flujo en tiempo real y recuerda en qué paso está cada
+    cliente (estado por cliente).
+
+### Cambiado
+- **Pulido de UI**: las tarjetas (`SectionCard`) ahora usan la superficie sólida
+  con un borde sutil, para mejor jerarquía y legibilidad en pantallas densas.
+- La versión sube a **6.0 (`versionCode 43`)**.
+
 ## [5.9] — 2026-11-13
 
 ### Corregido (rendimiento y congelamientos)

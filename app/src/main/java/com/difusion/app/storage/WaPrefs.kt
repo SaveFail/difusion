@@ -12,6 +12,8 @@ object WaPrefs {
     private const val KEY_RULES = "wa_bot_rules"
     private const val KEY_AUTO_RULES = "wa_auto_rules"
     private const val KEY_LAST_TS = "wa_last_msg_ts"
+    private const val KEY_FLOWS = "wa_flows"
+    private const val KEY_FLOW_STATE = "wa_flow_state"
 
     private fun prefs(context: Context): SharedPreferences =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -50,4 +52,17 @@ object WaPrefs {
         prefs(context).edit().putLong(KEY_LAST_TS, ts).apply()
 
     fun getLastMessageTs(context: Context): Long = prefs(context).getLong(KEY_LAST_TS, 0L)
+
+    // Flujos conversacionales del bot (mapa de nodos).
+    fun setFlowsJson(context: Context, json: String) =
+        prefs(context).edit().putString(KEY_FLOWS, json).apply()
+
+    fun getFlowsJson(context: Context): String = prefs(context).getString(KEY_FLOWS, "[]") ?: "[]"
+
+    // Estado por cliente: { <telefono>: {flowId, nodeId} }.
+    fun setFlowStateJson(context: Context, json: String) =
+        prefs(context).edit().putString(KEY_FLOW_STATE, json).apply()
+
+    fun getFlowStateJson(context: Context): String =
+        prefs(context).getString(KEY_FLOW_STATE, "{}") ?: "{}"
 }

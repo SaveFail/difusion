@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.difusion.app.service.BotAutomation
+import com.difusion.app.service.BotFlowStore
 import com.difusion.app.service.WhatsAppBridge
 import com.difusion.app.storage.RecipientsPrefs
 import com.difusion.app.storage.WaPrefs
@@ -66,6 +67,15 @@ fun BotScreen() {
         mutableStateOf(BotAutomation.parseRules(WaPrefs.getAutoRulesJson(context)))
     }
     var editingAuto by remember { mutableStateOf<Int?>(null) }
+
+    // Flujos conversacionales (mapa de nodos del bot).
+    var flows by remember { mutableStateOf(BotFlowStore.loadFlows(context)) }
+    var editingFlow by remember { mutableStateOf<BotFlowStore.Flow?>(null) }
+
+    fun saveFlows(newFlows: List<BotFlowStore.Flow>) {
+        flows = newFlows
+        BotFlowStore.saveFlows(context, newFlows)
+    }
 
     // Mensajes programados (varios).
     val vm: MainViewModel = viewModel()
@@ -500,6 +510,105 @@ fun BotScreen() {
 
             Spacer(Modifier.height(12.dp))
 
+            // --- Flujos del bot (mapa conceptual) ---
+            SectionCard {
+                Text(
+                    "Flujos del bot (mapa)",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Programa conversaciones por pasos: el bot responde según lo que " +
+                        "dice el cliente y ejecuta acciones. Se configura como un mapa.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                if (flows.isEmpty()) {
+                    Text(
+                        "Aún no hay flujos. Crea el primero para automatizar una conversación.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    flows.forEachIndexed { index, f ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    f.name.ifBlank { "Flujo ${index + 1}" },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    "${f.nodes.size} paso(s)" +
+                                        if (f.trigger.isNotBlank()) " · inicia con \"${f.trigger}\"" else "",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            Switch(
+                                checked = f.enabled,
+                                onCheckedChange = { on ->
+                                    saveFlows(flows.map { if (it.id == f.id) it.copy(enabled = on) else it })
+                                }
+                            )
+                            IconButton(onClick = {
+                                val editing = f.copy(
+                                    nodes = if (f.nodes.isEmpty()) listOf(
+                                        BotFlowStore.Node(BotFlowStore.newId(), "message", text = "Hola {nombre}, ¿en qué te ayudo?")
+                                    ) else f.nodes
+                                )
+                                editingFlow = editing
+                            }) {
+                                AppIcon(Icons.Default.Edit, contentDescription = "Editar", size = 20.dp)
+                            }
+                            IconButton(onClick = { saveFlows(flows.filter { it.id != f.id }) }) {
+                                AppIcon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "Borrar",
+                                    tint = MaterialTheme.colorScheme.error,
+                                    size = 20.dp
+                                )
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = {
+                        val f = BotFlowStore.Flow(
+                            id = BotFlowStore.newId(),
+                            name = "Nuevo flujo",
+                            trigger = "",
+                            enabled = true,
+                            startId = "",
+                            nodes = listOf(
+                                BotFlowStore.Node(BotFlowStore.newId(), "message", text = "Hola {nombre}, ¿en qué te ayudo?")
+                            )
+                        )
+                        saveFlows(flows + f)
+                        editingFlow = f
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    AppIcon(Icons.Default.Add, contentDescription = null, size = 18.dp)
+                    Spacer(Modifier.width(4.dp))
+                    Text("Nuevo flujo")
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
             // --- Mensajes programados de WhatsApp (varios) ---
             SectionCard {
                 Text(
@@ -674,6 +783,20 @@ fun BotScreen() {
                 saveAuto(l)
                 editingAuto = null
             }
+        )
+    }
+
+    editingFlow?.let { flow ->
+        BotFlowEditorDialog(
+            initialFlow = flow,
+            onSave = { updated ->
+                saveFlows(
+                    flows.map { if (it.id == updated.id) updated else it }
+                        .let { list -> if (list.none { it.id == updated.id }) list + updated else list }
+                )
+                editingFlow = null
+            },
+            onDismiss = { editingFlow = null }
         )
     }
 }
