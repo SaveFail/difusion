@@ -1,5 +1,21 @@
 # Registro de cambios
 
+## [6.1] — 2026-11-16
+
+### Agregado
+- **Fondos de chat personalizables.** En **Ajustes ▸ Apariencia ▸ "Burbujas del chat"**
+  ahora puedes elegir el **fondo de las conversaciones** (predeterminado, Aurora,
+  Atardecer, Bosque, Océano, Rosa y Lavanda) con una vista previa en miniatura.
+  Cada chat usa el fondo elegido de inmediato.
+
+### Cambiado
+- **Paleta por defecto refinada**: el azul principal pasa a un tono más moderno
+  (`#2563EB`), alineado con un diseño limpio tipo "Suiza" (más contraste y
+  legibilidad).
+- **Tarjetas (`SectionCard`)**: superficie sólida con borde sutil para una mejor
+  jerarquía visual en pantallas densas.
+- La versión sube a **6.1 (`versionCode 44`)**.
+
 ## [6.0] — 2026-11-16
 
 ### Agregado

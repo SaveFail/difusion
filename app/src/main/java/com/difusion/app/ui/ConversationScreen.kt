@@ -58,6 +58,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.difusion.app.data.*
 import com.difusion.app.service.DriveSyncService
 import com.difusion.app.ui.theme.ThemeConfig
+import com.difusion.app.ui.theme.chatBackgroundBrush
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -180,7 +181,15 @@ fun ConversationScreen(
 
     BackHandler { if (selectingMsgs) exitSelection() else onBack() }
 
-    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    val chatBgBrush = chatBackgroundBrush(themeConfig.chatBackground)
+    Column(
+        Modifier
+            .fillMaxSize()
+            .then(
+                if (chatBgBrush != null) Modifier.background(chatBgBrush)
+                else Modifier.background(MaterialTheme.colorScheme.background)
+            )
+    ) {
         if (selectingMsgs) {
             Surface(color = MaterialTheme.colorScheme.surface, shadowElevation = 3.dp) {
                 Row(

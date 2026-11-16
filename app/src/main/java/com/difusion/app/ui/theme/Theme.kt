@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.lerp
@@ -31,7 +32,7 @@ import java.io.FileOutputStream
 
 @Immutable
 data class ThemeConfig(
-    val accent: Long = 0xFF2340C9,
+    val accent: Long = 0xFF2563EB,
     val text: Long = 0xFF0F172A,
     val background: Long = 0xFFF7F9FC,
     val font: String = "difusion",
@@ -56,7 +57,9 @@ data class ThemeConfig(
     val bubbleShape: String = "rounded", // rounded | pill | sharp
     val showMessageStatus: Boolean = true,
     val showMessageTime: Boolean = true,
-    val showSmsCounter: Boolean = true
+    val showSmsCounter: Boolean = true,
+    // Fondo del chat (ConversationScreen). Vacío = usar el fondo de la app.
+    val chatBackground: String = ""
 )
 
 /** Claves de fuente válidas; cualquier valor desconocido cae a la predeterminada. */
@@ -91,6 +94,7 @@ object ThemePrefs {
     private const val KEY_SHOW_STATUS = "theme_show_status"
     private const val KEY_SHOW_TIME = "theme_show_time"
     private const val KEY_SHOW_SMS_COUNTER = "theme_show_sms_counter"
+    private const val KEY_CHAT_BACKGROUND = "theme_chat_background"
     private const val KEY_VERSION = "theme_version"
     private const val VERSION = 3
 
@@ -127,7 +131,8 @@ object ThemePrefs {
             bubbleShape = prefs.getString(KEY_BUBBLE_SHAPE, defaults.bubbleShape) ?: defaults.bubbleShape,
             showMessageStatus = prefs.getBoolean(KEY_SHOW_STATUS, defaults.showMessageStatus),
             showMessageTime = prefs.getBoolean(KEY_SHOW_TIME, defaults.showMessageTime),
-            showSmsCounter = prefs.getBoolean(KEY_SHOW_SMS_COUNTER, defaults.showSmsCounter)
+            showSmsCounter = prefs.getBoolean(KEY_SHOW_SMS_COUNTER, defaults.showSmsCounter),
+            chatBackground = prefs.getString(KEY_CHAT_BACKGROUND, defaults.chatBackground) ?: defaults.chatBackground
         )
     }
 
@@ -158,6 +163,7 @@ object ThemePrefs {
             .putBoolean(KEY_SHOW_STATUS, config.showMessageStatus)
             .putBoolean(KEY_SHOW_TIME, config.showMessageTime)
             .putBoolean(KEY_SHOW_SMS_COUNTER, config.showSmsCounter)
+            .putString(KEY_CHAT_BACKGROUND, config.chatBackground)
             .apply()
     }
 
@@ -276,7 +282,7 @@ data class ThemePreset(
 )
 
 val THEME_PRESETS: List<ThemePreset> = listOf(
-    ThemePreset("difusion", "Difusión", 0xFF2340C9, 0xFF0F172A, 0xFFF7F9FC),
+    ThemePreset("difusion", "Difusión", 0xFF2563EB, 0xFF0F172A, 0xFFF7F9FC),
     ThemePreset("violeta", "Violeta", 0xFF7C3AED, 0xFF1B1023, 0xFFF7F4FF),
     ThemePreset("oceano", "Océano", 0xFF0E7C86, 0xFF06262B, 0xFFEAF7F6),
     ThemePreset("cielo", "Cielo", 0xFF2F6FED, 0xFF0B1E4B, 0xFFEEF4FF, cornerStyle = "pill"),
@@ -306,6 +312,33 @@ fun applyPreset(config: ThemeConfig, presetId: String): ThemeConfig {
 fun presetLabel(config: ThemeConfig): String =
     THEME_PRESETS.firstOrNull { it.id == config.preset }?.label ?: "Personalizado"
 
+// ---------- Fondos de chat ----------
+
+data class ChatBackground(
+    val id: String,
+    val label: String,
+    val colors: List<Long>  // paradas del degradado; vacío = usar el fondo de la app
+)
+
+val CHAT_BACKGROUNDS: List<ChatBackground> = listOf(
+    ChatBackground("", "Predeterminado", emptyList()),
+    ChatBackground("aurora", "Aurora", listOf(0xFFE4F0FF, 0xFFF0E9FF, 0xFFE9F5FF)),
+    ChatBackground("dusk", "Atardecer", listOf(0xFFFFF1E0, 0xFFFFE2DE, 0xFFFFF0D8)),
+    ChatBackground("forest", "Bosque", listOf(0xFFE5F4E8, 0xFFD7F0E3, 0xFFEAF6E8)),
+    ChatBackground("ocean", "Océano", listOf(0xFFE1F4F4, 0xFFD5ECF7, 0xFFE4F1F9)),
+    ChatBackground("rose", "Rosa", listOf(0xFFFFE8EE, 0xFFFFE1F1, 0xFFFFECF0)),
+    ChatBackground("lavanda", "Lavanda", listOf(0xFFF1EBFF, 0xFFE8E0FF, 0xFFF0EBFF))
+)
+
+fun chatBackgroundLabel(id: String): String =
+    CHAT_BACKGROUNDS.firstOrNull { it.id == id }?.label ?: "Predeterminado"
+
+fun chatBackgroundBrush(id: String): Brush? {
+    val bg = CHAT_BACKGROUNDS.firstOrNull { it.id == id } ?: return null
+    if (bg.colors.isEmpty()) return null
+    return Brush.linearGradient(bg.colors.map { Color(it) })
+}
+
 // ---------- Exportar / importar configuración ----------
 
 private fun configToJson(config: ThemeConfig): JSONObject = JSONObject().apply {
@@ -333,13 +366,14 @@ private fun configToJson(config: ThemeConfig): JSONObject = JSONObject().apply {
     put("showMessageStatus", config.showMessageStatus)
     put("showMessageTime", config.showMessageTime)
     put("showSmsCounter", config.showSmsCounter)
+    put("chatBackground", config.chatBackground)
 }
 
 fun configFromJson(json: String): ThemeConfig? {
     return try {
         val o = JSONObject(json)
         ThemeConfig(
-            accent = o.optLong("accent", 0xFF2340C9),
+            accent = o.optLong("accent", 0xFF2563EB),
             text = o.optLong("text", 0xFF0F172A),
             background = o.optLong("background", 0xFFF7F9FC),
             font = o.optString("font", "difusion"),
@@ -361,7 +395,8 @@ fun configFromJson(json: String): ThemeConfig? {
             bubbleShape = o.optString("bubbleShape", "rounded"),
             showMessageStatus = o.optBoolean("showMessageStatus", true),
             showMessageTime = o.optBoolean("showMessageTime", true),
-            showSmsCounter = o.optBoolean("showSmsCounter", true)
+            showSmsCounter = o.optBoolean("showSmsCounter", true),
+            chatBackground = o.optString("chatBackground", "")
         )
     } catch (_: Exception) {
         null

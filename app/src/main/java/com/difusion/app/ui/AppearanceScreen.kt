@@ -47,6 +47,9 @@ import com.difusion.app.service.NotificationTones
 import com.difusion.app.ui.theme.ThemeConfig
 import com.difusion.app.ui.theme.THEME_PRESETS
 import com.difusion.app.ui.theme.ThemePreset
+import com.difusion.app.ui.theme.CHAT_BACKGROUNDS
+import com.difusion.app.ui.theme.chatBackgroundBrush
+import com.difusion.app.ui.theme.chatBackgroundLabel
 import com.difusion.app.ui.theme.cornerLabel
 import com.difusion.app.ui.theme.applyPreset
 import com.difusion.app.ui.theme.fontNameLabel
@@ -409,6 +412,46 @@ fun AppearanceScreen(
                                 onClick = { onConfigChange(config.copy(bubbleShape = v, preset = "")) },
                                 label = { Text(l, fontSize = 12.sp) }
                             )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text("Fondo del chat", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.horizontalScroll(rememberScrollState())
+                    ) {
+                        CHAT_BACKGROUNDS.forEach { bg ->
+                            val selected = config.chatBackground == bg.id
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .clickable { onConfigChange(config.copy(chatBackground = bg.id, preset = "")) }
+                                    .padding(4.dp)
+                            ) {
+                                Box(
+                                    Modifier
+                                        .size(52.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(
+                                            chatBackgroundBrush(bg.id)
+                                                ?: Brush.verticalGradient(listOf(MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.background))
+                                        )
+                                        .border(
+                                            width = if (selected) 2.dp else 1.dp,
+                                            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                                            shape = RoundedCornerShape(12.dp)
+                                        )
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    chatBackgroundLabel(bg.id),
+                                    fontSize = 11.sp,
+                                    color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
                         }
                     }
                     Spacer(modifier = Modifier.height(10.dp))
