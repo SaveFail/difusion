@@ -25,6 +25,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -741,44 +742,36 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            // Dock de iconos flotante (sin barra tradicional).
-            Surface(
+            // Solo iconos, sin barra: fila transparente que respeta los botones del sistema.
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 18.dp, vertical = 10.dp),
-                shape = RoundedCornerShape(34.dp),
-                color = MaterialTheme.colorScheme.surface,
-                shadowElevation = 12.dp
+                    .navigationBarsPadding()
+                    .padding(horizontal = 26.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 6.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    DockItem(Icons.Default.Sms, currentRoute == "inbox") {
-                        navController.navigate("inbox") { popUpTo("inbox") { inclusive = true } }
-                    }
-                    DockItem(Icons.Default.Phone, currentRoute == "calls") {
-                        navController.navigate("calls") { popUpTo("calls") { inclusive = true } }
-                    }
-                    DockItem(Icons.Default.Contacts, currentRoute == "contacts") {
-                        navController.navigate("contacts") { popUpTo("contacts") { inclusive = true } }
-                    }
-                    DockItem(Icons.Default.Edit, currentRoute == "editor", badge = isSending) {
-                        if (viewModel.isSendingValue) showSendScreen = true
-                        else navController.navigate("editor") { popUpTo("editor") { inclusive = true } }
-                    }
-                    DockItem(Icons.Default.History, currentRoute == "history") {
-                        navController.navigate("history") { popUpTo("history") { inclusive = true } }
-                    }
-                    DockItem(Icons.Default.Mic, currentRoute == "recordings") {
-                        navController.navigate("recordings") { popUpTo("recordings") { inclusive = true } }
-                    }
-                    DockItem(Icons.Default.Settings, currentRoute == "settings") {
-                        navController.navigate("settings") { popUpTo("settings") { inclusive = true } }
-                    }
+                DockItem(Icons.Default.Sms, currentRoute == "inbox") {
+                    navController.navigate("inbox") { popUpTo("inbox") { inclusive = true } }
+                }
+                DockItem(Icons.Default.Phone, currentRoute == "calls") {
+                    navController.navigate("calls") { popUpTo("calls") { inclusive = true } }
+                }
+                DockItem(Icons.Default.Contacts, currentRoute == "contacts") {
+                    navController.navigate("contacts") { popUpTo("contacts") { inclusive = true } }
+                }
+                DockItem(Icons.Default.Edit, currentRoute == "editor", badge = isSending) {
+                    if (viewModel.isSendingValue) showSendScreen = true
+                    else navController.navigate("editor") { popUpTo("editor") { inclusive = true } }
+                }
+                DockItem(Icons.Default.History, currentRoute == "history") {
+                    navController.navigate("history") { popUpTo("history") { inclusive = true } }
+                }
+                DockItem(Icons.Default.Mic, currentRoute == "recordings") {
+                    navController.navigate("recordings") { popUpTo("recordings") { inclusive = true } }
+                }
+                DockItem(Icons.Default.Settings, currentRoute == "settings") {
+                    navController.navigate("settings") { popUpTo("settings") { inclusive = true } }
                 }
             }
         }
@@ -1949,7 +1942,7 @@ private fun DockItem(
                 icon,
                 contentDescription = null,
                 tint = if (selected) colors.onPrimary else colors.onSurfaceVariant,
-                size = 24.dp
+                size = 22.dp
             )
             if (badge) {
                 Badge(modifier = Modifier.align(Alignment.TopEnd)) {}

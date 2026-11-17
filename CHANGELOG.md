@@ -1,5 +1,12 @@
 # Registro de cambios
 
+## [6.5] — 2026-11-16
+
+### Corregido
+- **Barra inferior eliminada por completo**: ahora solo quedan los **iconos**
+  (sin contenedor/barra), más pequeños, y **respetando los botones del sistema**
+  (quedan por encima, no encima ni debajo de ellos).
+
 ## [6.4] — 2026-11-16
 
 ### Cambiado (rediseño integral)
