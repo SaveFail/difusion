@@ -747,7 +747,7 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
-                    .padding(horizontal = 26.dp, vertical = 6.dp),
+                    .padding(horizontal = 6.dp, vertical = 6.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -1943,10 +1943,10 @@ private fun DockItem(
     val colors = MaterialTheme.colorScheme
     Box(
         Modifier
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
             .background(if (selected) colors.primary else androidx.compose.ui.graphics.Color.Transparent)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .padding(horizontal = 6.dp, vertical = 9.dp),
         contentAlignment = Alignment.Center
     ) {
         Box {
@@ -1954,7 +1954,7 @@ private fun DockItem(
                 icon,
                 contentDescription = null,
                 tint = if (selected) colors.onPrimary else colors.onSurfaceVariant,
-                size = 22.dp
+                size = 20.dp
             )
             if (badge) {
                 Badge(modifier = Modifier.align(Alignment.TopEnd)) {}

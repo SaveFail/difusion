@@ -68,9 +68,46 @@ fun HomeScreen(
             }
         }
 
+        Spacer(Modifier.height(16.dp))
+
+        // Botón principal
+        Column(Modifier.padding(horizontal = 16.dp)) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .clickable { onNavigate("editor") },
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.primary,
+                shadowElevation = 4.dp
+            ) {
+                Row(
+                    Modifier.padding(horizontal = 20.dp, vertical = 18.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    AppIcon(Icons.Default.Send, null, tint = MaterialTheme.colorScheme.onPrimary, size = 28.dp)
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            "Enviar campaña",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Text(
+                            "SMS · WhatsApp · Correo masivo",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f)
+                        )
+                    }
+                    AppIcon(Icons.Default.ArrowForward, null, tint = MaterialTheme.colorScheme.onPrimary)
+                }
+            }
+        }
+
         Spacer(Modifier.height(20.dp))
 
-        // Acciones principales
+        // Acciones rápidas (más accesos)
         Column(Modifier.padding(horizontal = 16.dp)) {
             Text(
                 "Acciones rápidas",
@@ -79,54 +116,28 @@ fun HomeScreen(
             )
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                QuickAction(
-                    Modifier.weight(1f),
-                    Icons.Default.Edit,
-                    "Enviar",
-                    "SMS masivo",
-                    MaterialTheme.colorScheme.primary
-                ) { onNavigate("editor") }
-                QuickAction(
-                    Modifier.weight(1f),
-                    Icons.Default.Phone,
-                    "Llamar",
-                    "en secuencia",
-                    Color(0xFF0E7C86)
-                ) { onNavigate("calls") }
+                QuickAction(Modifier.weight(1f), Icons.Default.Edit, "Enviar SMS", "plantillas", MaterialTheme.colorScheme.primary) { onNavigate("editor") }
+                QuickAction(Modifier.weight(1f), Icons.Default.Phone, "Llamar", "en secuencia", Color(0xFF0E7C86)) { onNavigate("calls") }
             }
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                QuickAction(
-                    Modifier.weight(1f),
-                    Icons.Default.Chat,
-                    "WhatsApp",
-                    "bot y envíos",
-                    Color(0xFF2E7D46)
-                ) { onNavigate("settings") }
-                QuickAction(
-                    Modifier.weight(1f),
-                    Icons.Default.Contacts,
-                    "Contactos",
-                    "importar y filtrar",
-                    Color(0xFF8D5B3C)
-                ) { onNavigate("contacts") }
+                QuickAction(Modifier.weight(1f), Icons.Default.Chat, "WhatsApp", "bot y envíos", Color(0xFF2E7D46)) { onNavigate("settings") }
+                QuickAction(Modifier.weight(1f), Icons.Default.Contacts, "Contactos", "lista y filtros", Color(0xFF8D5B3C)) { onNavigate("contacts") }
             }
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                QuickAction(
-                    Modifier.weight(1f),
-                    Icons.Default.History,
-                    "Historial",
-                    "de envíos",
-                    Color(0xFF7C3AED)
-                ) { onNavigate("history") }
-                QuickAction(
-                    Modifier.weight(1f),
-                    Icons.Default.Settings,
-                    "Ajustes",
-                    "y personalización",
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                ) { onNavigate("settings") }
+                QuickAction(Modifier.weight(1f), Icons.Default.FileUpload, "Importar", "Excel / Drive", Color(0xFF7C3AED)) { onNavigate("contacts") }
+                QuickAction(Modifier.weight(1f), Icons.Default.History, "Historial", "de envíos", Color(0xFFB03052)) { onNavigate("history") }
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                QuickAction(Modifier.weight(1f), Icons.Default.Schedule, "Programados", "mensajes", Color(0xFF5F9E1A)) { onNavigate("history") }
+                QuickAction(Modifier.weight(1f), Icons.Default.Mic, "Grabaciones", "de llamadas", Color(0xFFE8930C)) { onNavigate("recordings") }
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                QuickAction(Modifier.weight(1f), Icons.Default.Cloud, "Sincronizar", "Drive / Excel", Color(0xFF0E7C86)) { onNavigate("settings") }
+                QuickAction(Modifier.weight(1f), Icons.Default.Settings, "Ajustes", "personaliza", MaterialTheme.colorScheme.onSurfaceVariant) { onNavigate("settings") }
             }
         }
         Spacer(Modifier.height(24.dp))

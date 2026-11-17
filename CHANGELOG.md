@@ -1,5 +1,16 @@
 # Registro de cambios
 
+## [6.7] — 2026-11-17
+
+### Corregido
+- **Dock de iconos**: ahora los 8 iconos (incluido el engranaje de Ajustes) caben
+  sin desbordarse del ancho de la pantalla.
+
+### Agregado
+- **Inicio más completo**: botón principal "Enviar campaña" y **10 accesos
+  rápidos** (Enviar SMS, Llamar, WhatsApp, Contactos, Importar, Historial,
+  Programados, Grabaciones, Sincronizar, Ajustes).
+
 ## [6.6] — 2026-11-17
 
 ### Agregado
