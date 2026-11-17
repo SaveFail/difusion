@@ -39,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -385,22 +386,23 @@ fun ConversationScreen(
                                     highlightedBody(message.body, if (filtering) query else ""),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
-                                Spacer(Modifier.height(2.dp))
-                                if (themeConfig.showMessageTime) {
-                                    Text(
-                                        SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(Date(message.date)),
-                                        style = MaterialTheme.typography.labelSmall
-                                    )
-                                }
-                                // Estado del mensaje saliente, visible debajo y a la
-                                // derecha de cada mensaje (enviando/enviado/no enviado).
-                                if (isOutgoing && themeConfig.showMessageStatus) {
+                                if (themeConfig.showMessageTime || (isOutgoing && themeConfig.showMessageStatus)) {
                                     Spacer(Modifier.height(3.dp))
-                                    Box(
+                                    Row(
                                         Modifier.fillMaxWidth(),
-                                        contentAlignment = Alignment.CenterEnd
+                                        horizontalArrangement = Arrangement.End,
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        MessageStatusPill(status = message.status, theme = themeConfig)
+                                        if (themeConfig.showMessageTime) {
+                                            Text(
+                                                SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(Date(message.date)),
+                                                style = MaterialTheme.typography.labelSmall
+                                            )
+                                        }
+                                        if (isOutgoing && themeConfig.showMessageStatus) {
+                                            Spacer(Modifier.width(4.dp))
+                                            MessageStatusPill(status = message.status, theme = themeConfig)
+                                        }
                                     }
                                 }
                             }
@@ -479,7 +481,17 @@ private fun MessageStatusPill(status: Int, theme: ThemeConfig) {
 @Composable
 private fun ConversationAvatar(name: String, size: Dp) {
     Box(
-        Modifier.size(size).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
+        Modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.primary,
+                        MaterialTheme.colorScheme.tertiary
+                    )
+                )
+            ),
         contentAlignment = Alignment.Center
     ) {
         Text(
@@ -704,18 +716,25 @@ private fun ConversationInputBar(
     val scope = rememberCoroutineScope()
     var text by rememberSaveable { mutableStateOf("") }
 
-    Surface(color = MaterialTheme.colorScheme.surface, shadowElevation = 8.dp) {
+    // Barra de entrada en forma de píldora, con todo integrado (estilo Google Messages).
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 4.dp,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f))
+    ) {
         Row(
-            modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = 8.dp, vertical = 6.dp),
+            Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             var showCameraMenu by remember { mutableStateOf(false) }
             Box {
                 IconButton(onClick = { showCameraMenu = true }) {
-                    Icon(Icons.Default.PhotoCamera, contentDescription = "Camara")
+                    Icon(Icons.Default.PhotoCamera, contentDescription = "Adjuntar")
                 }
                 DropdownMenu(expanded = showCameraMenu, onDismissRequest = { showCameraMenu = false }) {
                     DropdownMenuItem(
@@ -734,22 +753,26 @@ private fun ConversationInputBar(
                     )
                 }
             }
-            Spacer(Modifier.width(2.dp))
-            OutlinedTextField(
+            TextField(
                 value = text,
                 onValueChange = { text = it },
-                Modifier.weight(1f),
+                modifier = Modifier.weight(1f),
                 maxLines = 4,
-                placeholder = { Text("Escribe un mensaje") }
+                placeholder = { Text("Escribe un mensaje") },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    disabledContainerColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    disabledIndicatorColor = Color.Transparent
+                )
             )
-            Spacer(Modifier.width(6.dp))
             SimPickerButton()
-            Spacer(Modifier.width(6.dp))
             FilledIconButton(
                 onClick = {
                     val raw = text.trim()
                     if (raw.isBlank()) return@FilledIconButton
-                    // En el chat también se reemplazan las variables de plantilla.
                     val body = raw
                         .replace("{nombre}", conversation.name)
                         .replace("{telefono}", conversation.address)

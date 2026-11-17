@@ -758,7 +758,7 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                         }
                     },
                     icon = { AppIcon(Icons.Default.Sms, contentDescription = null) },
-                    label = { Text("Mensajes", fontSize = 10.sp) },
+                    label = null,
                     colors = navColors
                 )
                 NavigationBarItem(
@@ -769,7 +769,7 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                         }
                     },
                     icon = { AppIcon(Icons.Default.Phone, contentDescription = null) },
-                    label = { Text("Llamadas", fontSize = 10.sp) },
+                    label = null,
                     colors = navColors
                 )
                 NavigationBarItem(
@@ -780,7 +780,7 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                         }
                     },
                     icon = { AppIcon(Icons.Default.Contacts, contentDescription = null) },
-                    label = { Text("Contactos", fontSize = 10.sp) },
+                    label = null,
                     colors = navColors
                 )
                 NavigationBarItem(
@@ -802,7 +802,7 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                             }
                         }
                     },
-                    label = { Text("Redactar", fontSize = 10.sp) },
+                    label = null,
                     colors = navColors
                 )
                 NavigationBarItem(
@@ -813,7 +813,7 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                         }
                     },
                     icon = { AppIcon(Icons.Default.History, contentDescription = null) },
-                    label = { Text("Historial", fontSize = 10.sp) },
+                    label = null,
                     colors = navColors
                 )
                 NavigationBarItem(
@@ -824,7 +824,7 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                         }
                     },
                     icon = { AppIcon(Icons.Default.Mic, contentDescription = null) },
-                    label = { Text("Grabar", fontSize = 10.sp) },
+                    label = null,
                     colors = navColors
                 )
                 NavigationBarItem(
@@ -835,7 +835,7 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                         }
                     },
                     icon = { AppIcon(Icons.Default.Settings, contentDescription = null) },
-                    label = { Text("Ajustes", fontSize = 10.sp) },
+                    label = null,
                     colors = navColors
                 )
             }

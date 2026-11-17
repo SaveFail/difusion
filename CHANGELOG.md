@@ -1,5 +1,16 @@
 # Registro de cambios
 
+## [6.3] — 2026-11-16
+
+### Cambiado (diseño único, estilo Google Messages)
+- **Chat rediseñado**:
+  - Barra de entrada en **forma de píldora** con todo integrado (adjuntar, texto,
+    SIM y enviar) — estilo Google Messages.
+  - Hora y estado del mensaje **en una sola línea** dentro de la burbuja.
+  - Avatar del contacto con **degradado**.
+- **Bandeja (pantalla de inicio)**: cabecera con **degradado** y título más grande.
+- **Barra inferior**: se quita el texto; solo iconos con resaltado en píldora.
+
 ## [6.2] — 2026-11-16
 
 ### Cambiado (visual, visible de inmediato)
