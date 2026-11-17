@@ -22,6 +22,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
 import androidx.activity.viewModels
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -739,105 +741,45 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 3.dp
+            // Dock de iconos flotante (sin barra tradicional).
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 18.dp, vertical = 10.dp),
+                shape = RoundedCornerShape(34.dp),
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 12.dp
             ) {
-                val navColors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.onPrimary,
-                    selectedTextColor = MaterialTheme.colorScheme.onPrimary,
-                    indicatorColor = MaterialTheme.colorScheme.primary,
-                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                NavigationBarItem(
-                    selected = currentRoute == "inbox",
-                    onClick = {
-                        navController.navigate("inbox") {
-                            popUpTo("inbox") { inclusive = true }
-                        }
-                    },
-                    icon = { AppIcon(Icons.Default.Sms, contentDescription = null) },
-                    label = null,
-                    colors = navColors
-                )
-                NavigationBarItem(
-                    selected = currentRoute == "calls",
-                    onClick = {
-                        navController.navigate("calls") {
-                            popUpTo("calls") { inclusive = true }
-                        }
-                    },
-                    icon = { AppIcon(Icons.Default.Phone, contentDescription = null) },
-                    label = null,
-                    colors = navColors
-                )
-                NavigationBarItem(
-                    selected = currentRoute == "contacts",
-                    onClick = {
-                        navController.navigate("contacts") {
-                            popUpTo("contacts") { inclusive = true }
-                        }
-                    },
-                    icon = { AppIcon(Icons.Default.Contacts, contentDescription = null) },
-                    label = null,
-                    colors = navColors
-                )
-                NavigationBarItem(
-                    selected = currentRoute == "editor",
-                    onClick = {
-                        if (viewModel.isSendingValue) {
-                            showSendScreen = true
-                        } else {
-                            navController.navigate("editor") {
-                                popUpTo("editor") { inclusive = true }
-                            }
-                        }
-                    },
-                    icon = {
-                        Box {
-                            AppIcon(Icons.Default.Edit, contentDescription = null)
-                            if (isSending) {
-                                Badge(modifier = Modifier.align(Alignment.TopEnd)) {}
-                            }
-                        }
-                    },
-                    label = null,
-                    colors = navColors
-                )
-                NavigationBarItem(
-                    selected = currentRoute == "history",
-                    onClick = {
-                        navController.navigate("history") {
-                            popUpTo("history") { inclusive = true }
-                        }
-                    },
-                    icon = { AppIcon(Icons.Default.History, contentDescription = null) },
-                    label = null,
-                    colors = navColors
-                )
-                NavigationBarItem(
-                    selected = currentRoute == "recordings",
-                    onClick = {
-                        navController.navigate("recordings") {
-                            popUpTo("recordings") { inclusive = true }
-                        }
-                    },
-                    icon = { AppIcon(Icons.Default.Mic, contentDescription = null) },
-                    label = null,
-                    colors = navColors
-                )
-                NavigationBarItem(
-                    selected = currentRoute == "settings",
-                    onClick = {
-                        navController.navigate("settings") {
-                            popUpTo("settings") { inclusive = true }
-                        }
-                    },
-                    icon = { AppIcon(Icons.Default.Settings, contentDescription = null) },
-                    label = null,
-                    colors = navColors
-                )
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 6.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    DockItem(Icons.Default.Sms, currentRoute == "inbox") {
+                        navController.navigate("inbox") { popUpTo("inbox") { inclusive = true } }
+                    }
+                    DockItem(Icons.Default.Phone, currentRoute == "calls") {
+                        navController.navigate("calls") { popUpTo("calls") { inclusive = true } }
+                    }
+                    DockItem(Icons.Default.Contacts, currentRoute == "contacts") {
+                        navController.navigate("contacts") { popUpTo("contacts") { inclusive = true } }
+                    }
+                    DockItem(Icons.Default.Edit, currentRoute == "editor", badge = isSending) {
+                        if (viewModel.isSendingValue) showSendScreen = true
+                        else navController.navigate("editor") { popUpTo("editor") { inclusive = true } }
+                    }
+                    DockItem(Icons.Default.History, currentRoute == "history") {
+                        navController.navigate("history") { popUpTo("history") { inclusive = true } }
+                    }
+                    DockItem(Icons.Default.Mic, currentRoute == "recordings") {
+                        navController.navigate("recordings") { popUpTo("recordings") { inclusive = true } }
+                    }
+                    DockItem(Icons.Default.Settings, currentRoute == "settings") {
+                        navController.navigate("settings") { popUpTo("settings") { inclusive = true } }
+                    }
+                }
             }
         }
     ) { padding ->
@@ -1983,6 +1925,36 @@ private fun exportHistory(context: android.content.Context, records: List<SendRe
         Toast.makeText(context, "Reporte en ${file.absolutePath}", Toast.LENGTH_LONG).show()
     } catch (e: Exception) {
         Toast.makeText(context, "Error al exportar: ${e.message}", Toast.LENGTH_LONG).show()
+    }
+}
+
+@Composable
+private fun DockItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    selected: Boolean,
+    badge: Boolean = false,
+    onClick: () -> Unit
+) {
+    val colors = MaterialTheme.colorScheme
+    Box(
+        Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .background(if (selected) colors.primary else androidx.compose.ui.graphics.Color.Transparent)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Box {
+            AppIcon(
+                icon,
+                contentDescription = null,
+                tint = if (selected) colors.onPrimary else colors.onSurfaceVariant,
+                size = 24.dp
+            )
+            if (badge) {
+                Badge(modifier = Modifier.align(Alignment.TopEnd)) {}
+            }
+        }
     }
 }
 

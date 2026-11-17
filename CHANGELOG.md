@@ -1,5 +1,16 @@
 # Registro de cambios
 
+## [6.4] — 2026-11-16
+
+### Cambiado (rediseño integral)
+- **Dock de iconos flotante**: la barra inferior desaparece y queda un dock
+  redondeado que "flota" con los iconos (la pestaña activa se resalta en píldora).
+- **Tarjetas más suaves**: esquinas más redondeadas y sombra sutil en todas las
+  secciones (Ajustes, Drive, Bot, etc.).
+- **Chat estilo Google Messages**: barra de entrada en píldora, hora + estado en
+  una línea, avatar con degradado.
+- **Bandeja**: cabecera con degradado y título más grande.
+
 ## [6.3] — 2026-11-16
 
 ### Cambiado (diseño único, estilo Google Messages)

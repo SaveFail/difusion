@@ -143,9 +143,9 @@ fun SectionCard(
     val colors = MaterialTheme.colorScheme
     Card(
         modifier = modifier,
-        shape = LocalAppShape.current,
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.5f)),
+        shape = RoundedCornerShape(LocalAppRadius.current * 1.25f),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.outlineVariant.copy(alpha = 0.4f)),
         colors = CardDefaults.cardColors(
             containerColor = colors.surface
         )
