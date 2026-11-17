@@ -751,6 +751,9 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                DockItem(Icons.Default.Home, currentRoute == "home") {
+                    navController.navigate("home") { popUpTo("home") { inclusive = true } }
+                }
                 DockItem(Icons.Default.Sms, currentRoute == "inbox") {
                     navController.navigate("inbox") { popUpTo("inbox") { inclusive = true } }
                 }
@@ -777,7 +780,16 @@ val openSeq by MainActivityDelegate.openSequence.collectAsStateWithLifecycle()
         }
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding)) {
-            NavHost(navController = navController, startDestination = "inbox") {
+            NavHost(navController = navController, startDestination = "home") {
+                composable("home") {
+                    HomeScreen(onNavigate = { route ->
+                        navController.navigate(route) {
+                            popUpTo("home") { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    })
+                }
                 composable("inbox") {
                     val conversations by viewModel.conversations.collectAsStateWithLifecycle()
                     InboxScreen(

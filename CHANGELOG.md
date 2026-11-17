@@ -1,5 +1,13 @@
 # Registro de cambios
 
+## [6.6] — 2026-11-17
+
+### Agregado
+- **Panel de Inicio** como primera pantalla: al abrir la app ves un panel amigable
+  con **acciones rápidas** (Enviar SMS, Llamar, WhatsApp, Contactos, Historial,
+  Ajustes) y el **resumen en vivo** de contactos y chats. Todo se hace desde ahí.
+- Nuevo acceso **Inicio** en el dock de iconos.
+
 ## [6.5] — 2026-11-16
 
 ### Corregido
