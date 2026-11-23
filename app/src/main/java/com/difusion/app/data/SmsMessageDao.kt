@@ -46,6 +46,11 @@ interface SmsMessageDao {
     @Query("UPDATE sms_messages SET status = :status, errorCode = 0, errorLabel = '' WHERE id = :id")
     suspend fun setStatusAndClearError(id: Long, status: Int)
 
+    // Mensajes salientes que siguen "enviando" más allá del umbral: nunca llegó
+    // la confirmación del sistema. Se usan para resolverlos como fallidos.
+    @Query("SELECT * FROM sms_messages WHERE status = :sending AND isIncoming = 0 AND date < :before ORDER BY date ASC")
+    suspend fun stuckSending(before: Long, sending: Int): List<SmsMessage>
+
     @Query("UPDATE sms_messages SET read = 1 WHERE threadId = :threadId AND inTrash = 0")
     suspend fun markThreadRead(threadId: Long)
 

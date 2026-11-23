@@ -98,6 +98,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             SmsInbox.syncNow(application, db)
             MmsInbox.syncNow(application, db)
+            // Resuelve los mensajes que quedaron "Enviando" sin confirmación:
+            // los marca como "No enviado" con la causa detectada.
+            runCatching { smsSender.resolveStuckSending() }
         }
         // El estado "enviando" se mantiene en sincronía con el envío en segundo plano.
         viewModelScope.launch {

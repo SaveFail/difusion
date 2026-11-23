@@ -401,7 +401,11 @@ fun ConversationScreen(
                                         }
                                         if (isOutgoing && themeConfig.showMessageStatus) {
                                             Spacer(Modifier.width(4.dp))
-                                            MessageStatusPill(status = message.status, theme = themeConfig)
+                                            MessageStatusPill(
+                                                status = message.status,
+                                                theme = themeConfig,
+                                                errorLabel = message.errorLabel
+                                            )
                                         }
                                     }
                                 }
@@ -437,7 +441,7 @@ fun ConversationScreen(
 }
 
 @Composable
-private fun MessageStatusPill(status: Int, theme: ThemeConfig) {
+private fun MessageStatusPill(status: Int, theme: ThemeConfig, errorLabel: String? = null) {
     val label: String
     val icon: ImageVector
     val colorLong: Long
@@ -448,7 +452,8 @@ private fun MessageStatusPill(status: Int, theme: ThemeConfig) {
             colorLong = theme.statusSending
         }
         SmsStatus.FAILED -> {
-            label = "No enviado"
+            // Muestra la causa concreta si se conoce (sin saldo, sin señal, etc.).
+            label = errorLabel?.takeIf { it.isNotBlank() } ?: "No enviado"
             icon = Icons.Default.Close
             colorLong = theme.statusFailed
         }

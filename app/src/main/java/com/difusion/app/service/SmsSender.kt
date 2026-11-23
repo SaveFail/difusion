@@ -97,6 +97,26 @@ class SmsSender(private val context: Context) {
         _waitingWindow.value = false
     }
 
+    // Resuelve los mensajes que quedaron "Enviando" sin confirmación del sistema:
+    // los marca como "No enviado" con la causa detectada (sin permiso, sin SIM,
+    // modo avión, o fallo del operador). Devuelve cuántos resolvió.
+    suspend fun resolveStuckSending(maxAgeMs: Long = 5 * 60_000L): Int {
+        val reason = SmsDiagnostics.primaryReason(context)
+        val before = System.currentTimeMillis() - maxAgeMs
+        val stuck = try {
+            db.smsMessageDao().stuckSending(before, SmsStatus.SENDING)
+        } catch (_: Exception) {
+            emptyList()
+        }
+        for (m in stuck) {
+            try {
+                db.smsMessageDao().setStatusWithError(m.id, SmsStatus.FAILED, m.isMms, -1, reason)
+            } catch (_: Exception) {
+            }
+        }
+        return stuck.size
+    }
+
     // Envía un solo mensaje (usado desde la bandeja de mensajería).
     suspend fun sendSingle(phone: String, message: String, subId: Int? = null) {
         val normalized = Importer.correctPhone(phone)
@@ -116,7 +136,8 @@ class SmsSender(private val context: Context) {
         persistPhoneCorrection(phone, normalized)
         db.smsMessageDao().setStatusAndClearError(rowId, SmsStatus.SENDING)
         try {
-            sendOne(normalized, message, subId)
+            // Reenvía sobre la MISMA fila (no crea una duplicada).
+            sendViaManager(rowId, normalized, message, subId)
         } catch (e: Exception) {
             db.smsMessageDao().setStatus(rowId, SmsStatus.FAILED)
             throw e
@@ -168,8 +189,11 @@ class SmsSender(private val context: Context) {
                 // el número viejo desaparezca y quede registrado el corregido.
                 val working = if (phone != contact.phone) {
                     val corrected = contact.copy(phone = phone)
-                    db.contactDao().update(corrected)
-                    rewriteMessages(contact.phone, phone)
+                    // La corrección es auxiliar: no debe impedir el envío.
+                    runCatching {
+                        db.contactDao().update(corrected)
+                        rewriteMessages(contact.phone, phone)
+                    }
                     corrected
                 } else {
                     contact
@@ -279,41 +303,49 @@ class SmsSender(private val context: Context) {
     // corregido, para que el número sin 0 desaparezca de la cadena.
     private suspend fun rewriteMessages(old: String, new: String) {
         if (old.isBlank() || old == new) return
-        val candidates = linkedSetOf(old, old.replace(Regex("[^0-9+]"), ""))
-        val newThreadId = runCatching { ThreadResolver.resolve(context, new) }.getOrDefault(0L)
-        for (c in candidates) {
-            if (c.isBlank() || c == new) continue
-            if (newThreadId != 0L) {
-                db.smsMessageDao().rewriteAddressAndThread(c, new, newThreadId)
-            } else {
-                db.smsMessageDao().rewriteAddress(c, new)
+        try {
+            val candidates = linkedSetOf(old, old.replace(Regex("[^0-9+]"), ""))
+            val newThreadId = runCatching { ThreadResolver.resolve(context, new) }.getOrDefault(0L)
+            for (c in candidates) {
+                if (c.isBlank() || c == new) continue
+                if (newThreadId != 0L) {
+                    db.smsMessageDao().rewriteAddressAndThread(c, new, newThreadId)
+                } else {
+                    db.smsMessageDao().rewriteAddress(c, new)
+                }
             }
+        } catch (_: Exception) {
+            // Nunca debe impedir el envío: la corrección es un extra.
         }
     }
 
     // Actualiza el teléfono de los contactos que coinciden en los últimos 10
     // dígitos (así no importa si estaban guardados con guiones o con +58).
     private suspend fun updateContactPhone(raw: String, new: String) {
-        val key = raw.filter { it.isDigit() }.takeLast(10)
-        if (key.isBlank()) return
-        val found = db.contactDao().getAllOnce().filter {
-            it.phone != new && it.phone.filter { c -> c.isDigit() }.takeLast(10) == key
+        try {
+            val key = raw.filter { it.isDigit() }.takeLast(10)
+            if (key.isBlank()) return
+            val found = db.contactDao().getAllOnce().filter {
+                it.phone != new && it.phone.filter { c -> c.isDigit() }.takeLast(10) == key
+            }
+            for (c in found) db.contactDao().update(c.copy(phone = new))
+        } catch (_: Exception) {
         }
-        for (c in found) db.contactDao().update(c.copy(phone = new))
     }
 
     // Corrige y persiste el número (contacto + mensajes) si le faltaba el 0.
+    // Es un paso auxiliar: NUNCA debe impedir el envío del mensaje.
     private suspend fun persistPhoneCorrection(raw: String, new: String) {
         if (raw.isBlank() || raw == new) return
-        updateContactPhone(raw, new)
-        rewriteMessages(raw, new)
+        runCatching {
+            updateContactPhone(raw, new)
+            rewriteMessages(raw, new)
+        }
     }
 
     // Guarda el mensaje en la base local (respaldo), marca el estado como "enviando",
     // y registra un PendingIntent que el sistema ejecuta al confirmar el envío.
     private suspend fun sendOne(phone: String, message: String, subId: Int? = null): Long {
-        val smsManager = smsManagerFor(subId)
-        val parts = smsManager.divideMessage(message)
         val threadId = ThreadResolver.resolve(context, phone)
         val rowId = db.smsMessageDao().insert(
             SmsMessage(
@@ -326,6 +358,14 @@ class SmsSender(private val context: Context) {
                 read = true
             )
         )
+        sendViaManager(rowId, phone, message, subId)
+        return rowId
+    }
+
+    // Envía por SmsManager apuntando a una fila YA existente (usado al reenviar).
+    private suspend fun sendViaManager(rowId: Long, phone: String, message: String, subId: Int?) {
+        val smsManager = smsManagerFor(subId)
+        val parts = smsManager.divideMessage(message)
         val sentPi = sentPendingIntent(rowId)
         try {
             if (parts.size > 1) {
@@ -339,7 +379,6 @@ class SmsSender(private val context: Context) {
             db.smsMessageDao().setStatus(rowId, SmsStatus.FAILED)
             throw e
         }
-        return rowId
     }
 
     private fun sentPendingIntent(rowId: Long): PendingIntent {

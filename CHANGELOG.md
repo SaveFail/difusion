@@ -1,5 +1,21 @@
 # Registro de cambios
 
+## [6.8] — 2026-11-23
+
+### Corregido (envío de mensajes)
+- **Los mensajes no se enviaban** cuando fallaba la corrección automática del
+  número (consultas a la base o al proveedor de SMS). Esa corrección es auxiliar
+  y **ya no bloquea el envío**: si falla, el mensaje se envía igual.
+- **Reenviar** ya no crea un mensaje duplicado: reutiliza la misma fila (antes
+  insertaba una nueva y la original quedaba "Enviando" para siempre).
+
+### Agregado (diagnóstico de "Enviando")
+- **Causa concreta del fallo**: cuando un mensaje queda "Enviando" sin
+  confirmación, al abrir la app se resuelve como "No enviado" indicando la causa:
+  **sin permiso para enviar SMS, sin SIM, modo avión** o "sin confirmación del
+  operador (posible falta de saldo o cobertura)".
+- La causa se muestra dentro de la burbuja del chat (ya no solo "No enviado").
+
 ## [6.7] — 2026-11-17
 
 ### Corregido
